@@ -18,6 +18,7 @@ const {
   removeRecentRecipientUse
 } = require('../../../resources/domain/recentRecipients')
 const supportedNetworkTypes = ['ethereum']
+const { pruneObservedTokenApprovals } = require('../../../resources/domain/tokenApprovals')
 
 function switchChainForOrigins(origins, oldChainId, newChainId) {
   Object.entries(origins).forEach(([origin, { chain }]) => {
@@ -333,6 +334,9 @@ module.exports = {
   clearRecentRecipients: (u) => {
     u('main.recentRecipientUses', () => [])
   },
+  setObservedTokenApprovals: (u, entries) => {
+    u('main.observedTokenApprovals', () => pruneObservedTokenApprovals(entries))
+  },
   clearActivity: (u) => {
     u('main.activityClearedAt', (clearedAt = 0) => Math.max(clearedAt, Date.now()))
     u('main.accountActivityCursors', (cursors = {}) =>
@@ -413,6 +417,9 @@ module.exports = {
     }
   },
   removeAccount: (u, id) => {
+    u('main.observedTokenApprovals', (entries = []) =>
+      pruneObservedTokenApprovals(entries).filter((entry) => entry.account !== id.toLowerCase())
+    )
     u('main.accounts', (accounts) => {
       delete accounts[id]
       return accounts

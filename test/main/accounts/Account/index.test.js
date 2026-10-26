@@ -1179,8 +1179,8 @@ describe('#addRequest', () => {
       type: ApprovalType.SignatureRisk,
       approved: false,
       data: {
-        title: 'Dangerous Message Signature',
-        confirmLabel: 'Sign anyway',
+        title: 'Message signature warnings',
+        confirmLabel: 'Accept warnings',
         riskCodes: 'legacy-eth-sign,siwe-expired'
       }
     })
@@ -1201,7 +1201,7 @@ describe('#addRequest', () => {
 
     expect(request.approvals[0]).toMatchObject({
       type: ApprovalType.SignatureRisk,
-      data: { title: 'Risky Typed Signature', riskCodes: 'domain-chain-mismatch' }
+      data: { title: 'Typed signature warnings', riskCodes: 'domain-chain-mismatch' }
     })
   })
 
@@ -1217,7 +1217,7 @@ describe('#addRequest', () => {
     expect(request.approvals[0]).toMatchObject({
       type: ApprovalType.SignatureRisk,
       data: {
-        title: 'Risky Typed Signature',
+        title: 'Typed signature warnings',
         riskCodes: 'permit2-transfer,permit2-maximum-amount,permit2-noncanonical-contract'
       }
     })
@@ -1231,7 +1231,7 @@ describe('#addRequest', () => {
     expect(request.approvals[0]).toMatchObject({
       type: ApprovalType.SignatureRisk,
       data: {
-        title: 'Risky Typed Signature',
+        title: 'Typed signature warnings',
         riskCodes: 'eip3009-transfer,eip3009-maximum-amount'
       }
     })
@@ -1259,8 +1259,8 @@ describe('#addRequest', () => {
       type: ApprovalType.TokenPermitRisk,
       approved: false,
       data: {
-        title: 'Unlimited Token Permit',
-        confirmLabel: 'Sign Permit Anyway'
+        title: 'Unlimited token allowance',
+        confirmLabel: 'Accept unlimited allowance'
       }
     })
   })
@@ -2139,13 +2139,11 @@ describe('#addRequest', () => {
       approved: false,
       data: {
         title: 'Broad Token Approvals',
-        confirmLabel: 'Approve anyway',
+        confirmLabel: 'Accept token access',
         riskCount: 2
       }
     })
-    expect(request.approvals[1].data.message).toBe(
-      'Your RPC reports broad access. Check the spender and limit.'
-    )
+    expect(request.approvals[1].data.message).toBe('Your RPC reports broad token access.')
 
     request.approvals[1].approve()
     expect(request.approvals[1].approved).toBe(true)
@@ -2212,11 +2210,9 @@ describe('#addRequest', () => {
     expect(request.approvals[0]).toMatchObject({
       type: ApprovalType.TokenApprovalRisk,
       approved: false,
-      data: { riskCount: 1, evidence: 'calldata', confirmLabel: 'Approve anyway' }
+      data: { riskCount: 1, evidence: 'calldata', confirmLabel: 'Accept token access' }
     })
-    expect(request.approvals[0].data.message).toBe(
-      'This request asks for broad access. Check the spender and limit.'
-    )
+    expect(request.approvals[0].data.message).toBe('This request asks for broad token access.')
   })
 
   it('does not classify contract-creation initcode as token approval calldata', async () => {
@@ -2358,6 +2354,94 @@ describe('#addRequest', () => {
     jest.advanceTimersByTime(1)
     await jest.advanceTimersByTimeAsync(0)
     expect(request.approvals).toEqual([])
+  })
+
+  it('invalidates broad-authority consent when the spender changes without changing the risk count', async () => {
+    simulateTransaction.mockResolvedValue({ status: 'succeeded', source: 'eth_call' })
+    const request = {
+      handlerId: 'changed-authority-spender',
+      type: 'transaction',
+      account: accountState.address,
+      data: {
+        chainId: '0x1',
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount])
+      },
+      approvals: [],
+      simulation: { status: 'pending' }
+    }
+    account.addRequest(request)
+    jest.advanceTimersByTime(1)
+    await jest.advanceTimersByTimeAsync(0)
+    const approval = request.approvals[0]
+    const fingerprint = approval.data.consentFingerprint
+    approval.approve()
+
+    request.data.data = tokenInterface.encodeFunctionData('approve', [tokenContract, maxTokenAmount])
+    account.refreshTransactionSimulation(request, true, true)
+    jest.advanceTimersByTime(1)
+    await jest.advanceTimersByTimeAsync(0)
+
+    expect(request.approvals[0]).toBe(approval)
+    expect(approval.approved).toBe(false)
+    expect(approval.data.riskCount).toBe(1)
+    expect(approval.data.consentFingerprint).toMatch(/^[0-9a-f]{64}$/)
+    expect(approval.data.consentFingerprint).not.toBe(fingerprint)
+  })
+
+  it('invalidates unlimited-permit consent when signed authority changes', () => {
+    const request = permitRequest(maxTokenAmount.toString())
+    account.addRequest(request)
+    const approval = request.approvals.find(({ type }) => type === ApprovalType.TokenPermitRisk)
+    approval.approve()
+
+    request.typedMessage.data.message.spender = tokenContract
+    account.syncPermitApprovalRisk(request)
+
+    expect(approval.approved).toBe(false)
+    expect(approval.data.consentFingerprint).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('requires batch authority consent even when stateful simulation is unavailable', () => {
+    const request = readyWalletCallsRequest('unavailable-batch-authority')
+    request.calls[0].data = tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount])
+    request.preparation.calls[0].transaction.data = request.calls[0].data
+    const preparation = request.preparation
+    account.addRequest(request)
+    request.preparation = preparation
+    request.simulation = { status: 'unavailable', source: 'eth_simulateV1', calls: [] }
+
+    expect(() => account.claimWalletCallsRequest(request.handlerId, true)).toThrow(
+      'Wallet-call request approvals are incomplete'
+    )
+    const approval = request.approvals.find(({ type }) => type === ApprovalType.TokenApprovalRisk)
+    expect(approval).toMatchObject({ approved: false, data: { riskCount: 1, evidence: 'calldata' } })
+
+    approval.approve()
+    request.preparation.status = 'succeeded'
+    expect(account.claimWalletCallsRequest(request.handlerId, true).calls[0].data).toBe(request.calls[0].data)
+  })
+
+  it('does not let a changed batch reuse consent for an equally broad operator approval', () => {
+    const request = readyWalletCallsRequest('changed-batch-authority')
+    request.calls[0].data = tokenInterface.encodeFunctionData('setApprovalForAll', [delegate, true])
+    request.preparation.calls[0].transaction.data = request.calls[0].data
+    const preparation = request.preparation
+    account.addRequest(request)
+    request.preparation = preparation
+    request.simulation = { status: 'succeeded', source: 'eth_simulateV1', calls: [] }
+    request.preparation.status = 'succeeded'
+    const approval = request.approvals.find(({ type }) => type === ApprovalType.TokenApprovalRisk)
+    expect(approval).toBeDefined()
+    approval.approve()
+
+    request.calls[0].data = tokenInterface.encodeFunctionData('setApprovalForAll', [tokenContract, true])
+    request.preparation.calls[0].transaction.data = request.calls[0].data
+    expect(() => account.claimWalletCallsRequest(request.handlerId)).toThrow(
+      'Wallet-call request approvals are incomplete'
+    )
+    expect(approval.approved).toBe(false)
+    expect(request.locked).not.toBe(true)
   })
 
   it('requires zero-first consent when replacing a different nonzero allowance', async () => {

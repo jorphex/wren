@@ -971,7 +971,8 @@ describe('simulation review', () => {
       data: {
         title: 'Broad Token Approval',
         message: 'This request asks for broad access. Check the spender and limit.',
-        confirmLabel: 'Approve Anyway'
+        confirmLabel: 'Approve Anyway',
+        consentFingerprint: 'a'.repeat(64)
       }
     }
 
@@ -984,7 +985,7 @@ describe('simulation review', () => {
       'confirmRequestApproval',
       req,
       approval.type,
-      {},
+      { consentFingerprint: approval.data.consentFingerprint },
       expect.any(Function)
     )
   })
@@ -1019,18 +1020,18 @@ describe('simulation review', () => {
       type: 'approveUnlimitedTokenPermit',
       approved: false,
       data: {
-        title: 'Unlimited Token Permit',
+        title: 'Unlimited token allowance',
         message:
           'This EIP-2612 signature authorizes the displayed spender to use the maximum uint256 token amount.',
-        confirmLabel: 'Sign Permit Anyway'
+        confirmLabel: 'Accept unlimited allowance'
       }
     }
 
     const { user } = render(<TxApproval req={req} approval={approval} />)
 
-    expect(screen.getByText('Unlimited Token Permit')).toBeTruthy()
+    expect(screen.getByText('Unlimited token allowance')).toBeTruthy()
     expect(screen.getByText(approval.data.message)).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Sign Permit Anyway' }))
+    await user.click(screen.getByRole('button', { name: 'Accept unlimited allowance' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
       req,

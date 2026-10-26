@@ -13,7 +13,8 @@ import {
   subscribeToTransactionFeeDraftSafety
 } from '../../../resources/domain/request'
 
-import RequestCommand, { accountCodeEvidenceReady } from './RequestCommand'
+import RequestCommand, { accountCodeEvidenceReady, getRequiredRequestApproval } from './RequestCommand'
+import TxApproval from './RequestCommand/TxApproval'
 import { parseWalletCallsDraft } from '../Account/Requests/WalletCallsRequest/adjustment'
 import { revokeLifecyclePresentation } from '../Account/Requests/Eip7702RevokeRequest'
 
@@ -63,6 +64,7 @@ export const canApproveWalletCalls = (
   simulationAcknowledged = false
 ) =>
   canDecideWalletCalls(req, actionRequestId, accountSignerType) &&
+  (req.approvals || []).every((approval) => approval.approved) &&
   (req.simulation?.status === 'succeeded' ||
     (Boolean(walletCallsSimulationWarning(req.simulation)) && simulationAcknowledged))
 
@@ -798,6 +800,16 @@ export class Footer extends React.Component {
             this.state.walletCallsActionId,
             account.lastSignerType
           )
+          const requiredApproval = canStartDecision && getRequiredRequestApproval(req)
+          if (requiredApproval) {
+            return (
+              <div className='requestNotice requestNoticeApproval'>
+                <div className='requestNoticeInner requestNoticeInnerApproval'>
+                  <TxApproval req={req} approval={requiredApproval} />
+                </div>
+              </div>
+            )
+          }
           return (
             <div className='requestApprove requestApproveLightweight walletCallsReviewActions'>
               <div className='requestActionContext' role='status'>
@@ -806,7 +818,6 @@ export class Footer extends React.Component {
                 </span>
                 <span className='requestActionContextCopy'>
                   <strong>Ready to submit</strong>
-                  <span>Review the ordered calls before submitting.</span>
                 </span>
               </div>
               <div className='requestActionButtons'>

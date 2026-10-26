@@ -1,0 +1,131 @@
+.accountView:has(.tokenApprovalsView) .accountViewMain
+  top 64px
+  left 0
+  right 0
+
+.accountViewScroll.tokenApprovalsView
+  padding 0
+  overflow-y auto
+
+.tokenApprovalsBody
+  padding 20px
+
+.tokenApprovalsToolbar,
+.tokenApprovalRow > header,
+.tokenApprovalActions,
+.tokenApprovalsPagination
+  display flex
+  align-items center
+  justify-content space-between
+  gap 16px
+
+.tokenApprovalsToolbar
+  margin-bottom 8px
+  color var(--wren-text-secondary)
+
+.tokenApprovalsList
+  list-style none
+  margin 0
+  padding 0
+
+.tokenApprovalRow
+  padding 20px 0
+  & + &
+    border-top 1px solid var(--wren-border-subtle)
+  > header
+    margin-bottom 12px
+    strong
+      font-size var(--wren-type-body)
+    > span
+      color var(--wren-text-muted)
+      font-size var(--wren-type-small)
+
+.tokenApprovalField
+  display grid
+  grid-template-columns 60px minmax(0, 1fr)
+  align-items center
+  gap 8px
+  > span
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+
+.tokenApprovalAddress
+  display flex
+  align-items center
+  justify-content space-between
+  gap 10px
+  min-height 44px
+  min-width 0
+  padding 6px 0
+  border 0
+  background transparent
+  color var(--wren-text-secondary)
+  text-align left
+  cursor pointer
+  > span
+    min-width 0
+    overflow-wrap anywhere
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-small)
+    line-height 18px
+  svg
+    flex-shrink 0
+  &:hover
+    color var(--wren-text-primary)
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 3px
+
+.tokenApprovalActions
+  margin-top 14px
+  align-items flex-end
+  > button
+    flex 0 0 auto
+
+.tokenApprovalLimit
+  min-width 0
+  display flex
+  flex-direction column
+  gap 6px
+  > span
+    color var(--wren-text-muted)
+    font-size var(--wren-type-small)
+  strong
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-body)
+    line-height 22px
+    overflow-wrap anywhere
+
+.tokenApprovalsAbout
+  margin-top 20px
+  color var(--wren-text-secondary)
+  summary
+    display list-item
+    cursor pointer
+    min-height 44px
+    align-content center
+  p
+    margin 4px 0 14px
+    font-size var(--wren-type-small)
+    line-height 20px
+
+.tokenApprovalsEmpty
+  margin 36px 0
+  color var(--wren-text-secondary)
+
+.tokenApprovalsError
+  color var(--wren-danger)
+  line-height 20px
+
+.tokenApprovalsPagination
+  margin-top 16px
+
+.accountApprovalsLink
+  width 100%
+  margin 8px 0 4px
+
+@media (max-width: 560px)
+  .tokenApprovalsBody
+    padding 12px
+  .tokenApprovalField
+    grid-template-columns 52px minmax(0, 1fr)

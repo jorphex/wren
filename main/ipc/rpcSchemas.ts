@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
 import { MINIMUM_PASSWORD_LENGTH } from '../../resources/domain/password'
+import {
+  MAX_OBSERVED_TOKEN_APPROVALS,
+  MAX_TOKEN_APPROVAL_REFRESH,
+  TokenApprovalViewSchema
+} from '../../resources/domain/tokenApprovals'
 
 const MAX_WIRE_VALUE = 16 * 1024 * 1024
 const MAX_SECRET = 4096
@@ -187,6 +192,25 @@ const ActionIdSchema = z
   .nullable()
 
 const rpcSchemas = {
+  getTokenApprovals: {
+    request: z.tuple([AddressSchema]),
+    response: result(z.array(TokenApprovalViewSchema).max(MAX_OBSERVED_TOKEN_APPROVALS))
+  },
+  refreshTokenApprovals: {
+    request: z.tuple([
+      AddressSchema,
+      z.array(z.string().regex(/^[0-9a-f]{64}$/)).max(MAX_TOKEN_APPROVAL_REFRESH)
+    ]),
+    response: result(z.array(TokenApprovalViewSchema).max(MAX_TOKEN_APPROVAL_REFRESH))
+  },
+  revokeTokenApproval: {
+    request: z.tuple([AddressSchema, z.string().regex(/^[0-9a-f]{64}$/)]),
+    response: result(TransactionRequestReferenceSchema)
+  },
+  clearTokenApprovals: {
+    request: z.tuple([AddressSchema]),
+    response: actionResult
+  },
   approveRequest: {
     request: z.union([
       z.tuple([ActionRequestReferenceSchema]),
@@ -215,7 +239,18 @@ const rpcSchemas = {
     response: actionResult
   },
   confirmRequestApproval: {
-    request: z.tuple([RequestReferenceSchema, ApprovalTypeSchema, z.object({}).strict()]),
+    request: z.tuple([
+      RequestReferenceSchema,
+      ApprovalTypeSchema,
+      z
+        .object({
+          consentFingerprint: z
+            .string()
+            .regex(/^[0-9a-f]{64}$/)
+            .optional()
+        })
+        .strict()
+    ]),
     response: actionResult
   },
   createAccount: {

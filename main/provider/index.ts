@@ -136,6 +136,7 @@ import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
 import type { NativeMaxTrustedMetadata } from '../send/max'
 import recentRecipientsRuntime from '../recentRecipients/runtime'
+import { recordSubmittedTokenApproval } from '../tokenApprovals/runtime'
 import type { DeploymentTrustedMetadata } from '../deployment'
 import { snapshotDeploymentMetadata } from '../deployment/metadata'
 
@@ -1159,6 +1160,7 @@ export class Provider extends EventEmitter {
             accounts,
             connection: this.connection,
             ledger: walletCallBatchLedger,
+            recordSubmittedApproval: recordSubmittedTokenApproval,
             evidenceAvailable: () => walletCallEvidenceRuntime.wake(),
             assertBeforeSign: () => {
               const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)

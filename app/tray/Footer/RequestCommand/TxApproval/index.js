@@ -37,7 +37,15 @@ const TxApproval = ({ req, approval }) => {
             type='button'
             className='_txActionButton _txActionButtonGood'
             onClick={() => {
-              link.rpc('confirmRequestApproval', req, approval.type, {}, () => {})
+              link.rpc(
+                'confirmRequestApproval',
+                req,
+                approval.type,
+                approval.data?.consentFingerprint
+                  ? { consentFingerprint: approval.data.consentFingerprint }
+                  : {},
+                () => {}
+              )
             }}
           >
             {confirmLabel}

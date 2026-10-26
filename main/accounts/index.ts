@@ -77,6 +77,7 @@ import operationLifecycleLedger from '../operationLifecycle'
 import operationLifecycleRuntime from '../operationLifecycle/runtime'
 import { operationLifecycleRpc } from '../operationLifecycle/rpc'
 import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
+import { recordSubmittedTokenApproval } from '../tokenApprovals/runtime'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 import recentRecipientsRuntime from '../recentRecipients/runtime'
@@ -1521,6 +1522,12 @@ export class Accounts extends EventEmitter {
       const approval = (request.approvals || []).find((a) => a.type === approvalType)
 
       if (approval) {
+        if (
+          typeof approval.data?.['consentFingerprint'] === 'string' &&
+          approvalData?.['consentFingerprint'] !== approval.data['consentFingerprint']
+        ) {
+          throw new Error('Approval changed. Review it again.')
+        }
         approval.approve(approvalData)
       }
     }
@@ -1590,6 +1597,7 @@ export class Accounts extends EventEmitter {
       permitReq.typedMessage.data.message.value = normalizedAmount
       permitReq.permit.value = normalizedAmount
       currentAccount.syncPermitApprovalRisk(permitReq)
+      currentAccount.syncSignatureApprovalRisk(permitReq)
       currentAccount.update()
       return true
     }
@@ -2753,6 +2761,15 @@ export class Accounts extends EventEmitter {
       }
     }
 
+    if (isSignatureRequest(storedRequest)) {
+      currentAccount.syncSignatureApprovalRisk(storedRequest)
+      if (storedRequest.type === 'signErc20Permit') currentAccount.syncPermitApprovalRisk(storedRequest)
+      if ((storedRequest.approvals || []).some((approval) => !approval.approved)) {
+        currentAccount.update()
+        throw new Error('Signature approvals changed. Review them again.')
+      }
+    }
+
     storedRequest.status = RequestStatus.Pending
 
     const signerType = currentAccount.lastSignerType
@@ -3184,6 +3201,9 @@ export class Accounts extends EventEmitter {
     }
     const lifecycle = this.admitTransactionLifecycle(context, hash, 'acknowledged')
     if (!lifecycle) return false
+    if (request?.type === 'transaction' && request.activityId === context.activityId) {
+      recordSubmittedTokenApproval(request.data, hash)
+    }
     const lateAcknowledgement =
       currentAccount &&
       request?.type === 'transaction' &&
