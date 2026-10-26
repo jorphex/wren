@@ -432,7 +432,7 @@ const ActivityRow = ({ entry, networkName, onOpen, originName, selected, nativeC
 }
 
 const DetailValue = ({ children, label, title }) => (
-  <div className='activityDetailValue'>
+  <div className={`activityDetailValue${label === 'Method' ? ' activityDetailMethod' : ''}`}>
     <dt>{label}</dt>
     <dd title={title}>{children}</dd>
   </div>

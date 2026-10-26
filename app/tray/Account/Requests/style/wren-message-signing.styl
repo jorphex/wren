@@ -25,9 +25,8 @@
 
   .typedDataReviewSummary
     display grid
-    min-height 108px
     padding 8px 6px 18px
-    grid-template-columns minmax(0, 1fr) 240px
+    grid-template-columns minmax(0, 1fr)
     align-items center
     gap var(--wren-space-6)
 
@@ -213,7 +212,7 @@
   .signingPermissionRow
     display grid
     padding 4px 6px
-    grid-template-columns 1fr 1fr 1fr
+    grid-template-columns repeat(2, minmax(0, 1fr))
     gap var(--wren-space-5)
 
     > div
@@ -221,7 +220,7 @@
 
     strong,
     small,
-    span
+    .signingAuthorityLabel
       display block
 
     strong
@@ -235,10 +234,12 @@
 
     .signingAuthorityCopy
       appearance none
-      display block
+      display flex
+      min-height 44px
       width 100%
       margin-top var(--wren-space-1)
       padding 0
+      align-items center
       border 0
       border-radius var(--wren-radius-sm)
       color var(--wren-accent-primary-hover)
@@ -263,6 +264,13 @@
       color var(--wren-text-muted)
       font-size var(--wren-type-caption)
       line-height 17px
+
+  .signingPermissionRow > div:first-child
+    grid-column 1 / -1
+
+  .signingTokenAmountFormatted
+    font-size var(--wren-type-body)
+    line-height 22px
 
   .signingAuthorityLabel
     color var(--wren-text-tertiary)

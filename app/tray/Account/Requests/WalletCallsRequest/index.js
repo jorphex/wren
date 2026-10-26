@@ -513,7 +513,7 @@ export class WalletCallsRequest extends React.Component {
                     )}
                   </div>
                   <div className='walletCallsCallMaximum'>
-                    <span>Maximum cost</span>
+                    <span>Maximum fee</span>
                     <strong>
                       {maximum === undefined ? '—' : formatNativeMaximum(maximum, decimals, symbol)}
                     </strong>
