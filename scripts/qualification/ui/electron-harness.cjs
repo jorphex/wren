@@ -638,6 +638,9 @@ const runScenario = async (scenario) => {
       fs.writeFileSync(screenshot, image.toPNG(), { mode: 0o600 })
     }
     return { ...scenario, audit, screenshot }
+  } catch (error) {
+    const errors = rendererErrors.get(window.webContents.id) || []
+    throw new Error(`${scenario.id}: ${error.message}${errors.length ? `; ${errors.join(' | ')}` : ''}`)
   } finally {
     stateByWebContents.delete(window.webContents.id)
     scenarioByWebContents.delete(window.webContents.id)

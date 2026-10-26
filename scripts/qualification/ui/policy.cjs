@@ -124,7 +124,7 @@ const RPC_WARNING_SCENARIOS = Object.freeze([
     variant: 'broad-token-approval',
     title: 'Broad Token Approval',
     message: 'Your RPC reports broad access.',
-    confirmLabel: 'Approve anyway'
+    confirmLabel: 'Accept token access'
   },
   {
     variant: 'existing-token-allowance',
@@ -437,7 +437,8 @@ const sendComposerScenarios = () =>
             kind: 'computed-style',
             selector: '.sendModeSwitch',
             property: 'borderTopWidth',
-            value: '1px'
+            minimum: 0.5,
+            maximum: 1
           },
           {
             kind: 'computed-style',
@@ -449,7 +450,8 @@ const sendComposerScenarios = () =>
             kind: 'computed-style',
             selector: '.sendInputWrap',
             property: 'borderTopWidth',
-            value: '1px'
+            minimum: 0.5,
+            maximum: 1
           },
           {
             kind: 'computed-style',
@@ -528,7 +530,8 @@ const sendComposerScenarios = () =>
             kind: 'computed-style',
             selector: '.sendInputWrap',
             property: 'borderTopWidth',
-            value: '1px'
+            minimum: 0.5,
+            maximum: 1
           },
           {
             kind: 'computed-style',
@@ -1056,8 +1059,7 @@ const reviewScenarios = () => [
       requiredText: [
         'Contracts',
         'Verify source',
-        'Solidity or Vyper standard JSON',
-        'Foundry or Hardhat build-info'
+        'Solidity / Vyper standard JSON · Foundry / Hardhat build-info'
       ]
     }))
   ),
@@ -1175,7 +1177,7 @@ const reviewScenarios = () => [
         'Uses your configured RPC',
         'Unknown function',
         '0x12345678',
-        'Configured-RPC simulation'
+        'Simulation'
       ]
     }))
   ),
@@ -1269,9 +1271,8 @@ const reviewScenarios = () => [
           : [],
       requiredControls: ['Edit and recheck', 'Review deployment'],
       requiredText: [
-        'PREPARED EVIDENCE',
-        'Keccak-256',
-        'Simulation is evidence only',
+        'Check results',
+        'Deployment details',
         'Provisional CREATE address',
         'Uses your configured RPC'
       ]
@@ -1374,7 +1375,6 @@ const reviewScenarios = () => [
     requiredControls: ['Cancel', 'Confirm revoke'],
     requiredText: [
       'Revoke access for https://treasury.workshop.example?',
-      'App connection ID 11111111-1111-4111-8111-111111111111',
       'Its guardrails will be removed, and it must request access again.'
     ]
   })),
@@ -1436,7 +1436,6 @@ const reviewScenarios = () => [
     requiredControls: ['Cancel', 'Confirm revoke'],
     requiredText: [
       'Revoke access for https://treasury.workshop.example?',
-      'App connection ID 11111111-1111-4111-8111-111111111111',
       'Its guardrails will be removed, and it must request access again.'
     ],
     layoutExpectations: [
@@ -2277,8 +2276,7 @@ const reviewScenarios = () => [
     requiredControls: ['Wallet activity notifications'],
     requiredText: [
       'Wallet activity notifications',
-      'Show private updates while Wren is hidden.',
-      'They never include app, account, network, amounts, addresses, call data, transaction hashes, or delegation details.'
+      'Show activity alerts while Wren is hidden. Wallet details stay private.'
     ],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-wallet-notifications'
@@ -2385,7 +2383,7 @@ const reviewScenarios = () => [
     action: { type: 'clickText', text: 'Restore backup' },
     ready: '[role="dialog"][aria-label="Inspect encrypted backup"]',
     requiredControls: ['Cancel', 'Choose backup to inspect'],
-    requiredText: ['Nothing is replaced yet', 'Backup password'],
+    requiredText: ['Choose a backup to preview before restoring.', 'Backup password'],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-recovery'
   },
@@ -2709,9 +2707,15 @@ const reviewScenarios = () => [
       },
       {
         kind: 'computed-style',
-        selector: '.accountPortfolioCard, .requestPreviewContent, .accountMainPerch .moduleHeader',
+        selector: '.accountPortfolioCard, .accountMainPerch .moduleHeader',
         property: 'paddingTop',
         value: '15px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.requestPreviewContent',
+        property: 'paddingTop',
+        value: '12px'
       },
       { kind: 'size', selector: '.balancesPreview .signerBalanceIcon', width: 32, height: 32 },
       {
@@ -2994,12 +2998,7 @@ const reviewScenarios = () => [
       text: 'Sign anyway',
       requestId: 'qualification-rpc-warning-revert'
     },
-    requiredText: [
-      'Ready for review',
-      'Verify on your signer before approving.',
-      'Decline',
-      'Sign transaction'
-    ],
+    requiredText: ['Ready for review', 'Decline', 'Sign transaction'],
     layoutExpectations: [
       { kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' },
       {
@@ -3070,7 +3069,14 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
-    requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
+    requiredControls: [
+      'Back',
+      'All',
+      'Transactions',
+      'Signatures',
+      'Connections',
+      'Clear activity for all accounts'
+    ],
     requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
     layoutExpectations: [
       ...WALLET_VIEW_CHROME,
@@ -3089,7 +3095,14 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
-    requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
+    requiredControls: [
+      'Back',
+      'All',
+      'Transactions',
+      'Signatures',
+      'Connections',
+      'Clear activity for all accounts'
+    ],
     requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
@@ -3100,10 +3113,13 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    action: { type: 'clickText', text: 'Clear activity' },
+    action: { type: 'clickText', text: 'Clear activity for all accounts' },
     ready: '[role="alertdialog"]',
-    requiredControls: ['Cancel', 'Clear history'],
-    requiredText: ['Clear activity history?', 'every account on this device', 'cannot be undone']
+    requiredControls: ['Cancel', 'Clear activity for all accounts'],
+    requiredText: [
+      'Clear activity for all accounts?',
+      'Also resets prior-use and lookalike address memory. Pending activity may reappear.'
+    ]
   },
   {
     id: 'tray-account-activity-lifecycle-full-1',
@@ -3158,7 +3174,8 @@ const reviewScenarios = () => [
         container: '.activityModuleExpanded',
         excludeScrollbar: true
       },
-      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT,
+      { kind: 'text-unclipped', selector: '.activityDetailMethod dd' }
     ]
   },
   {
@@ -3175,13 +3192,14 @@ const reviewScenarios = () => [
       'Transaction',
       'Details',
       'Action',
-      'Native value transfer',
+      'Contract call',
       'On-chain',
       'Succeeded'
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
-      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT,
+      { kind: 'text-unclipped', selector: '.activityDetailMethod dd' }
     ]
   },
   {
@@ -3209,7 +3227,8 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
-      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT,
+      { kind: 'text-unclipped', selector: '.activityDetailMethod dd' }
     ]
   },
   {
@@ -4196,6 +4215,134 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const defaultScenarios = [
     ...scenarios,
+    ...INTERFACE_SCALES.flatMap((scale) =>
+      [
+        ['full', FULL_SHELL_HEIGHT],
+        ['short', SHORT_SHELL_HEIGHT]
+      ].map(([geometry, logicalHeight]) => ({
+        id: `tray-account-approvals-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'account-approvals',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.tokenApprovalRow',
+        requiredControls: [
+          'Back',
+          'Refresh',
+          'Revoke TST approval',
+          'Copy spender address',
+          'About this list'
+        ],
+        requiredText: ['Approvals', '1.000000000000000001 TST', 'Unavailable', 'Spender'],
+        layoutExpectations: [
+          { kind: 'text-unclipped', selector: '.tokenApprovalLimit' },
+          { kind: 'text-unclipped', selector: '.tokenApprovalAddress' }
+        ]
+      }))
+    ),
+    {
+      id: 'tray-account-approvals-private-short-1.5',
+      renderer: 'tray',
+      state: 'account-approvals',
+      approvalsPrivacy: true,
+      scale: 1.5,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.tokenApprovalRow',
+      requiredText: ['Amount hidden'],
+      layoutExpectations: [{ kind: 'hidden', selector: '.tokenApprovalAmount' }]
+    },
+    {
+      id: 'tray-account-approvals-empty-full-1',
+      renderer: 'tray',
+      state: 'account-approvals',
+      approvalsEmpty: true,
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.tokenApprovalsEmpty',
+      requiredText: ['No observed token approvals'],
+      requiredControls: ['Back', 'Refresh', 'About this list']
+    },
+    ...INTERFACE_SCALES.flatMap((scale) =>
+      ['full', 'short'].map((geometry) => ({
+        id: `tray-permit2-authority-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'signature-typed-data-review',
+        authorityReview: 'permit2',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: geometry === 'full' ? FULL_SHELL_HEIGHT : SHORT_SHELL_HEIGHT,
+        ready: '.signingPermissionRow',
+        requiredControls: ['Back', 'Copy Permit2 spender address', 'Decline', 'Sign message'],
+        requiredText: [
+          'Authorize token spending',
+          '1.000000000000000001 TST',
+          'Amount in base units',
+          '42',
+          'Signed data'
+        ],
+        layoutExpectations: [
+          ...WALLET_VIEW_CHROME,
+          ...FOCUSED_WINDOW_SURFACE,
+          { kind: 'viewport-bottom', selector: '.requestApproveSignature' },
+          { kind: 'text-unclipped', selector: '.signingPermissionRow strong' },
+          {
+            kind: 'contained',
+            selector: '.signingPermissionRow:first-child .signingTokenAmountFormatted',
+            container: '.accountViewScroll'
+          }
+        ]
+      }))
+    ),
+    ...['full', 'short'].flatMap((geometry) =>
+      [1, 1.5].map((scale) => ({
+        id: `tray-erc3009-authority-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'signature-typed-data-review',
+        authorityReview: 'eip3009',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: geometry === 'full' ? FULL_SHELL_HEIGHT : SHORT_SHELL_HEIGHT,
+        ready: '.signingTokenAmountFormatted',
+        requiredText: ['Authorize token transfer', '1.000000000000000001 TST', 'Signed data'],
+        requiredControls: ['Back', 'Copy recipient address', 'Decline', 'Sign message'],
+        layoutExpectations: [
+          { kind: 'contained', selector: '.signingTokenAmountFormatted', container: '.accountViewScroll' },
+          { kind: 'text-unclipped', selector: '.simpleJsonCopyValue' }
+        ]
+      }))
+    ),
+    {
+      id: 'tray-erc3009-extra-domain-full-1',
+      renderer: 'tray',
+      state: 'signature-typed-data-review',
+      authorityReview: 'eip3009-extra-domain',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.signingTokenAmountFormatted',
+      requiredText: ['Domain', 'salt', 'Message: TransferWithAuthorization'],
+      layoutExpectations: [{ kind: 'hidden', selector: '.signingRawDisclosureBody' }]
+    },
+    {
+      id: 'tray-permit2-wrong-chain-full-1',
+      renderer: 'tray',
+      state: 'signature-typed-data-review',
+      authorityReview: 'wrong-chain',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.signingPermissionRow',
+      requiredControls: ['Back', 'Decline', 'Sign message'],
+      requiredText: [
+        'Domain chain 8453 does not match request chain 1.',
+        '1000000000000000001',
+        'Amount in base units'
+      ],
+      layoutExpectations: [{ kind: 'hidden', selector: '.signingTokenAmountFormatted' }]
+    },
     ...['full', 'short'].map((geometry) => ({
       id: `tray-receive-${geometry}-1`,
       renderer: 'tray',
@@ -4224,9 +4371,13 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
   if (includeReview) {
-    const base = selected.find(scenario => scenario.id === 'tray-account-activity-full-1')
-    selected.push({...base, id: 'tray-account-external-activity-full-1', externalActivity: true,
-      requiredText: ['Received assets', 'Approve', 'Deposit', 'Outside Wren', 'Ethereum']})
+    const base = selected.find((scenario) => scenario.id === 'tray-account-activity-full-1')
+    selected.push({
+      ...base,
+      id: 'tray-account-external-activity-full-1',
+      externalActivity: true,
+      requiredText: ['Received assets', 'Approve', 'Deposit', 'Outside Wren', 'Ethereum']
+    })
   }
   if (includeReview) {
     for (const removing of [false, true]) {

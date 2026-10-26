@@ -269,7 +269,13 @@ const auditPage = async ({
     } else if (expectation.kind === 'computed-style') {
       for (const element of elements) {
         const actual = getComputedStyle(element)[expectation.property]
-        if (actual !== expectation.value) {
+        const matches =
+          expectation.minimum === undefined
+            ? actual === expectation.value
+            : /^\d+(?:\.\d+)?px$/u.test(actual) &&
+              Number.parseFloat(actual) >= expectation.minimum &&
+              Number.parseFloat(actual) <= expectation.maximum
+        if (!matches) {
           violations.push({
             kind: 'required-layout',
             detail: `${expectation.selector} has ${expectation.property} ${actual}; expected ${expectation.value}`
