@@ -9,7 +9,10 @@ import { Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/C
 import { DisplayValue } from '../../../../../../resources/Components/DisplayValue'
 import RequestHeader from '../../../../../../resources/Components/RequestHeader'
 import BigNumber from 'bignumber.js'
-import { isBroadTokenAuthorityEffect } from '../../../../../../resources/domain/transaction/effects'
+import {
+  hasSimulationEffects,
+  isBroadTokenAuthorityEffect
+} from '../../../../../../resources/domain/transaction/effects'
 import { summarizeAccessList } from '../../../../../../resources/domain/transaction/accessList'
 import { transactionAccountCodeEvidence } from '../ViewData/effects'
 
@@ -22,7 +25,7 @@ const SimpleContractCallOverview = ({ method }) => {
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 export const getExpectedAssetChanges = (simulation, account) => {
-  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return []
+  if (!hasSimulationEffects(simulation)) return []
   const selected = account?.toLowerCase()
   if (!selected) return []
   return (simulation.effects || []).filter(
@@ -387,7 +390,7 @@ export function getAdvancedChecksPresentation(simulation) {
 }
 
 export function getSimulationEffectsPresentation(simulation, account) {
-  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return null
+  if (!hasSimulationEffects(simulation)) return null
 
   const effects = simulation.effects || []
   if (!effects.length && !simulation.effectsTruncated) return null

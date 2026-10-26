@@ -770,7 +770,7 @@ const responsiveTransactionRequest = (variant) => {
       signature: 'transfer(address,uint256)',
       source: 'bundled-selector-directory'
     }
-  } else if (variant === 'asset-changes') {
+  } else if (variant === 'asset-changes' || variant === 'trace-asset-changes') {
     const token = '0x3333333333333333333333333333333333333333'
     request.data.to = token
     request.data.value = '0x0'
@@ -794,6 +794,18 @@ const responsiveTransactionRequest = (variant) => {
         amount: '1000000000000000000'
       }
     ]
+    if (variant === 'trace-asset-changes') {
+      request.simulation.source = 'eth_call'
+      request.simulation.effectsEvidence = {
+        source: 'debug_traceCall',
+        blockHash: `0x${'ab'.repeat(32)}`,
+        blockNumber: '0x123'
+      }
+      request.simulation.executionBlock = {
+        hash: request.simulation.effectsEvidence.blockHash,
+        number: '0x123'
+      }
+    }
     request.simulation.nativeBalanceChanges = {
       status: 'succeeded',
       source: 'debug_traceCall',
@@ -2687,7 +2699,7 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.main.origins = { workshop: { name: 'workshop.example' } }
-    if (scenario.variant === 'asset-changes') {
+    if (scenario.variant === 'asset-changes' || scenario.variant === 'trace-asset-changes') {
       state.main.balances[QUALIFICATION_ACCOUNT] = [
         {
           chainId: 1,

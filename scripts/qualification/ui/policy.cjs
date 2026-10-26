@@ -1842,6 +1842,31 @@ const reviewScenarios = () => [
       }
     ]
   },
+  ...INTERFACE_SCALES.flatMap((scale) => [
+    {
+      id: `tray-transaction-trace-summary-full-${scale}`,
+      renderer: 'tray',
+      state: 'transaction-responsive',
+      variant: 'trace-asset-changes',
+      scale,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.transactionReviewAssetChanges',
+      requiredText: ['Estimated changes', 'Wrapped Ether', '1 WETH']
+    },
+    {
+      id: `tray-transaction-trace-details-full-${scale}`,
+      renderer: 'tray',
+      state: 'transaction-responsive',
+      variant: 'trace-asset-changes',
+      viewData: true,
+      scale,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.simulationEffectsNotice',
+      requiredText: ['Token effects', 'RPC trace · Block 291']
+    }
+  ]),
   {
     id: 'tray-transaction-approval-full-1',
     renderer: 'tray',

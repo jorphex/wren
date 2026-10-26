@@ -69,6 +69,58 @@ const TxRecipient = Restore.connect(TxRecipientComponent, store)
 
 const account = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
 
+describe('trace-backed fallback preview', () => {
+  const token = '0x2222222222222222222222222222222222222222'
+  const simulation = {
+    status: 'succeeded',
+    source: 'eth_call',
+    effectsEvidence: { source: 'debug_traceCall', blockHash: `0x${'ab'.repeat(32)}`, blockNumber: '0x123' },
+    effects: [
+      { type: 'transfer', standard: 'erc20', token, from: account.toLowerCase(), to: token, amount: '7' },
+      {
+        type: 'approval',
+        standard: 'erc20',
+        token,
+        owner: account.toLowerCase(),
+        spender: token,
+        amount: ((1n << 256n) - 1n).toString()
+      }
+    ]
+  }
+
+  it('shows reported transfers and broad approvals in the existing summary', () => {
+    expect(getExpectedAssetChanges(simulation, account)).toEqual([simulation.effects[0]])
+    expect(getSimulationEffectsPresentation(simulation, account)).toEqual({
+      broadApproval: true,
+      truncated: false
+    })
+    render(
+      <BalanceChanges
+        account={account}
+        req={{ classification: 'CONTRACT_CALL', data: { value: '0x0' } }}
+        simulation={simulation}
+        symbol='ETH'
+        tokenFor={() => ({ decimals: 0, symbol: 'TEST' })}
+      />
+    )
+    expect(screen.getByText('You send')).toBeTruthy()
+  })
+
+  it('identifies the RPC trace and block in technical details', () => {
+    render(<SimulationEffects account={account} simulation={simulation} />)
+    expect(screen.getByText(/RPC trace · Block 291/)).toBeTruthy()
+    expect(screen.getByText(/Unlimited/)).toBeTruthy()
+  })
+
+  it('does not present unsourced eth_call events as usable evidence', () => {
+    const unsourced = { ...simulation, effectsEvidence: undefined }
+    expect(getExpectedAssetChanges(unsourced, account)).toEqual([])
+    expect(getSimulationEffectsPresentation(unsourced, account)).toBeNull()
+    const { container } = render(<SimulationEffects account={account} simulation={unsourced} />)
+    expect(container.textContent).toBe('')
+  })
+})
+
 function addRequest(req, activeRequestId) {
   const currentRequestId = arguments.length > 1 ? activeRequestId : req.handlerId
   store.updateAccount({

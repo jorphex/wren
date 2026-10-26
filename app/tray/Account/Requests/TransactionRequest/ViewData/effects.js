@@ -1,5 +1,6 @@
 import { SimpleJSON } from '../../../../../../resources/Components/SimpleTypedData'
-import { MAX_UINT256 } from '../../../../../../resources/domain/transaction/quantity'
+import { MAX_UINT256, parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
+import { hasSimulationEffects } from '../../../../../../resources/domain/transaction/effects'
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const MAX_UINT256_DECIMAL = MAX_UINT256.toString(10)
@@ -74,14 +75,17 @@ export const getEffectPresentation = (effect, account) => {
 }
 
 export const SimulationEffects = ({ account, simulation }) => {
-  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return null
+  if (!hasSimulationEffects(simulation)) return null
 
   const effects = simulation.effects || []
+  const block = parseRpcQuantity(simulation.effectsEvidence?.blockNumber)
   return (
     <div className='txViewData'>
       <div className='txViewDataHeader'>Token effects</div>
       <div className='simulationEffectsNotice' role='note'>
-        Reported by your RPC simulation. The preview may be incomplete.
+        {simulation.effectsEvidence?.source === 'debug_traceCall'
+          ? `RPC trace${block !== undefined ? ` · Block ${block}` : ''}`
+          : 'Reported by your RPC simulation. The preview may be incomplete.'}
       </div>
       {effects.length ? (
         effects.map((effect, index) => {
