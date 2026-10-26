@@ -51,6 +51,10 @@ feature. Wren-specific display qualification remains separate from the signing
 tests above. See the [investigation and proposed checks](TREZOR_CLEAR_SIGNING.md)
 and [vendor coverage](https://trezor.io/guides/sending-receiving-staking-funds/interacting-with-smart-contracts/clear-signing-on-trezor).
 
+Connect 10.0.1 sends v1 external metadata; Model One firmware 1.14.2 or later
+requires v2. Built-in metadata can bypass this path. Compatibility work for
+external metadata remains pending; see the investigation above.
+
 The following physical results apply to earlier builds.
 
 The pre-separation `0.8.0` qualification covered fresh Safe 7 pairing, full
