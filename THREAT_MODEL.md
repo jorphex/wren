@@ -251,6 +251,13 @@ request and depends on firmware, vendor libraries, and USB drivers. Blind or
 incomplete displays are risky. Claims require physical-device evidence in
 [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md).
 
+During Ethereum transaction signing, Trezor Connect can fetch signed definitions
+from `data.trezor.io`. Lookups can disclose IP address, chain ID, target/token
+address, and function selector. They omit amounts, full calldata, and private keys.
+Metadata and contract display coverage depend on firmware and the vendor registry.
+See the
+[clear-signing investigation](TREZOR_CLEAR_SIGNING.md).
+
 ### Renderer and IPC
 
 #### Renderer isolation
