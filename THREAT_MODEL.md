@@ -217,7 +217,7 @@ envelopes over an explicit recovery allowlist. They include configuration,
 validated contacts and their provenance, and validated encrypted
 software-signer records, but exclude activity, address-safety memory, pending
 work, runtime observations, caches, installed dapp content, and Companion
-credentials; hardware devices keep their keys. Export writes a new mode-`0600`
+credentials and observed token approvals; hardware devices keep their keys. Export writes a new mode-`0600`
 regular file. When OS-backed device protection is enabled, export first
 verifies the all-or-nothing local policy and removes only that outer layer in
 main memory; the backup contains the original password-encrypted signer record
@@ -400,6 +400,25 @@ The policy can change between user review and signing, so Wren rechecks at the
 signer boundary and stops remaining sequential calls on drift. A
 user-initiated Cancel is exempt so a dapp policy cannot trap transaction
 recovery; Speed Up remains constrained.
+
+#### Observed token approvals
+
+Wren retains at most 500 locally observed ERC-20 approval pairs for one year.
+Each record holds the account, chain, token, spender, submission hash, and time.
+It does not retain the approved amount or calldata. Records stay out of renderer
+bootstrap state, profile backups, and diagnostics. Removing an account or using
+**Forget observed approvals** removes its records.
+
+The account view reads allowances through the configured RPC, at most 20 pairs
+per refresh with four concurrent reads and a five-second deadline. Results stay
+in memory for one minute. Missing, malformed, or failed replies remain unavailable;
+they are not treated as zero. Canonical execution and reorg evidence triggers a
+new check. Late replies cannot restore cleared history or overwrite a newer check.
+
+Revocation rechecks the selected account and allowance, then queues the exact
+token's `approve(spender, 0)` through normal transaction review. It does not sign,
+broadcast, or retry automatically. RPC evidence does not prove token semantics.
+The list does not discover older approvals, NFT authority, or signed permits.
 
 #### Account activity monitoring
 

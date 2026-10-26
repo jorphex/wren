@@ -47,6 +47,17 @@ notifications** in Settings to turn them off. Alerts omit amounts and addresses.
 Internal-call traces and historical activity from before monitoring began are outside
 this first version.
 
+## Token approvals
+
+Open **Approvals** from the account screen. Wren lists token approvals submitted
+through Wren and checks current allowances through your configured RPC. **Revoke**
+opens a zero-allowance transaction for normal review and signing.
+
+The list covers locally observed ERC-20 approval calls. Earlier approvals, NFT
+approvals, and signed permits are not included. Records stay on this device for
+up to a year, with a limit of 500. They are excluded from profile backups.
+**Forget observed approvals** clears the list without changing onchain allowances.
+
 ## Support
 
 Wren 0.1.11 works with Wren Companion 0.1.3 over pairing protocol 3.

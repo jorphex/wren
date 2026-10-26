@@ -6,6 +6,10 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Added an account Approvals list with current RPC allowances and reviewed revocation.
+- Bound broad-approval consent to the reviewed request. Detected unlimited and NFT operator approvals in call batches even without simulation.
+- Showed exact local token units in known Permit2 and ERC-3009 reviews. Grouped raw signed fields under Signed data when the summary is complete.
+- Improved signing review spacing, address controls, and fee labels.
 - Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
 - Updated commit checks and HTTP caching to remove vulnerable dependency paths.
 - Updated Electron, Trezor, Ledger, WebSocket support, and development tools.
