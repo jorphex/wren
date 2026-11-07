@@ -1207,7 +1207,7 @@ const reviewScenarios = () => [
                 kind: 'computed-style',
                 selector: '.deploymentActionShelf',
                 property: 'backgroundColor',
-                value: 'rgb(9, 12, 10)'
+                value: 'rgba(0, 0, 0, 0)'
               }
             ]
           : []),
@@ -1252,7 +1252,6 @@ const reviewScenarios = () => [
       ready: '.deploymentEvidence',
       captureScroll: 'target',
       captureScrollSelector: '.deploymentEvidence',
-      captureScrollOffset: -80,
       layoutExpectations:
         geometry === 'short'
           ? [
@@ -1260,7 +1259,7 @@ const reviewScenarios = () => [
                 kind: 'computed-style',
                 selector: '.deploymentActionShelf',
                 property: 'backgroundColor',
-                value: 'rgb(9, 12, 10)'
+                value: 'rgba(0, 0, 0, 0)'
               }
             ]
           : [],
@@ -2047,7 +2046,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address'],
+    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address', 'Create private key'],
     requiredText: ['Add account', 'Advanced']
   },
   {
@@ -2061,14 +2060,14 @@ const reviewScenarios = () => [
       type: 'sequence',
       steps: [
         { type: 'inputLabel', label: 'Create password', value: 'aaaaaaaa', delayMs: 650 },
-        { type: 'clickCheckboxText', text: 'I understand this password may be easy to guess.' }
+        { type: 'clickCheckboxText', text: 'I understand this password may be weak.' }
       ]
     },
     ready: '.addAccountItemOptionPasswordConsent',
     requiredControls: ['Continue'],
     requiredText: [
       'Repeats like "aaa" are easy to guess',
-      'I understand this password may be easy to guess.'
+      'I understand this password may be weak.'
     ],
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.addAccountItemOptionSetupFrame[aria-hidden="false"]' }
@@ -4590,6 +4589,24 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       requiredText: ['Batch settings', 'Nonce']
     })
   }
+  if (includeReview) {
+    for (const [geometry, scale, logicalHeight] of [['full', 1, FULL_SHELL_HEIGHT], ['short', 1.5, SHORT_SHELL_HEIGHT]]) {
+      const base = selected.find((scenario) => scenario.id === 'tray-transaction-approval-full-1')
+      selected.push({ ...base, id: `tray-transaction-approval-named-${geometry}-${scale}`, scale, logicalHeight, namedSpender: true,
+        requiredText: [...base.requiredText, 'SwapRouter', 'sourcify'] })
+    }
+    for (const authority of ['permit2', 'erc3009']) {
+      for (const geometry of ['full', 'short']) {
+        for (const scale of [1, 1.5]) {
+          const base = selected.find((scenario) => scenario.id === `tray-${authority}-authority-${geometry}-${scale}`)
+          selected.push({ ...base, id: `tray-${authority}-rpc-metadata-${geometry}-${scale}`, rpcMetadata: true,
+            requiredText: authority === 'permit2' ? ['USDC', '1.000001', 'USDT', '0.000042', 'SwapRouter', 'sourcify'] : ['1.000001 USDC'],
+            requiredControls: [...(base.requiredControls || [])]
+          })
+        }
+      }
+    }
+  }
   const disclosures = includeReview
     ? [
         [
@@ -4628,7 +4645,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           ['Submit directly with API key'],
           ['Encoded constructor arguments']
         ],
-        ['dash-account-chooser-full-1', ['Advanced'], ['Create private key'], ['Advanced']],
+
         ['dash-add-token-details-full-1', [], ['Decimals', 'Logo URI'], []]
       ].map(([id, summaries, requiredControls, requiredText]) => {
         const base = selected.find((scenario) => scenario.id === id)
@@ -4649,6 +4666,29 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     : []
   return [...selected, ...disclosures].map((scenario) => {
     const layout = [...(scenario.layoutExpectations || [])]
+    if (scenario.state?.startsWith('account-add-') || scenario.state?.startsWith('account-create-')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.addAccountItemTopTitle', container: '.dash', tolerance: 1 })
+    }
+    if (scenario.id.includes('account-verify-phrase')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.generatedWalletVerifyField .wrenInputGroup', container: '.generatedWalletVerifyField', tolerance: 1 })
+    }
+    if (scenario.id.includes('account-create-private-key')) {
+      layout.push({ kind: 'computed-style', selector: '.generatedWalletFrameBody', property: 'scrollbarWidth', value: 'auto' })
+    }
+    if (scenario.id.includes('settings-recent-clear')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay', tolerance: 1 })
+      layout.push({ kind: 'contained', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay' })
+    }
+    if (['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)) {
+      layout.push({ kind: 'centered-horizontal', selector: '.txLifecycleStepMarker svg', container: '.txLifecycleStepMarker', tolerance: 0.5 })
+    }
+    if (scenario.state === 'account-home') {
+      layout.push({ kind: 'contained', selector: '.accountPortfolioActions button', container: '.accountPortfolioCard' })
+    }
+    if (scenario.id.includes('dash-token-expanded') || scenario.id.includes('dash-token-removal')) {
+      layout.push({ kind: 'computed-style', selector: '.customTokensListItemExpanded', property: 'backgroundColor', value: 'rgba(0, 0, 0, 0)' })
+    }
+
     if (['account-add-seed', 'account-add-watch'].includes(scenario.state)) {
       layout.push({
         kind: 'centered-horizontal',

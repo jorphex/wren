@@ -273,7 +273,7 @@ const clickText = async (webContents, text) => {
     `(() => {
       const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
-          button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden' && (button.innerText.trim() === ${JSON.stringify(text)} ||
+          !button.disabled && button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden' && (button.innerText.trim() === ${JSON.stringify(text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(text)})
       )
       if (!target) return false
@@ -397,8 +397,8 @@ const performAction = async (webContents, action) => {
       webContents,
       `Array.from(document.querySelectorAll('button, summary')).some(
         (button) =>
-          button.innerText.trim() === ${JSON.stringify(action.text)} ||
-          button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
+          !button.disabled && (button.innerText.trim() === ${JSON.stringify(action.text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(action.text)})
       )`
     )
     await clickText(webContents, action.text)
@@ -674,6 +674,20 @@ const main = async () => {
   app.setPath('userData', path.join(runRoot, 'profile'))
   app.setPath('temp', path.join(runRoot, 'tmp'))
   installIsolation()
+
+  // Mirror the production ResizeObserver update for the gas module. Fixed
+  // fixture heights otherwise leave obsolete narrow-layout space or clip details.
+  ipcMain.on('tray:action', (event, action, id, update) => {
+    if (action !== 'updateAccountModule' || id !== 'chains' || !Number.isFinite(update?.height)) return
+    const state = stateByWebContents.get(event.sender.id)
+    const module = state?.panel?.account?.modules?.chains
+    if (!module || module.height === update.height) return
+    module.height = update.height
+    event.sender.send('main:action', 'stateSync', JSON.stringify([{
+      name: 'qualification-gas-module-size', count: 1, deferred: false,
+      updates: [{ path: 'panel.account.modules.chains.height', value: update.height }]
+    }]))
+  })
 
   ipcMain.on('nav:update', (event, windowId, crumb, navigate = true) => {
     const scenario = scenarioByWebContents.get(event.sender.id)

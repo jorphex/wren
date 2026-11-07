@@ -136,7 +136,7 @@ const auditPage = async ({
         if (fails)
           violations.push({
             kind: 'required-layout',
-            detail: `${expectation.selector} is not ${expectation.kind} in ${expectation.container}`
+            detail: `${expectation.selector} is not ${expectation.kind} in ${expectation.container}: inner ${inner.left},${inner.top} ${inner.width}x${inner.height}; outer ${outer.left},${outer.top} ${outer.width}x${outer.height}; transform ${getComputedStyle(element).transform}; container display ${getComputedStyle(container).display}, padding ${getComputedStyle(container).padding}, columns ${getComputedStyle(container).gridTemplateColumns}, gap ${getComputedStyle(container).gap}, justify ${getComputedStyle(container).justifyItems}`
           })
       }
     } else if (expectation.kind === 'full-width') {

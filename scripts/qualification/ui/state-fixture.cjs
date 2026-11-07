@@ -460,7 +460,7 @@ const permitReviewRequest = () => ({
     }
   },
   permit: {
-    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract' },
+    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract', contractName: 'SwapRouter', contractSource: 'sourcify' },
     verifyingContract: {
       address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
       ens: '',
@@ -1910,7 +1910,7 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.panel.account.moduleOrder = ['chains']
-    state.panel.account.modules.chains.height = scenario.logicalWidth <= 540 ? 108 : 56
+    state.panel.account.modules.chains.height = 66
   }
 
   if (scenario.state === 'account-empty-perch') {
@@ -2387,6 +2387,24 @@ const fixtureFor = (scenario) => {
           : scenario.state === 'add-chain-review'
             ? addChainReviewRequest()
             : addTokenReviewRequest()
+    if (scenario.rpcMetadata) {
+      const token = request.context.eip3009?.verifyingContract || request.context.permit2.permissions[0].token
+      const amount = '1000001'
+      if (request.context.eip3009) {
+        request.context.eip3009.value = amount
+        request.typedMessage.data.message.value = amount
+      } else {
+        request.context.permit2.permissions[0].amount = amount
+        request.typedMessage.data.message.details[0].amount = amount
+      }
+      request.signingMetadata = {
+        tokens: (request.context.permit2?.permissions.map(({ token }) => token) || [token]).map((address, index) => ({ address, chainId: 1, symbol: index ? 'USDT' : 'USDC', name: index ? 'Tether USD' : 'USD Coin', decimals: 6 })),
+        ...(request.context.permit2 ? { spender: {
+          address: request.context.permit2.spender.toLowerCase(),
+          contractName: 'SwapRouter', contractSource: 'sourcify'
+        }} : {})
+      }
+    }
     prepareSelectedAccount(state, request)
     state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'ledger'
     const { metadata, networks } = accountHomeNetworks()
@@ -2694,6 +2712,11 @@ const fixtureFor = (scenario) => {
 
   if (scenario.state === 'transaction-responsive') {
     const request = responsiveTransactionRequest(scenario.variant)
+    if (scenario.namedSpender) {
+      Object.assign(request.recognizedActions[0].data.spender, {
+        contractName: 'SwapRouter', contractSource: 'sourcify'
+      })
+    }
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
