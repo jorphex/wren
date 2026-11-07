@@ -204,6 +204,12 @@ function validateTypeDefinitions(value: unknown): TypeDefinitions {
       if (!isValidFieldType(field.type, types)) {
         throw invalidParams(`typed data field ${typeName}.${field.name} has invalid type ${field.type}`)
       }
+      const baseType = referencedType(field.type)
+      // The signing encoder truncates namespaced dependency names. Flat primary
+      // messages hash correctly, but nested structs can omit signed type definitions.
+      if (HYPERLIQUID_TYPE.test(baseType) || (HYPERLIQUID_TYPE.test(typeName) && !isAtomicType(baseType))) {
+        throw invalidParams('namespaced typed data types cannot use nested structs')
+      }
     }
   }
 
