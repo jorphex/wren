@@ -214,7 +214,7 @@ const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
     'Verify the full address. Its first and last four characters match a destination you used before.'
   ],
   layoutExpectations:
-    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' }] : []
+    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }] : []
 })
 
 const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
@@ -225,9 +225,10 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
   logicalWidth: 620,
   logicalHeight,
   ready: '.requestApproveTransaction .requestSign:not(:disabled)',
+  action: { type: 'clickText', text: 'Advanced details' },
   requiredControls: [
     'View transaction data',
-    'Copy transaction sender address',
+    'Copy signing account address',
     'Copy deployment initcode hash',
     'Copy provisional deployment address',
     'Adjust',
@@ -246,7 +247,7 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
     'may change before signing'
   ],
   layoutExpectations:
-    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' }] : []
+    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }] : []
 })
 
 const joinedCanvasScenarios = () => [
@@ -839,13 +840,7 @@ const reviewScenarios = () => [
     logicalHeight,
     ready: '.walletCallsReview',
     requiredControls: ['Adjust', 'Decline', 'Submit batch'],
-    requiredText: [
-      '1 ORDERED CALL',
-      'Submit one transaction?',
-      'Batch context',
-      'Total maximum network fees',
-      'Ready to submit'
-    ],
+    requiredText: ['1 transaction', 'Sequential execution', 'Maximum network fees', 'Signing with'],
     layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
   })),
   {
@@ -1212,7 +1207,7 @@ const reviewScenarios = () => [
                 kind: 'computed-style',
                 selector: '.deploymentActionShelf',
                 property: 'backgroundColor',
-                value: 'rgb(9, 12, 10)'
+                value: 'rgba(0, 0, 0, 0)'
               }
             ]
           : []),
@@ -1257,7 +1252,6 @@ const reviewScenarios = () => [
       ready: '.deploymentEvidence',
       captureScroll: 'target',
       captureScrollSelector: '.deploymentEvidence',
-      captureScrollOffset: -80,
       layoutExpectations:
         geometry === 'short'
           ? [
@@ -1265,7 +1259,7 @@ const reviewScenarios = () => [
                 kind: 'computed-style',
                 selector: '.deploymentActionShelf',
                 property: 'backgroundColor',
-                value: 'rgb(9, 12, 10)'
+                value: 'rgba(0, 0, 0, 0)'
               }
             ]
           : [],
@@ -1822,7 +1816,7 @@ const reviewScenarios = () => [
         kind: 'computed-style',
         selector: '.transactionReviewAssetChange',
         property: 'minHeight',
-        value: '32px'
+        value: '62px'
       },
       {
         kind: 'computed-style',
@@ -1876,43 +1870,28 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewMain',
-    requiredText: ['Approve', '890', 'USDC', 'Token approval', 'Spend limit', 'Spender'],
+    requiredText: [
+      'Allow token spending',
+      '890',
+      'USDC',
+      'Spend limit',
+      'Spender',
+      'Token contract',
+      'Signing with'
+    ],
     layoutExpectations: [
       {
-        kind: 'computed-style',
-        selector: '.transactionReviewApprovalSummary',
-        property: 'flexWrap',
-        value: 'nowrap'
-      },
-      {
-        kind: 'computed-style',
-        selector: '.transactionReviewMainApproval ._txDescription',
-        property: 'minHeight',
-        value: '72px'
-      },
-      {
-        kind: 'aligned-left',
-        selector: '.transactionReviewApprovalSpender .clusterAddressRecipient',
-        with: '.transactionReviewApprovalLimit strong'
-      },
-      {
-        kind: 'computed-style',
-        selector: '.transactionReviewApprovalSpender .clusterAddressRecipient',
-        property: 'justifyContent',
-        value: 'flex-start'
-      },
-      {
-        kind: 'computed-style',
+        kind: 'contained',
         selector: '.transactionReviewApprovalLimit',
-        property: 'minHeight',
-        value: '48px'
+        container: '.transactionReviewTokenApproval'
       },
       {
-        kind: 'computed-style',
+        kind: 'contained',
         selector: '.transactionReviewApprovalSpender',
-        property: 'minHeight',
-        value: '48px'
-      }
+        container: '.transactionReviewTokenApproval'
+      },
+      { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
+      { kind: 'hidden', selector: '.signingReviewDetails:not([open]) .transactionNonceButton' }
     ]
   },
   {
@@ -2067,7 +2046,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address'],
+    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address', 'Create private key'],
     requiredText: ['Add account', 'Advanced']
   },
   {
@@ -2081,14 +2060,14 @@ const reviewScenarios = () => [
       type: 'sequence',
       steps: [
         { type: 'inputLabel', label: 'Create password', value: 'aaaaaaaa', delayMs: 650 },
-        { type: 'clickCheckboxText', text: 'I understand this password may be easy to guess.' }
+        { type: 'clickCheckboxText', text: 'I understand this password may be weak.' }
       ]
     },
     ready: '.addAccountItemOptionPasswordConsent',
     requiredControls: ['Continue'],
     requiredText: [
       'Repeats like "aaa" are easy to guess',
-      'I understand this password may be easy to guess.'
+      'I understand this password may be weak.'
     ],
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.addAccountItemOptionSetupFrame[aria-hidden="false"]' }
@@ -2976,7 +2955,7 @@ const reviewScenarios = () => [
       scale: 1,
       logicalWidth: 620,
       logicalHeight,
-      ready: '.approveTransactionWarning',
+      ready: '.requestApproveTransaction .requestDecline:not(:disabled)',
       requiredControls: [
         'Decline',
         confirmLabel === 'Proceed'
@@ -2988,7 +2967,7 @@ const reviewScenarios = () => [
       requiredText: [title, message],
       layoutExpectations: [
         { kind: 'hidden', selector: '.accountSelectorOpen' },
-        { kind: 'viewport-bottom', selector: '.requestNoticeApproval' },
+        { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
         ...(variant === 'broad-token-approval'
           ? [{ kind: 'text-unclipped', selector: '.approveTransactionWarningMessage' }]
           : [])
@@ -3003,11 +2982,11 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.approveTransactionWarning',
+    ready: '.requestDecline:not(:disabled)',
     action: { type: 'hoverText', text: 'Sign anyway' },
     requiredControls: ['Decline', 'Sign anyway'],
     requiredText: ['RPC reports a revert', 'Your configured RPC reports that this transaction will revert.'],
-    layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestNoticeApproval' }]
+    layoutExpectations: [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }]
   },
   {
     id: 'tray-rpc-warning-revert-confirmed-full-1',
@@ -3023,12 +3002,12 @@ const reviewScenarios = () => [
       text: 'Sign anyway',
       requestId: 'qualification-rpc-warning-revert'
     },
-    requiredText: ['Ready for review', 'Decline', 'Sign transaction'],
+    requiredText: ['Signing with', 'Accepted', 'Decline', 'Sign transaction'],
     layoutExpectations: [
-      { kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' },
+      { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
       {
         kind: 'computed-style',
-        selector: '.requestNoticeTransactionReview',
+        selector: '.signingDecisionShelf',
         property: 'animationName',
         value: 'none'
       },
@@ -3621,7 +3600,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               scale: 1,
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
-              ready: '.approvePermitPerch',
+              ready: '.signingPermitReview',
               requiredControls: [
                 'Back',
                 'View raw permit data',
@@ -3633,34 +3612,19 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               requiredText: [
                 'Token approval',
                 'Uniswap',
-                'Approval',
-                'Permit data',
-                'Review ›',
+                'Allow token spending',
+                'Signed data',
                 'Adjust',
-                'Copy',
-                'Details',
                 'USDC',
                 '2412',
                 'Jan 1, 2100',
-                'EIP-712',
                 'Sign approval'
               ],
               layoutExpectations: [
                 ...WALLET_VIEW_CHROME,
                 ...FOCUSED_WINDOW_SURFACE,
-                {
-                  kind: 'computed-style',
-                  selector: '.permitOriginCard',
-                  property: 'borderBottomWidth',
-                  value: '0px'
-                },
-                {
-                  kind: 'computed-style',
-                  selector: '.permitActionCard',
-                  property: 'borderBottomWidth',
-                  value: '0px'
-                },
-                { kind: 'text-unclipped', selector: '.permitAccountAddress' }
+                { kind: 'text-unclipped', selector: '.signingDecisionSummary .signingReviewAddress' },
+                { kind: 'contained', selector: '.signingPermitLimit', container: '.signingPermissionCard' }
               ]
             },
             {
@@ -3673,7 +3637,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               ready: '.messageSigningReview',
               requiredControls: ['Back', 'Copy signing account address', 'Decline', 'Sign message'],
               requiredText: ['Sign a message', 'workshop.example', 'Review this exact message.'],
-              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }]
             },
             {
               id: 'tray-signature-typed-data-review-full-1',
@@ -3685,7 +3649,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               ready: '.signingReview',
               requiredControls: ['Back', 'Decline', 'Sign message'],
               requiredText: ['Sign data', 'Qualification', 'Message:', 'workshop.example'],
-              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }]
             },
             {
               id: 'tray-add-chain-review-full-1',
@@ -4303,15 +4267,15 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredControls: ['Back', 'Copy Permit2 spender address', 'Decline', 'Sign message'],
         requiredText: [
           'Authorize token spending',
-          '1.000000000000000001 TST',
-          'Amount in base units',
-          '42',
+          'TST',
+          '1.000000000000000001',
+          '42 base units',
           'Signed data'
         ],
         layoutExpectations: [
           ...WALLET_VIEW_CHROME,
           ...FOCUSED_WINDOW_SURFACE,
-          { kind: 'viewport-bottom', selector: '.requestApproveSignature' },
+          { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
           { kind: 'text-unclipped', selector: '.signingPermissionRow strong' },
           {
             kind: 'contained',
@@ -4335,7 +4299,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredControls: ['Back', 'Copy recipient address', 'Decline', 'Sign message'],
         layoutExpectations: [
           { kind: 'contained', selector: '.signingTokenAmountFormatted', container: '.accountViewScroll' },
-          { kind: 'text-unclipped', selector: '.simpleJsonCopyValue' }
+          { kind: 'text-unclipped', selector: '.signingReviewAddress' }
         ]
       }))
     ),
@@ -4364,7 +4328,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       requiredText: [
         'Domain chain 8453 does not match request chain 1.',
         '1000000000000000001',
-        'Amount in base units'
+        '1000000000000000001 base units'
       ],
       layoutExpectations: [{ kind: 'hidden', selector: '.signingTokenAmountFormatted' }]
     },
@@ -4496,8 +4460,152 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       action: { type: 'clickText', text: 'Deposit' },
       requiredControls: ['Deposit', 'Cancel cooldown', 'Max'] })
     const contact = selected.find(({ id }) => id === 'dash-address-book-editor-short-1')
-    selected.push({ ...contact, id: 'dash-address-book-editor-bottom-short-1',
-      captureScroll: 'bottom', captureScrollSelector: '.addressBookEditorScroll' })
+    selected.push({
+      ...contact,
+      id: 'dash-address-book-editor-bottom-short-1',
+      captureScroll: 'bottom',
+      captureScrollSelector: '.addressBookEditorScroll'
+    })
+  }
+  if (includeReview) {
+    for (const [geometry, scale, logicalHeight] of [
+      ['full', 1, FULL_SHELL_HEIGHT],
+      ['short', 1, SHORT_SHELL_HEIGHT],
+      ['short', 1.5, SHORT_SHELL_HEIGHT]
+    ]) {
+      selected.push({
+        id: `tray-transaction-fee-editor-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'transaction-responsive',
+        variant: 'method-unknown',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: { type: 'clickText', text: 'Adjust' },
+        ready: '#panel:has(.signingReviewDetails[open] .txAdjustFeeInline input) .requestSign:not(:disabled)',
+        expectedInitialFocus: 'Base Fee Cap (GWEI)',
+        captureScroll: 'interaction',
+        requiredControls: ['Decline', 'Sign transaction', 'Decrease nonce', 'Increase nonce'],
+        requiredText: ['Advanced details', 'Network fee', 'Gas limit', 'Signing with'],
+        layoutExpectations: [
+          { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
+          { kind: 'contained', selector: '.txAdjustFeeInline input[aria-label="Base Fee Cap (GWEI)"]', container: '.approveTransaction' }
+        ]
+      })
+    }
+    selected.push({
+      id: 'tray-transaction-fee-draft-short-1',
+      renderer: 'tray',
+      state: 'transaction-responsive',
+      variant: 'method-unknown',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: {
+        type: 'sequence',
+        delayMs: 150,
+        steps: [
+          { type: 'clickText', text: 'Adjust' },
+          { type: 'inputLabel', label: 'Gas Limit (UNITS)', value: '' }
+        ]
+      },
+      ready: '#panel:has(.signingDecisionShelf .requestSign:disabled) .requestDecline:not(:disabled)',
+      requiredControls: ['Decline'],
+      requiredText: ['Signing with', 'Sign transaction'],
+      layoutExpectations: [
+        { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
+        { kind: 'input-value', selector: 'input[aria-label="Gas Limit (UNITS)"]', value: '' }
+      ]
+    })
+    selected.push({
+      id: 'tray-erc3009-signed-data-short-1',
+      renderer: 'tray',
+      state: 'signature-typed-data-review',
+      authorityReview: 'eip3009',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: { type: 'clickText', text: 'Signed data' },
+      ready: '.signingRawDisclosure[open] .signingRawDisclosureBody',
+      requiredControls: ['Decline', 'Sign message'],
+      requiredText: ['Valid until', 'nonce', '0x' + 'ab'.repeat(32)],
+      layoutExpectations: [
+        { kind: 'contained', selector: '.signingAuthorizationAmount', container: '.signingPermissionCard' },
+        { kind: 'viewport-bottom', selector: '.signingDecisionShelf' }
+      ]
+    })
+    selected.push({
+      id: 'tray-permit2-distinct-expirations-short-1.5',
+      renderer: 'tray',
+      state: 'signature-typed-data-review',
+      authorityReview: 'different-expirations',
+      scale: 1.5,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.signingPermissionExpiration',
+      requiredText: ['May 18, 2033', 'Jul 18, 2036', 'Sign by'],
+      requiredControls: ['Decline', 'Sign message'],
+      layoutExpectations: [
+        {
+          kind: 'hidden',
+          selector: '.signingPermissionDates > div:first-child > [title="2000000000 Unix seconds"]'
+        },
+        {
+          kind: 'contained',
+          selector: '.signingPermissionRow:first-child .signingPermissionExpiration',
+          container: '.signingPermissionRow:first-child'
+        },
+        {
+          kind: 'contained',
+          selector: '.signingPermissionRow:nth-child(2) .signingPermissionExpiration',
+          container: '.signingPermissionRow:nth-child(2)'
+        },
+        { kind: 'viewport-bottom', selector: '.signingDecisionShelf' }
+      ]
+    })
+    selected.push({
+      id: 'tray-wallet-calls-details-short-1',
+      renderer: 'tray',
+      state: 'wallet-calls-review',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: { type: 'clickText', text: 'Call 1 details' },
+      ready: '.walletCallsCalldata',
+      requiredControls: ['Decline', 'Submit batch'],
+      requiredText: ['Gas limit', 'Max rate', 'Calldata', 'Maximum fee', 'Maximum network fees'],
+      layoutExpectations: [{ kind: 'viewport-bottom', selector: '.signingDecisionShelf' }]
+    })
+    selected.push({
+      id: 'tray-wallet-calls-open-adjustment-short-1',
+      renderer: 'tray',
+      state: 'wallet-calls-review',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: { type: 'clickText', text: 'Adjust' },
+      ready: '.walletCallsAdjust input[aria-label="Starting nonce"]',
+      requiredControls: ['Cancel', 'Apply changes', 'Starting nonce'],
+      requiredText: ['Batch settings', 'Nonce']
+    })
+  }
+  if (includeReview) {
+    for (const [geometry, scale, logicalHeight] of [['full', 1, FULL_SHELL_HEIGHT], ['short', 1.5, SHORT_SHELL_HEIGHT]]) {
+      const base = selected.find((scenario) => scenario.id === 'tray-transaction-approval-full-1')
+      selected.push({ ...base, id: `tray-transaction-approval-named-${geometry}-${scale}`, scale, logicalHeight, namedSpender: true,
+        requiredText: [...base.requiredText, 'SwapRouter', 'sourcify'] })
+    }
+    for (const authority of ['permit2', 'erc3009']) {
+      for (const geometry of ['full', 'short']) {
+        for (const scale of [1, 1.5]) {
+          const base = selected.find((scenario) => scenario.id === `tray-${authority}-authority-${geometry}-${scale}`)
+          selected.push({ ...base, id: `tray-${authority}-rpc-metadata-${geometry}-${scale}`, rpcMetadata: true,
+            requiredText: authority === 'permit2' ? ['USDC', '1.000001', 'USDT', '0.000042', 'SwapRouter', 'sourcify'] : ['1.000001 USDC'],
+            requiredControls: [...(base.requiredControls || [])]
+          })
+        }
+      }
+    }
   }
   const disclosures = includeReview
     ? [
@@ -4537,7 +4645,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           ['Submit directly with API key'],
           ['Encoded constructor arguments']
         ],
-        ['dash-account-chooser-full-1', ['Advanced'], ['Create private key'], ['Advanced']],
+
         ['dash-add-token-details-full-1', [], ['Decimals', 'Logo URI'], []]
       ].map(([id, summaries, requiredControls, requiredText]) => {
         const base = selected.find((scenario) => scenario.id === id)
@@ -4558,6 +4666,29 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     : []
   return [...selected, ...disclosures].map((scenario) => {
     const layout = [...(scenario.layoutExpectations || [])]
+    if (scenario.state?.startsWith('account-add-') || scenario.state?.startsWith('account-create-')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.addAccountItemTopTitle', container: '.dash', tolerance: 1 })
+    }
+    if (scenario.id.includes('account-verify-phrase')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.generatedWalletVerifyField .wrenInputGroup', container: '.generatedWalletVerifyField', tolerance: 1 })
+    }
+    if (scenario.id.includes('account-create-private-key')) {
+      layout.push({ kind: 'computed-style', selector: '.generatedWalletFrameBody', property: 'scrollbarWidth', value: 'auto' })
+    }
+    if (scenario.id.includes('settings-recent-clear')) {
+      layout.push({ kind: 'centered-horizontal', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay', tolerance: 1 })
+      layout.push({ kind: 'contained', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay' })
+    }
+    if (['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)) {
+      layout.push({ kind: 'centered-horizontal', selector: '.txLifecycleStepMarker svg', container: '.txLifecycleStepMarker', tolerance: 0.5 })
+    }
+    if (scenario.state === 'account-home') {
+      layout.push({ kind: 'contained', selector: '.accountPortfolioActions button', container: '.accountPortfolioCard' })
+    }
+    if (scenario.id.includes('dash-token-expanded') || scenario.id.includes('dash-token-removal')) {
+      layout.push({ kind: 'computed-style', selector: '.customTokensListItemExpanded', property: 'backgroundColor', value: 'rgba(0, 0, 0, 0)' })
+    }
+
     if (['account-add-seed', 'account-add-watch'].includes(scenario.state)) {
       layout.push({
         kind: 'centered-horizontal',

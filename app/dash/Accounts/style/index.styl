@@ -206,12 +206,12 @@
       padding 0 var(--wren-space-2)
       font-size var(--wren-type-caption)
 
-.accountTypeAdvanced > summary
-  box-sizing border-box
-  min-height 44px
+.accountTypeAdvanced > h2
+  margin 20px 0 0
   padding 12px 0
-  cursor pointer
+  color var(--wren-text-muted)
   font-size 12px
+  font-weight 500
   line-height 20px
 .dashAccountsActions
   grid-template-columns repeat(2, minmax(0, 1fr))
@@ -225,3 +225,7 @@
     box-sizing border-box
     cursor pointer
     font-size 14px
+
+.accountDelegationEntry .delegationRevocation
+  margin-top 0
+  padding-top var(--wren-space-2)

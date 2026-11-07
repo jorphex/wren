@@ -15,10 +15,17 @@ npm run brand:generate
 npm run brand:verify
 ```
 
-The generator writes the delivery PNGs and runtime copies. The verifier checks
+The generator uses the project’s Electron dependency. On Linux, it needs Xvfb
+for a private display. It writes the delivery PNGs and runtime copies. The verifier checks
 dimensions, app-tile geometry, monochrome polarity, platform copies, social
 crop safety, and stale asset paths. Do not edit generated delivery files
 directly.
+
+To generate a separate review copy:
+
+```sh
+npm run brand:generate -- --output-dir /absolute/path/to/review
+```
 
 Historical review screenshots stay in Git history. Local design notes may
 provide context, but the current application is the reference for its UI.

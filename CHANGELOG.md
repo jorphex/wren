@@ -9,16 +9,22 @@ For release details and platform limits, see
 - Fixed Lattice native and contract signing with modern firmware. Preserved exact transaction fields and used bundled calldata decoders without external lookups.
 - Accepted Hyperliquid's namespaced typed-data types unchanged in signing and inspection.
 - Reduced token-discovery RPC batches and bounded concurrent scans. Kept successful batches, retained token additions and edits during active reads, preserved saved custom metadata, and allowed time for parent timeout responses over IPC.
+- Showed spender contract names and readable token amounts in approval and permit reviews when metadata is available.
+- Aligned account setup fields and titles. Kept private-key creation visible under Advanced.
+- Refined dashboard spacing, token rows and Earn actions. Centered recent-recipient confirmations and transaction progress icons.
+- Removed unused onboarding screens, artwork, fonts and review styles. Brand generation now uses the project’s Electron.
 - Added an account Approvals list with current RPC allowances and reviewed revocation.
 - Included successful direct approvals found by Activity outside Wren.
 - Stopped queued allowance checks after history or account removal. Refreshed affected allowances together after confirmation.
 - Bound broad-approval consent to the reviewed request. Detected unlimited and NFT operator approvals in call batches even without simulation.
-- Showed exact local token units in known Permit2 and ERC-3009 reviews. Grouped raw signed fields under Signed data when the summary is complete.
-- Improved signing review spacing, address controls, and fee labels.
+- Grouped raw signed fields under Signed data when the Permit2 or ERC-3009 summary is complete.
+- Grouped signing reviews around the action, value and permissions. Kept account, fee and actions together; moved technical controls into details.
+- Kept Sign visible while required acknowledgements are reviewed separately.
 - Added token-event previews from compatible RPC traces.
 - Settled pending Trezor requests when the bridge closes during a metadata lookup.
 - Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
 - Updated commit checks and HTTP caching to remove vulnerable dependency paths.
+- Updated redirect handling and validation packages to their patched versions.
 - Updated Electron, Trezor, Ledger, WebSocket support, and development tools.
 
 ## 0.1.11 - 2026-10-01

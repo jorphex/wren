@@ -3177,3 +3177,33 @@ describe('signer address ownership', () => {
     }
   )
 })
+
+describe('background signing metadata', () => {
+  it('discards a late result after the signed request changes', async () => {
+    const req = permitRequest('1230000', 'late-signing-metadata')
+    account.requests[req.handlerId] = req
+    let resolve
+    reveal.signingMetadata.mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    const pending = account.revealSigningMetadata(req)
+    req.typedMessage.data.message.spender = tokenContract
+    resolve({
+      tokens: [],
+      spender: { address: delegate, contractName: 'Old router', contractSource: 'sourcify' }
+    })
+    await pending
+    expect(req.signingMetadata).toBeUndefined()
+  })
+
+  it('does not fetch metadata for a mismatched signing chain', async () => {
+    const req = permitRequest('1230000', 'mismatched-signing-metadata')
+    req.context.domainChainId = '10'
+    account.requests[req.handlerId] = req
+    await account.revealSigningMetadata(req)
+    expect(reveal.signingMetadata).not.toHaveBeenCalled()
+  })
+})

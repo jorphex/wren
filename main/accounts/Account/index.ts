@@ -762,6 +762,30 @@ class FrameAccount {
           this.actionRecognitionBindings[req.handlerId] = binding
           this.syncAddressSafety(knownTxRequest)
           this.update()
+          for (const action of actions) {
+            if (action.id !== 'erc20:approve') continue
+            const data = action.data as import('../../transaction/actions/erc20').Erc20Approve
+            if (!data?.spender?.address) continue
+            void Promise.resolve(
+              reveal.signingMetadata(parseInt(binding.chainId, 16), {
+                tokens: [],
+                spender: data.spender.address
+              })
+            )
+              .then((metadata) => {
+                if (
+                  this.requests[req.handlerId] !== req ||
+                  this.actionRecognitionVersions[req.handlerId] !== version ||
+                  !sameActionRecognitionInput(actionRecognitionBinding(req), binding) ||
+                  req.recognizedActions !== actions ||
+                  metadata?.spender?.address !== data.spender.address.toLowerCase()
+                )
+                  return
+                Object.assign(data.spender, metadata.spender)
+                this.update()
+              })
+              .catch(() => {})
+          }
         }
       } catch (e) {
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
@@ -1642,35 +1666,57 @@ class FrameAccount {
     return snapshot
   }
 
-  private async decodeTypedMessage(req: SignTypedDataRequest) {
-    if (req.type === 'signTypedData') return
-
-    const knownRequest = this.requests[req.handlerId]
-    if (!knownRequest) return
-
+  private async revealSigningMetadata(req: SignTypedDataRequest) {
+    const chainId = req.context?.requestChainId
+    if (!Number.isSafeInteger(chainId) || Number(req.context?.domainChainId) !== chainId) return
+    const binding = JSON.stringify(req.typedMessage)
+    const permit = req.type === 'signErc20Permit' ? req.permit : undefined
+    const tokens = permit
+      ? [permit.verifyingContract.address]
+      : req.context?.permit2?.permissions.map(({ token }) => token) ||
+        (req.context?.eip3009 ? [req.context.eip3009.verifyingContract] : [])
+    const spender = permit?.spender.address || req.context?.permit2?.spender
+    if (!tokens.length && !spender) return
     try {
-      const permitRequest = knownRequest as PermitSignatureRequest
-      const { permit } = permitRequest
+      const metadata = await reveal.signingMetadata(chainId, { tokens, ...(spender ? { spender } : {}) })
+      if (
+        this.requests[req.handlerId] !== req ||
+        JSON.stringify(req.typedMessage) !== binding ||
+        req.context?.requestChainId !== chainId ||
+        Number(req.context?.domainChainId) !== chainId ||
+        !metadata
+      )
+        return
+      req.signingMetadata = metadata
+      if (req.type === 'signErc20Permit') {
+        const token = metadata.tokens.find(
+          ({ address }) => address === req.permit.verifyingContract.address.toLowerCase()
+        )
+        if (token) req.tokenData = { ...req.tokenData, ...token }
+        if (metadata.spender?.address === req.permit.spender.address.toLowerCase())
+          Object.assign(req.permit.spender, metadata.spender)
+      }
+      this.update()
+    } catch {
+      // Metadata is optional; exact addresses and raw amounts remain available.
+    }
+  }
 
-      const contract = new Erc20Contract(permit.verifyingContract.address, Number(permit.chainId))
-      const [tokenData, contractIdentity, spenderIdentity] = await Promise.all([
-        contract.getTokenData(),
+  private async decodeTypedMessage(req: SignTypedDataRequest) {
+    if (req.type !== 'signErc20Permit') return
+    const binding = JSON.stringify(req.typedMessage)
+    const { permit } = req
+    try {
+      const [contractIdentity, spenderIdentity] = await Promise.all([
         reveal.identity(permit.verifyingContract.address),
         reveal.identity(permit.spender.address)
       ])
-
-      Object.assign(permitRequest, {
-        tokenData,
-        permit: {
-          ...permit,
-          verifyingContract: { ...permit.verifyingContract, ...contractIdentity },
-          spender: { ...permit.spender, ...spenderIdentity }
-        }
-      })
-
+      if (this.requests[req.handlerId] !== req || JSON.stringify(req.typedMessage) !== binding) return
+      req.permit.verifyingContract = { ...req.permit.verifyingContract, ...contractIdentity }
+      req.permit.spender = { ...req.permit.spender, ...spenderIdentity }
       this.update()
-    } catch (error) {
-      log.warn('unable to decode typed message', { error, handlerId: req.handlerId })
+    } catch {
+      // Keep the full address if optional ENS identity is unavailable.
     }
   }
 
@@ -1693,6 +1739,7 @@ class FrameAccount {
     }
 
     if (isTypedMessageSignatureRequest(req)) {
+      this.revealSigningMetadata(req)
       this.decodeTypedMessage(req)
     }
   }

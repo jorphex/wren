@@ -14,7 +14,7 @@ import {
 } from '../../../resources/domain/request'
 
 import RequestCommand, { accountCodeEvidenceReady, getRequiredRequestApproval } from './RequestCommand'
-import TxApproval from './RequestCommand/TxApproval'
+import SigningDecisionSummary from './SigningDecisionSummary'
 import { parseWalletCallsDraft } from '../Account/Requests/WalletCallsRequest/adjustment'
 import { revokeLifecyclePresentation } from '../Account/Requests/Eip7702RevokeRequest'
 
@@ -513,7 +513,7 @@ export class Footer extends React.Component {
       if (req) {
         if (req.type === 'eip7702Revoke' && crumb.data.step === 'confirm') {
           return this.renderEip7702RevocationFooter(req, account)
-        } else if (req.type === 'transaction' && crumb.data.step === 'confirm') {
+        } else if (req.type === 'transaction' && ['confirm', 'adjustFee'].includes(crumb.data.step)) {
           const active = req.mode === 'monitor' || account.activeRequestId === req.handlerId
           if (!active) return this.renderQueuedTransactionFooter()
           return (
@@ -801,25 +801,8 @@ export class Footer extends React.Component {
             account.lastSignerType
           )
           const requiredApproval = canStartDecision && getRequiredRequestApproval(req)
-          if (requiredApproval) {
-            return (
-              <div className='requestNotice requestNoticeApproval'>
-                <div className='requestNoticeInner requestNoticeInnerApproval'>
-                  <TxApproval req={req} approval={requiredApproval} />
-                </div>
-              </div>
-            )
-          }
           return (
             <div className='requestApprove requestApproveLightweight walletCallsReviewActions'>
-              <div className='requestActionContext' role='status'>
-                <span className='requestActionContextIcon'>
-                  <Icon name='sign' size={19} />
-                </span>
-                <span className='requestActionContextCopy'>
-                  <strong>Ready to submit</strong>
-                </span>
-              </div>
               <div className='requestActionButtons'>
                 <button
                   type='button'
@@ -840,8 +823,9 @@ export class Footer extends React.Component {
                   ref={this.walletCallsSubmitRef}
                   type='button'
                   className='requestSign'
-                  disabled={simulationWarning ? !canStartDecision : !canApprove}
+                  disabled={requiredApproval || (simulationWarning ? !canStartDecision : !canApprove)}
                   onClick={() => {
+                    if (requiredApproval) return
                     if (simulationWarning && canStartDecision) {
                       this.setState({
                         walletCallsAcknowledgement: {
@@ -1019,10 +1003,27 @@ export class Footer extends React.Component {
   }
   render() {
     const footerHeight = this.store('windows.panel.footer.height')
+    const crumb = this.store('windows.panel.nav')[0] || {}
+    const req =
+      crumb.view === 'requestView' &&
+      this.store('main.accounts', crumb.data?.accountId, 'requests', crumb.data?.requestId)
+    const summary =
+      req &&
+      ['transaction', 'walletCalls', 'sign', 'signTypedData', 'signErc20Permit'].includes(req.type) &&
+      ['confirm', 'adjustFee'].includes(crumb.data?.step) &&
+      (!req.status || req.status === 'pending') &&
+      req.mode !== 'monitor'
     return (
       <div className='footerModule' style={{ height: footerHeight + 'px' }}>
         <div ref={this.footerRef} className='footerWrap'>
-          {this.renderFooter()}
+          {summary ? (
+            <div className='signingDecisionShelf'>
+              <SigningDecisionSummary req={req} accountId={crumb.data.accountId} />
+              {this.renderFooter()}
+            </div>
+          ) : (
+            this.renderFooter()
+          )}
         </div>
       </div>
     )

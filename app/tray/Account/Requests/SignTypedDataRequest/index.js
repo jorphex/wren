@@ -7,6 +7,7 @@ import {
 } from '../../../../../resources/Components/SimpleTypedData'
 import { getSignatureRequestClass } from '../../../../../resources/domain/request'
 import { getOriginDisplayName } from '../../../../../resources/domain/origin'
+import ReviewAcknowledgements from '../ReviewAcknowledgements'
 
 export class SignTypedDataRequest extends React.Component {
   render() {
@@ -25,7 +26,10 @@ export class SignTypedDataRequest extends React.Component {
 
     return (
       <div key={req.id || req.handlerId} className={requestClass}>
-        <TypedSignatureOverview {...{ chainName, deviceWarning, originName, req, tokenMetadata }} />
+        <TypedSignatureOverview
+          {...{ chainName, deviceWarning, originName, req, tokenMetadata }}
+          acknowledgements={<ReviewAcknowledgements req={req} readOnly={this.props.readOnly} />}
+        />
       </div>
     )
   }

@@ -522,10 +522,18 @@ External links are allowlisted except configured explorers, whose final OS
 launch still permits only credential-free HTTP(S).
 
 Lattice signing uses its configured device relay. Calldata decoder definitions
-come only from Wren's bundled standard ABIs; preparing a signature does not send
+come only from Wren's bundled standard ABIs; decoder preparation does not send
 contract addresses or selectors to explorer, 4byte, or chain-metadata services.
 Unknown calldata remains raw device-review data. This local decoder does not
 establish the target contract's identity or prove its behavior.
+
+Approval and permit reviews read token decimals and labels through the configured
+RPC. Optional spender names use the existing Sourcify and Etherscan source
+lookups, which share the contract address, chain, IP address and timing with
+those services. They do not send the signed message or amount. Names remain
+informational; the full address stays visible. Each metadata read is bounded,
+and missing data does not block signing. Permit batches read at most 32 distinct
+tokens in groups of four; remaining unknown amounts retain exact base units.
 
 Contract verification deliberately publishes user-selected source and compiler
 metadata to Sourcify after an explicit permanent-public acknowledgement.

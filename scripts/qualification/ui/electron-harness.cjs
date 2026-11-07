@@ -273,10 +273,11 @@ const clickText = async (webContents, text) => {
     `(() => {
       const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
-          button.innerText.trim() === ${JSON.stringify(text)} ||
-          button.getAttribute('aria-label') === ${JSON.stringify(text)}
+          !button.disabled && button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden' && (button.innerText.trim() === ${JSON.stringify(text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(text)})
       )
       if (!target) return false
+      target.scrollIntoView({ block: 'nearest' })
       target.click()
       return true
     })()`,
@@ -290,10 +291,11 @@ const focusText = async (webContents, text) => {
     `(() => {
       const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
-          button.innerText.trim() === ${JSON.stringify(text)} ||
-          button.getAttribute('aria-label') === ${JSON.stringify(text)}
+          button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden' && (button.innerText.trim() === ${JSON.stringify(text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(text)})
       )
       if (!target) return false
+      target.scrollIntoView({ block: 'nearest' })
       target.focus()
       return document.activeElement === target
     })()`,
@@ -395,8 +397,8 @@ const performAction = async (webContents, action) => {
       webContents,
       `Array.from(document.querySelectorAll('button, summary')).some(
         (button) =>
-          button.innerText.trim() === ${JSON.stringify(action.text)} ||
-          button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
+          !button.disabled && (button.innerText.trim() === ${JSON.stringify(action.text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(action.text)})
       )`
     )
     await clickText(webContents, action.text)
@@ -594,8 +596,21 @@ const runScenario = async (scenario) => {
     let screenshot
     if (captureAll || audit.violations.length) {
       if (captureAll) {
+        if (scenario.captureScroll === 'interaction' && scenario.expectedInitialFocus) {
+          // The focus audit moves focus to test keyboard controls. Restore the
+          // already-verified entry focus without changing its scroll position.
+          await window.webContents.executeJavaScript(
+            `(() => {
+              const target = [...document.querySelectorAll('[aria-label]')].find(
+                (element) => element.getAttribute('aria-label') === ${JSON.stringify(scenario.expectedInitialFocus)}
+              )
+              target?.focus({ preventScroll: true })
+            })()`, true
+          )
+        }
         await window.webContents.executeJavaScript(
-          `if (!${JSON.stringify(scenario.ready === '.receivePanel')}) {
+          `if (!${JSON.stringify(scenario.captureScroll === 'interaction')}) {
+          if (!${JSON.stringify(scenario.ready === '.receivePanel')}) {
             document.querySelector('.receivePanel')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
             if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
           }
@@ -604,6 +619,7 @@ const runScenario = async (scenario) => {
               element.scrollTop = 0
               element.scrollLeft = 0
             }
+          }
           }`,
           true
         )
@@ -658,6 +674,48 @@ const main = async () => {
   app.setPath('userData', path.join(runRoot, 'profile'))
   app.setPath('temp', path.join(runRoot, 'tmp'))
   installIsolation()
+
+  // Mirror the production ResizeObserver update for the gas module. Fixed
+  // fixture heights otherwise leave obsolete narrow-layout space or clip details.
+  ipcMain.on('tray:action', (event, action, id, update) => {
+    if (action !== 'updateAccountModule' || id !== 'chains' || !Number.isFinite(update?.height)) return
+    const state = stateByWebContents.get(event.sender.id)
+    const module = state?.panel?.account?.modules?.chains
+    if (!module || module.height === update.height) return
+    module.height = update.height
+    event.sender.send('main:action', 'stateSync', JSON.stringify([{
+      name: 'qualification-gas-module-size', count: 1, deferred: false,
+      updates: [{ path: 'panel.account.modules.chains.height', value: update.height }]
+    }]))
+  })
+
+  ipcMain.on('nav:update', (event, windowId, crumb, navigate = true) => {
+    const scenario = scenarioByWebContents.get(event.sender.id)
+    const state = stateByWebContents.get(event.sender.id)
+    if (scenario?.renderer !== 'tray' || windowId !== 'panel' || !crumb?.data) return
+    const nav = state?.windows?.panel?.nav
+    if (!nav?.[0]) throw new Error('Qualification request navigation is unavailable')
+    const next = {
+      view: nav[0].view || crumb.view,
+      data: Object.keys(crumb.data).length === 0 ? {} : { ...nav[0].data, ...crumb.data }
+    }
+    if (JSON.stringify(nav[0]) !== JSON.stringify(next)) {
+      if (navigate) nav.unshift(next)
+      else nav[0] = next
+    }
+    event.sender.send(
+      'main:action',
+      'stateSync',
+      JSON.stringify([
+        {
+          name: 'qualification-request-navigation',
+          count: 1,
+          deferred: false,
+          updates: [{ path: 'windows.panel.nav', value: nav }]
+        }
+      ])
+    )
+  })
 
   ipcMain.on('main:rpc', (event, idWire, methodWire, ...argWires) => {
     const id = parseWireValue(idWire)

@@ -740,56 +740,6 @@ module.exports = {
       log.error(e)
     }
   },
-  // Flow
-  addDapp: (u, namehash, data, options = { docked: false, added: false }) => {
-    u(`main.dapp.details.${namehash}`, () => data)
-    u('main.dapp.map', (map) => {
-      if (options.docked && map.docked.length <= 10) {
-        map.docked.push(namehash)
-      } else {
-        map.added.unshift(namehash)
-      }
-      return map
-    })
-  },
-  setDappOpen: (u, ens, open) => {
-    u('main.openDapps', (dapps) => {
-      if (open) {
-        if (dapps.indexOf(ens) === -1) dapps.push(ens)
-      } else {
-        dapps = dapps.filter((e) => e !== ens)
-      }
-      return dapps
-    })
-  },
-  removeDapp: (u, namehash) => {
-    u('main.dapp.details', (dapps) => {
-      dapps = { ...dapps }
-      delete dapps[namehash]
-      return dapps
-    })
-    u('main.dapp.map', (map) => {
-      let index = map.added.indexOf(namehash)
-      if (index !== -1) {
-        map.added.splice(index, 1)
-      } else {
-        index = map.docked.indexOf(namehash)
-        if (index !== -1) map.docked.splice(index, 1)
-      }
-      return map
-    })
-  },
-  moveDapp: (u, fromArea, fromIndex, toArea, toIndex) => {
-    u('main.dapp.map', (map) => {
-      const hash = map[fromArea][fromIndex]
-      map[fromArea].splice(fromIndex, 1)
-      map[toArea].splice(toIndex, 0, hash)
-      return map
-    })
-  },
-  setDappStorage: (u, hash, state) => {
-    if (state) u(`main.dapp.storage.${hash}`, () => state)
-  },
   initOrigin: (u, originId, origin) => {
     u('main.origins', (origins) => {
       const now = new Date().getTime()

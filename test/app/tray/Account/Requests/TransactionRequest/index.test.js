@@ -168,18 +168,6 @@ describe('confirm', () => {
     expect(await screen.findByText('Address copied')).toBeTruthy()
   })
 
-  it('copies the displayed sender identity from the main review', () => {
-    const txMain = new TxMain({})
-    txMain.setState = jest.fn()
-    link.send.mockClear()
-
-    txMain.copyFromAddress(account)
-
-    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', account)
-    expect(txMain.setState).toHaveBeenCalledWith({ copied: true })
-    txMain.componentWillUnmount()
-  })
-
   it('shows the recipient for a zero-value EOA transaction', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
 
@@ -196,7 +184,7 @@ describe('confirm', () => {
     expect(screen.getByText('Recipient Account')).toBeTruthy()
   })
 
-  it('does not present an in-flight contract method lookup as a decode failure', () => {
+  it('does not show a decode failure in ordinary review during an in-flight lookup', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
 
     render(
@@ -210,7 +198,7 @@ describe('confirm', () => {
       />
     )
 
-    expect(screen.getByText('Identifying contract method…')).toBeTruthy()
+    expect(screen.queryByText('Identifying contract method…')).toBeNull()
     expect(screen.queryByText('Contract method not decoded')).toBeNull()
   })
 
@@ -412,8 +400,8 @@ describe('confirm', () => {
     )
 
     expect(screen.getByText('Calling Yearn Contract')).toBeTruthy()
-    expect(screen.getByText('Yearn vault deposit')).toBeTruthy()
-    expect(screen.getByText('Allowlisted vault: USDC Horizon yVault')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy transaction recipient address' })).toBeTruthy()
+    expect(screen.queryByText('Allowlisted vault: USDC Horizon yVault')).toBeNull()
     expect(screen.queryByText(/unknown action/i)).toBeNull()
   })
 
