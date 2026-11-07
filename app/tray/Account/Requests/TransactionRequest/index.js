@@ -12,6 +12,9 @@ import NonceControl from './NonceControl'
 import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
 import link from '../../../../../resources/link'
 import { erc20Interface } from '../../../../../resources/contracts'
+import { ReviewDetails } from '../../../../../resources/Components/SigningReview'
+import { TransactionDataRow } from './TxMainNew/overview'
+import ReviewAcknowledgements from '../ReviewAcknowledgements'
 
 export class TransactionRequest extends React.Component {
   isReadOnly(req) {
@@ -78,6 +81,19 @@ export class TransactionRequest extends React.Component {
     }
 
     const recognizedActions = req.recognizedActions || []
+    const approval = recognizedActions.some((action) => action.id === 'erc20:approve')
+    const actions = recognizedActions.map((action, i) => (
+      <TxAction
+        key={'action' + action.type + i}
+        i={2 + i}
+        {...this.props}
+        req={req}
+        readOnly={readOnly}
+        chain={chain}
+        action={action}
+        compact
+      />
+    ))
     return (
       <div
         key={req.handlerId}
@@ -114,33 +130,29 @@ export class TransactionRequest extends React.Component {
             <div className='approveTransactionPayload'>
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
+                {approval ? actions : null}
                 <TxRecipient i={1} {...this.props} req={req} />
-                {recognizedActions.map((action, i) => {
-                  return (
-                    <TxAction
-                      key={'action' + action.type + i}
-                      i={2 + i}
-                      {...this.props}
-                      req={req}
-                      readOnly={readOnly}
-                      chain={chain}
-                      action={action}
-                    />
-                  )
-                })}
-                <TxFee
-                  i={2 + recognizedActions.length}
-                  {...this.props}
-                  req={req}
-                  readOnly={readOnly}
-                  initiallyExpanded={feeInitiallyExpanded}
-                />
-                <div className='_txMain transactionReviewNonce'>
-                  <div className='transactionReviewNonceRow'>
-                    <span className='transactionReviewMetaLabel'>Nonce</span>
-                    <NonceControl req={req} hint='Transaction sequence' readOnly={readOnly} />
+                {!approval ? actions : null}
+                <ReviewAcknowledgements req={req} readOnly={readOnly} />
+                <ReviewDetails initiallyOpen={feeInitiallyExpanded}>
+                  <TxFee
+                    i={2 + recognizedActions.length}
+                    {...this.props}
+                    req={req}
+                    readOnly={readOnly}
+                    initiallyExpanded={feeInitiallyExpanded}
+                  />
+                  <div className='_txMain transactionReviewNonce'>
+                    <div className='transactionReviewNonceRow'>
+                      <span className='transactionReviewMetaLabel'>Nonce</span>
+                      <NonceControl req={req} hint='Transaction sequence' readOnly={readOnly} />
+                    </div>
                   </div>
-                </div>
+                  <TransactionDataRow method={req.decodedData?.method} />
+                  {req.decodedData?.source ? (
+                    <div className='signingReviewTechnical'>ABI source: {req.decodedData.source}</div>
+                  ) : null}
+                </ReviewDetails>
               </div>
             </div>
           </div>

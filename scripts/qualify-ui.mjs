@@ -136,6 +136,8 @@ try {
   const environment = {
     ...process.env,
     DISPLAY: display,
+    WAYLAND_DISPLAY: '',
+    XDG_SESSION_TYPE: 'x11',
     HOME: path.join(runRoot, 'home'),
     XDG_CONFIG_HOME: path.join(runRoot, 'config'),
     XDG_DATA_HOME: path.join(runRoot, 'data'),

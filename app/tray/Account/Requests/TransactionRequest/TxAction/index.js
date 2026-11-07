@@ -1,3 +1,4 @@
+import Icon from '../../../../../../resources/Components/Icon'
 import { toTokenId } from '../../../../../../resources/domain/balance'
 import React from 'react'
 import Restore from 'react-restore'
@@ -247,29 +248,31 @@ export class TxSending extends React.Component {
         return (
           <ClusterBox title={`Sending ${symbol}`} subtitle={name} animationSlot={this.props.i}>
             <Cluster>
-              <ClusterRow>
-                <ClusterValue grow={2}>
-                  <div className='txSendingValue'>
-                    <DisplayCoinBalance amount={amount} decimals={decimals} symbol={symbol} />
-                  </div>
-                </ClusterValue>
-                <ClusterValue>
-                  <span className='_txMainTransferringEq'>{isTestnet ? '=' : '≈'}</span>
-                  <DisplayValue
-                    type='fiat'
-                    value={amount}
-                    valueDataParams={{ currencyRate: rate && rate.usd, isTestnet, decimals }}
-                    currencySymbol='$'
-                  />
-                </ClusterValue>
-              </ClusterRow>
-              {address && recipientType === 'contract' ? (
+              {!this.props.compact ? (
+                <ClusterRow>
+                  <ClusterValue grow={2}>
+                    <div className='txSendingValue'>
+                      <DisplayCoinBalance amount={amount} decimals={decimals} symbol={symbol} />
+                    </div>
+                  </ClusterValue>
+                  <ClusterValue>
+                    <span className='_txMainTransferringEq'>{isTestnet ? '=' : '≈'}</span>
+                    <DisplayValue
+                      type='fiat'
+                      value={amount}
+                      valueDataParams={{ currencyRate: rate && rate.usd, isTestnet, decimals }}
+                      currencySymbol='$'
+                    />
+                  </ClusterValue>
+                </ClusterRow>
+              ) : null}
+              {!this.props.compact && address && recipientType === 'contract' ? (
                 <ClusterRow>
                   <ClusterValue>
                     <div className='clusterTag'>{`to contract on ${chainName}`}</div>
                   </ClusterValue>
                 </ClusterRow>
-              ) : address ? (
+              ) : !this.props.compact && address ? (
                 <ClusterRow>
                   <ClusterValue>
                     <div className='clusterTag'>{`to account on ${chainName}`}</div>
@@ -313,7 +316,7 @@ export class TxSending extends React.Component {
         const {
           amount,
           decimals,
-          spender: { address: recipientAddress, ens: spenderEns },
+          spender: { address: recipientAddress, ens: spenderEns, contractName, contractSource },
           symbol
         } = action.data || {}
         const address = recipientAddress
@@ -384,10 +387,15 @@ export class TxSending extends React.Component {
                           emphasizeEnds={
                             addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'
                           }
-                          label={localIdentity?.label || spenderEns}
+                          label={localIdentity?.label || contractName || spenderEns}
                           revealOnHover={false}
-                          source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
+                          source={
+                            localIdentity?.source || (contractName ? contractSource : spenderEns ? 'ENS' : '')
+                          }
                         />
+                        <span className='signingReviewCopyIcon'>
+                          <Icon name='copy' size={16} />
+                        </span>
                         {distinctSafetyTarget ? (
                           <AddressSafetyStatus address={address} assessment={req.addressSafety} />
                         ) : null}

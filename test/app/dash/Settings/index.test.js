@@ -162,7 +162,7 @@ it('confirms disabling recent recipients and restores focus', async () => {
 
   await user.click(toggle)
   const dialog = screen.getByRole('alertdialog', { name: 'Turn off and clear recent recipients?' })
-  expect(dialog.hasAttribute('aria-modal')).toBe(false)
+  expect(dialog.getAttribute('aria-modal')).toBe('true')
   expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }))
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('alertdialog', { name: 'Turn off and clear recent recipients?' })).toBeNull()

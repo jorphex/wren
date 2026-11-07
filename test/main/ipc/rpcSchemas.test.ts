@@ -386,6 +386,15 @@ test('accepts the ERC-1967 implementation-slot approval type', () => {
   ).toBe(true)
 })
 
+test('accepts only a bounded consent fingerprint with an approval acknowledgement', () => {
+  const request = (consentFingerprint: string) =>
+    wire(1, 'confirmRequestApproval', { handlerId, account: address }, 'approveBroadTokenAuthority', {
+      consentFingerprint
+    })
+  expect(parseRendererRpcRequest(request('a'.repeat(64))).success).toBe(true)
+  expect(parseRendererRpcRequest(request('not-a-fingerprint')).success).toBe(false)
+})
+
 test('accepts the dapp guardrail warning approval type', () => {
   expect(
     parseRendererRpcRequest(

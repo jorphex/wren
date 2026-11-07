@@ -1,4 +1,5 @@
 const PRIVATE_MAIN_PATHS = new Set([
+  'main.observedTokenApprovals',
   'main.activityClearedAt',
   'main.activityTransactionReferences',
   'main.accountActivityCursors'
@@ -17,6 +18,7 @@ const activitySummary = (value: unknown): unknown => {
 const withoutPrivateActivityState = (value: unknown) => {
   if (!isRecord(value)) return value
   const {
+    observedTokenApprovals: _privateApprovals,
     accountActivityCursors: _privateActivityCursors,
     activityClearedAt: _privateClearBoundary,
     activityTransactionReferences: _privateReferences,

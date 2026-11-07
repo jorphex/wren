@@ -159,6 +159,8 @@ export function projectInspectorSimulation(simulation: TransactionSimulation) {
   return {
     status: simulation.status,
     ...(simulation.source ? { source: simulation.source } : {}),
+    ...(simulation.executionBlock ? { executionBlock: simulation.executionBlock } : {}),
+    ...(simulation.effectsEvidence ? { effectsEvidence: simulation.effectsEvidence } : {}),
     ...(simulation.gasUsed ? { gasUsed: simulation.gasUsed.toLowerCase() } : {}),
     ...(simulation.reason ? { reason: boundedReason(simulation.reason, 'Simulation failed') } : {}),
     ...(simulation.effects

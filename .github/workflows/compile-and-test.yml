@@ -39,11 +39,13 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - run: npm run test:usbAdapters
-      - name: Upload IPFS integration results
+      - name: Upload integration results
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ipfs-integration-${{ github.sha }}
-          path: compiled/*-integration-report.json
+          path: |
+            compiled/*-integration-report.json
+            compiled/simulation-fallback-e2e.json
           if-no-files-found: error
           retention-days: 7
 

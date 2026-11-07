@@ -1,4 +1,6 @@
 import { SimpleJSON, Section } from '../../../../../resources/Components/SimpleTypedData'
+import { ReviewContext, ReviewDetails } from '../../../../../resources/Components/SigningReview'
+import ReviewAcknowledgements from '../ReviewAcknowledgements'
 
 const RISK_MESSAGES = {
   'legacy-eth-sign': () =>
@@ -67,7 +69,6 @@ const MessageReviewSummary = ({ context }) => {
   return (
     <div className='typedDataReviewSummary messageReviewSummary'>
       <div className='typedDataReviewSummaryMain'>
-        <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
         <div className='typedDataReviewTitle'>{presentation.title}</div>
       </div>
     </div>
@@ -100,10 +101,9 @@ const SiweReview = ({ siwe }) => (
   </>
 )
 
-const SignatureRequest = ({ req, originName, chainData = {} }) => {
+const SignatureRequest = ({ req, originName, chainData = {}, readOnly = false }) => {
   const { account, data, id, handlerId, status, type } = req
   const { context, decodedMessage } = data
-  const requestChain = `${chainData.requestChainName || 'Unknown chain'} (${context.requestChainId})`
   const method = context.method === 'eth_sign' ? 'eth_sign (EIP-191-prefixed by Wren)' : 'personal_sign'
   const requestClass = getRequestClass(status)
 
@@ -111,26 +111,18 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
     <div key={id || handlerId} className={requestClass}>
       <div className='accountViewScroll cardShow'>
         <div className='txViewData signingReview messageSigningReview'>
+          <ReviewContext
+            origin={originName || context.origin}
+            network={chainData.requestChainName || `Chain ${context.requestChainId}`}
+          />
           <MessageReviewSummary context={context} />
-          <Section first title='Signing Context'>
-            <SimpleJSON
-              copyableKeys={{ account: 'signing account address' }}
-              humanizeKeys
-              quoteStrings={false}
-              json={{
-                origin: originName || context.origin || 'Unknown origin',
-                account,
-                requestNetwork: requestChain
-              }}
-            />
-          </Section>
           <MessageWarnings account={account} context={context} />
           {context.siwe ? <SiweReview siwe={context.siwe} /> : null}
           <Section title={context.siwe ? 'Exact Signed Message' : 'Message'}>
             <div className='signMessageRaw'>{decodedMessage || '""'}</div>
           </Section>
-          <details className='signingRawDisclosure'>
-            <summary>Signature details</summary>
+          <ReviewAcknowledgements req={req} readOnly={readOnly} />
+          <ReviewDetails label='Signature details'>
             <SimpleJSON
               humanizeKeys
               quoteStrings={false}
@@ -140,7 +132,7 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
                 bytes: context.byteLength
               }}
             />
-          </details>
+          </ReviewDetails>
         </div>
       </div>
     </div>

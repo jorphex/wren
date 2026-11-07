@@ -1,5 +1,5 @@
 import log from 'electron-log'
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { isValidAddress } from '@ethereumjs/util'
 
 import {
@@ -762,6 +762,30 @@ class FrameAccount {
           this.actionRecognitionBindings[req.handlerId] = binding
           this.syncAddressSafety(knownTxRequest)
           this.update()
+          for (const action of actions) {
+            if (action.id !== 'erc20:approve') continue
+            const data = action.data as import('../../transaction/actions/erc20').Erc20Approve
+            if (!data?.spender?.address) continue
+            void Promise.resolve(
+              reveal.signingMetadata(parseInt(binding.chainId, 16), {
+                tokens: [],
+                spender: data.spender.address
+              })
+            )
+              .then((metadata) => {
+                if (
+                  this.requests[req.handlerId] !== req ||
+                  this.actionRecognitionVersions[req.handlerId] !== version ||
+                  !sameActionRecognitionInput(actionRecognitionBinding(req), binding) ||
+                  req.recognizedActions !== actions ||
+                  metadata?.spender?.address !== data.spender.address.toLowerCase()
+                )
+                  return
+                Object.assign(data.spender, metadata.spender)
+                this.update()
+              })
+              .catch(() => {})
+          }
         }
       } catch (e) {
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
@@ -784,7 +808,9 @@ class FrameAccount {
   }
 
   private removeApproval(req: ManagedApprovalRequest, type: ApprovalType) {
-    req.approvals = (req.approvals || []).filter((approval) => approval.type !== type)
+    if (req.approvals?.some((approval) => approval.type === type)) {
+      req.approvals = req.approvals.filter((approval) => approval.type !== type)
+    }
   }
 
   private syncManagedApproval(
@@ -898,37 +924,66 @@ class FrameAccount {
     this.syncManagedApproval(req, ApprovalType.SimulationApproval, data)
   }
 
-  private syncTokenApprovalRisk(req: TransactionRequest, simulation: TransactionSimulation) {
-    const broadEffects =
-      simulation.status === 'succeeded'
-        ? (simulation.effects || []).filter((effect) => isBroadTokenAuthorityEffect(effect, req.account))
-        : []
-    const intent = req.data.to ? parseBroadTokenAuthorityIntent(req.data.data) : undefined
-    const intentReported =
-      intent !== undefined &&
-      broadEffects.some((effect) =>
-        effectReportsBroadTokenAuthorityIntent(intent, effect, req.account, req.data.to)
-      )
-    const broadApprovalCount = broadEffects.length + (intent && !intentReported ? 1 : 0)
+  private syncTokenApprovalRisk(
+    req: TransactionRequest | WalletCallsRequest,
+    simulation: TransactionSimulation | WalletCallsRequest['simulation'] = req.simulation
+  ) {
+    const calls = req.type === 'walletCalls' ? req.calls : [req.data]
+    const simulations = 'calls' in simulation ? simulation.calls : [simulation]
+    const authority = calls.map((call, index) => {
+      const result = simulations[index]
+      const effects =
+        result?.status === 'succeeded'
+          ? (result.effects || []).filter((effect) => isBroadTokenAuthorityEffect(effect, req.account))
+          : []
+      const intent = call.to ? parseBroadTokenAuthorityIntent(call.data) : undefined
+      const reported =
+        intent &&
+        effects.some((effect) => effectReportsBroadTokenAuthorityIntent(intent, effect, req.account, call.to))
+      return { intent, effects, count: effects.length + (intent && !reported ? 1 : 0) }
+    })
+    const broadApprovalCount = authority.reduce((count, call) => count + call.count, 0)
 
     if (broadApprovalCount === 0) {
       this.removeApproval(req, ApprovalType.TokenApprovalRisk)
       return
     }
 
-    const evidence = intent ? (broadEffects.length > 0 ? 'calldata-and-rpc' : 'calldata') : 'rpc'
+    const hasIntent = authority.some((call) => call.intent)
+    const hasEffects = authority.some((call) => call.effects.length > 0)
+    const evidence = hasIntent ? (hasEffects ? 'calldata-and-rpc' : 'calldata') : 'rpc'
     const message =
       evidence === 'rpc'
-        ? 'Your RPC reports broad access. Check the spender and limit.'
+        ? 'Your RPC reports broad token access.'
         : evidence === 'calldata-and-rpc'
-          ? 'The request and your RPC report broad access. Check the spender and limit.'
-          : 'This request asks for broad access. Check the spender and limit.'
+          ? 'The request and your RPC report broad token access.'
+          : 'This request asks for broad token access.'
     this.syncManagedApproval(req, ApprovalType.TokenApprovalRisk, {
       title: broadApprovalCount === 1 ? 'Broad Token Approval' : 'Broad Token Approvals',
       message,
-      confirmLabel: 'Approve anyway',
+      confirmLabel: 'Accept token access',
       riskCount: broadApprovalCount,
-      evidence
+      evidence,
+      consentFingerprint: createHash('sha256')
+        .update(
+          JSON.stringify({
+            account: req.account?.toLowerCase(),
+            handlerId: req.handlerId,
+            origin: req.origin,
+            chainId: req.type === 'walletCalls' ? req.chainId : req.data.chainId,
+            calls: calls.map((call) => ({
+              from:
+                'from' in call && typeof call.from === 'string'
+                  ? call.from.toLowerCase()
+                  : req.account?.toLowerCase(),
+              to: call.to?.toLowerCase(),
+              data: call.data?.toLowerCase(),
+              value: call.value
+            })),
+            effects: authority.map(({ effects }) => effects.map((effect) => JSON.stringify(effect)).sort())
+          })
+        )
+        .digest('hex')
     })
   }
 
@@ -1014,10 +1069,10 @@ class FrameAccount {
     }
 
     this.syncManagedApproval(req, ApprovalType.TokenPermitRisk, {
-      title: 'Unlimited Token Permit',
-      message:
-        'This EIP-2612 signature authorizes the displayed spender to use the maximum uint256 token amount. It can grant broad authority without sending an onchain transaction.',
-      confirmLabel: 'Sign Permit Anyway'
+      title: 'Unlimited token allowance',
+      message: 'This signature allows an unlimited token allowance for the displayed spender.',
+      confirmLabel: 'Accept unlimited allowance',
+      consentFingerprint: this.signatureConsentFingerprint(req)
     })
   }
 
@@ -1030,15 +1085,28 @@ class FrameAccount {
       return
     }
 
-    const subject = kind === 'message' ? 'message signing request' : 'typed-data signing request'
     this.syncManagedApproval(req, ApprovalType.SignatureRisk, {
-      title: kind === 'message' ? 'Dangerous Message Signature' : 'Risky Typed Signature',
-      message: `Wren detected ${risks.length} high-risk condition${
-        risks.length === 1 ? '' : 's'
-      } in this ${subject}. Review every displayed warning before proceeding.`,
-      confirmLabel: 'Sign anyway',
-      riskCodes: risks.join(',')
+      title: kind === 'message' ? 'Message signature warnings' : 'Typed signature warnings',
+      message: `${risks.length} warning${risks.length === 1 ? '' : 's'} in this signature.`,
+      confirmLabel: 'Accept warnings',
+      riskCodes: risks.join(','),
+      consentFingerprint: this.signatureConsentFingerprint(req)
     })
+  }
+
+  private signatureConsentFingerprint(req: SignatureRequest) {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          type: req.type,
+          handlerId: req.handlerId,
+          account: req.account?.toLowerCase(),
+          origin: req.origin,
+          chainId: req.type === 'sign' ? req.data?.context?.requestChainId : req.context?.requestChainId,
+          message: req.type === 'sign' ? req.data?.rawMessage : req.typedMessage
+        })
+      )
+      .digest('hex')
   }
 
   private applySimulationResult(
@@ -1184,6 +1252,7 @@ class FrameAccount {
 
   private applyWalletCallsSimulationResult(req: WalletCallsRequest, simulation: WalletCallsSimulationResult) {
     req.simulation = simulation
+    this.syncTokenApprovalRisk(req)
     this.update()
     if (simulation.accountCodeEvidence) this.revealWalletCallDetails(req)
   }
@@ -1338,6 +1407,7 @@ class FrameAccount {
     }
     request.preparation = { status: 'succeeded', ...preparation }
     request.simulation = simulation
+    this.syncTokenApprovalRisk(request)
     delete request.status
     delete request.notice
     delete request.recoverableError
@@ -1522,6 +1592,11 @@ class FrameAccount {
     if (walletCalls.locked || walletCalls.status !== undefined) {
       throw new Error('Wallet-call request has already been claimed')
     }
+    this.syncTokenApprovalRisk(walletCalls)
+    if ((walletCalls.approvals || []).some((approval) => !approval.approved)) {
+      this.update()
+      throw new Error('Wallet-call request approvals are incomplete')
+    }
     if (!walletCalls.simulation || walletCalls.simulation.status === 'pending') {
       throw new Error('Wallet-call execution check is still pending')
     }
@@ -1591,35 +1666,57 @@ class FrameAccount {
     return snapshot
   }
 
-  private async decodeTypedMessage(req: SignTypedDataRequest) {
-    if (req.type === 'signTypedData') return
-
-    const knownRequest = this.requests[req.handlerId]
-    if (!knownRequest) return
-
+  private async revealSigningMetadata(req: SignTypedDataRequest) {
+    const chainId = req.context?.requestChainId
+    if (!Number.isSafeInteger(chainId) || Number(req.context?.domainChainId) !== chainId) return
+    const binding = JSON.stringify(req.typedMessage)
+    const permit = req.type === 'signErc20Permit' ? req.permit : undefined
+    const tokens = permit
+      ? [permit.verifyingContract.address]
+      : req.context?.permit2?.permissions.map(({ token }) => token) ||
+        (req.context?.eip3009 ? [req.context.eip3009.verifyingContract] : [])
+    const spender = permit?.spender.address || req.context?.permit2?.spender
+    if (!tokens.length && !spender) return
     try {
-      const permitRequest = knownRequest as PermitSignatureRequest
-      const { permit } = permitRequest
+      const metadata = await reveal.signingMetadata(chainId, { tokens, ...(spender ? { spender } : {}) })
+      if (
+        this.requests[req.handlerId] !== req ||
+        JSON.stringify(req.typedMessage) !== binding ||
+        req.context?.requestChainId !== chainId ||
+        Number(req.context?.domainChainId) !== chainId ||
+        !metadata
+      )
+        return
+      req.signingMetadata = metadata
+      if (req.type === 'signErc20Permit') {
+        const token = metadata.tokens.find(
+          ({ address }) => address === req.permit.verifyingContract.address.toLowerCase()
+        )
+        if (token) req.tokenData = { ...req.tokenData, ...token }
+        if (metadata.spender?.address === req.permit.spender.address.toLowerCase())
+          Object.assign(req.permit.spender, metadata.spender)
+      }
+      this.update()
+    } catch {
+      // Metadata is optional; exact addresses and raw amounts remain available.
+    }
+  }
 
-      const contract = new Erc20Contract(permit.verifyingContract.address, Number(permit.chainId))
-      const [tokenData, contractIdentity, spenderIdentity] = await Promise.all([
-        contract.getTokenData(),
+  private async decodeTypedMessage(req: SignTypedDataRequest) {
+    if (req.type !== 'signErc20Permit') return
+    const binding = JSON.stringify(req.typedMessage)
+    const { permit } = req
+    try {
+      const [contractIdentity, spenderIdentity] = await Promise.all([
         reveal.identity(permit.verifyingContract.address),
         reveal.identity(permit.spender.address)
       ])
-
-      Object.assign(permitRequest, {
-        tokenData,
-        permit: {
-          ...permit,
-          verifyingContract: { ...permit.verifyingContract, ...contractIdentity },
-          spender: { ...permit.spender, ...spenderIdentity }
-        }
-      })
-
+      if (this.requests[req.handlerId] !== req || JSON.stringify(req.typedMessage) !== binding) return
+      req.permit.verifyingContract = { ...req.permit.verifyingContract, ...contractIdentity }
+      req.permit.spender = { ...req.permit.spender, ...spenderIdentity }
       this.update()
-    } catch (error) {
-      log.warn('unable to decode typed message', { error, handlerId: req.handlerId })
+    } catch {
+      // Keep the full address if optional ENS identity is unavailable.
     }
   }
 
@@ -1642,6 +1739,7 @@ class FrameAccount {
     }
 
     if (isTypedMessageSignatureRequest(req)) {
+      this.revealSigningMetadata(req)
       this.decodeTypedMessage(req)
     }
   }
@@ -1829,6 +1927,7 @@ class FrameAccount {
     this.requests[req.handlerId] = req
 
     if (req.type === 'transaction' || req.type === 'walletCalls') this.syncAddressSafety(req)
+    if (req.type === 'walletCalls') this.syncTokenApprovalRisk(req)
 
     if (signal) {
       const abort = () => {

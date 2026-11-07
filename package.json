@@ -253,7 +253,7 @@
     "base-x@>=3.0.0 <=3.0.10": "3.0.11",
     "base-x@5.0.0": "5.0.1",
     "bn.js@>=4.0.0 <4.12.3": "4.12.3",
-    "joi@<17.13.4": "17.13.4",
+    "joi@<17.13.9": "17.13.9",
     "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
     "lodash@>=4.0.0 <4.18.1": "4.18.1",
     "minimatch@<3.1.4": "3.1.5",
@@ -275,19 +275,6 @@
     "ethereum-cryptography@1.2.0": {
       "@noble/hashes": "1.2.0"
     },
-    "@trezor/connect@9.7.3": {
-      "@ethereumjs/tx@10.1.2": {
-        "@noble/curves": "1.9.7",
-        "@noble/hashes": "1.8.0"
-      },
-      "@ethereumjs/util@10.1.2": {
-        "@noble/curves": "1.9.7",
-        "@noble/hashes": "1.8.0"
-      }
-    },
-    "@trezor/device-authenticity@1.1.2": {
-      "@noble/curves": "1.9.7"
-    },
     "@trezor/transport": {
       "usb": "2.18.0"
     },
@@ -308,10 +295,10 @@
     "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
     "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
     "fast-uri@>=3.0.0 <3.1.9": "3.1.9",
-    "joi@>=18.0.0 <18.2.6": "18.2.6",
+    "joi@>=18.0.0 <18.3.1": "18.3.1",
     "undici@>=6.0.0 <6.29.1": "6.29.1",
     "undici@>=7.0.0 <7.30.1": "7.30.1",
-    "follow-redirects@1.16.0": "1.16.1",
+    "follow-redirects@>=1.16.0 <1.16.2": "1.16.2",
     "ip-address@>=10.0.0 <10.7.4": "10.7.4"
   },
   "lavamoat": {

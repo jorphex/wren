@@ -28,6 +28,8 @@ const MAX_INSPECTED_CALL_FRAMES = 512
 const MAX_CALL_TRACE_CHILDREN = 256
 const MAX_CALL_TRACE_DEPTH = 32
 const MAX_CALL_TRACE_INPUT_BYTES = 512 * 1024
+const MAX_TRACE_LOGS = 256
+const MAX_TRACE_LOG_BYTES = 1024 * 1024
 const MAX_UINT64 = (1n << 64n) - 1n
 const MAX_UINT256 = (1n << 256n) - 1n
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/
@@ -307,6 +309,8 @@ export interface TransactionSimulation {
   reason?: string
   effects?: SimulationEffect[]
   effectsTruncated?: boolean
+  executionBlock?: { hash: string; number: string }
+  effectsEvidence?: { source: 'debug_traceCall'; blockHash: string; blockNumber: string }
   returnDataKind?: 'abi-bool-true' | 'abi-bool-false' | 'other'
   allowance?: TokenAllowanceSnapshot
   delegation?: AccountDelegationCheck
@@ -432,8 +436,66 @@ function errorResult(source: SimulationSource, error: EVMError): TransactionSimu
   return { status: 'failed', source, reason }
 }
 
-function isUnsupportedMethod(error: EVMError) {
-  return error.code === -32601 || error.code === -32004
+function isUnsupportedMethod(error: EVMError, method?: string) {
+  if (error.code === -32601 || error.code === -32004) return true
+  if (!method || ![-32000, -32002, -32600, -32603].includes(error.code ?? 0)) return false
+  // Some clients use a generic error code. Require the named method and an
+  // explicit unsupported-method message, never an upstream failure or limit.
+  const message = error.message.toLowerCase().trim()
+  const name = method.toLowerCase()
+  return (
+    message === `unsupported method: ${name}` ||
+    message === `method ${name} is not supported` ||
+    message === `the resource ${name} is not available.` ||
+    message === `the method ${name} does not exist` ||
+    message === `the method ${name} does not exist/is not available`
+  )
+}
+
+function unsupportedBlockSelector(error: EVMError) {
+  return (
+    error.code === -32602 &&
+    /(?:invalid argument 1:.*cannot unmarshal object.*string|block(?: parameter| selector)?.*(?:must be|expected) (?:a )?string)/i.test(
+      error.message
+    )
+  )
+}
+
+function blockSelector(block?: TransactionSimulation['executionBlock']) {
+  return block ? { blockHash: block.hash, requireCanonical: true } : 'latest'
+}
+
+async function readExecutionBlock(send: ChainSend, targetChain: Chain, timeoutMs: number) {
+  if (timeoutMs <= 0) return
+  const outcome = await requestRpc(
+    send,
+    {
+      id: 6,
+      jsonrpc: '2.0',
+      method: 'eth_getBlockByNumber',
+      params: ['latest', false]
+    },
+    targetChain,
+    Math.min(timeoutMs, 1000)
+  )
+  if (
+    'timedOut' in outcome ||
+    !isRecord(outcome.response) ||
+    outcome.response.id !== 6 ||
+    outcome.response.jsonrpc !== '2.0' ||
+    outcome.response.error !== undefined
+  )
+    return
+  const header = outcome.response.result
+  if (
+    !isRecord(header) ||
+    typeof header['hash'] !== 'string' ||
+    !STORAGE_WORD.test(header['hash']) ||
+    /^0x0{64}$/i.test(header['hash']) ||
+    parseRpcQuantity(header['number']) === undefined
+  )
+    return
+  return { hash: header['hash'].toLowerCase(), number: (header['number'] as string).toLowerCase() }
 }
 
 function normalizeRpcError(value: unknown): EVMError | undefined {
@@ -662,6 +724,142 @@ export function parseCallTrace(
   return { calls, truncated }
 }
 
+function parseTraceEvents(result: unknown, transaction: SimulationCallData, callTraceTruncated: boolean) {
+  // eth_call omits the reviewed nonce; creation addresses cannot be bound to it.
+  if (!transaction.to) return
+  if (!isRecord(result) || result.error !== undefined || result['revertReason'] !== undefined) return
+  const expectedGas = buildEthCall(transaction)['gas']
+  if (expectedGas === undefined || parseRpcQuantity(result['gas']) !== parseRpcQuantity(expectedGas)) return
+
+  const logs: Array<{
+    address: string
+    topics: string[]
+    data: string
+    index: bigint | undefined
+    order: number[]
+  }> = []
+  const indices = new Set<bigint>()
+  let ordering: 'index' | 'position' | undefined
+  let frames = 0
+  let bytes = 0
+  let truncated = callTraceTruncated
+  const stack: Array<{ value: unknown; depth: number; context?: string; path: number[] }> = [
+    { value: result, depth: 0, path: [] }
+  ]
+  while (stack.length) {
+    if (frames++ === MAX_INSPECTED_CALL_FRAMES) {
+      truncated = true
+      break
+    }
+    const candidate = stack.pop()!
+    if (!isRecord(candidate.value)) return
+    const frame = candidate.value
+    // A successful child inside a reverted ancestor has no surviving effects.
+    if (frame.error !== undefined || frame['revertReason'] !== undefined) continue
+    const delegated = frame['type'] === 'DELEGATECALL' || frame['type'] === 'CALLCODE'
+    const emitter = delegated ? candidate.context : frame['to']
+    if (typeof emitter !== 'string' || !ADDRESS.test(emitter)) return
+    const children = frame.calls === undefined ? [] : frame.calls
+    const events = frame.logs === undefined ? [] : frame.logs
+    if (!Array.isArray(children) || !Array.isArray(events)) return
+    if (children.length > MAX_CALL_TRACE_CHILDREN) truncated = true
+    let previousIndex = -1n
+    let previousPosition = -1n
+    let eventNumber = 0
+    for (const event of events) {
+      if (logs.length === MAX_TRACE_LOGS) {
+        truncated = true
+        break
+      }
+      if (
+        !isRecord(event) ||
+        typeof event['address'] !== 'string' ||
+        event['address'].toLowerCase() !== emitter.toLowerCase() ||
+        frame['type'] === 'STATICCALL'
+      )
+        return
+      if (
+        !Array.isArray(event['topics']) ||
+        event['topics'].length > 4 ||
+        !event['topics'].every((topic) => typeof topic === 'string' && STORAGE_WORD.test(topic))
+      )
+        return
+      if (typeof event.data !== 'string' || event.data.length > 64 * 1024 * 2 + 2 || !isData(event.data))
+        return
+      const mode = event['index'] === undefined ? 'position' : 'index'
+      ordering ??= mode
+      if (ordering !== mode) return
+      let index: bigint | undefined
+      let position = 0n
+      if (mode === 'index') {
+        index = parseRpcQuantity(event['index'])
+        if (
+          index === undefined ||
+          index > BigInt(Number.MAX_SAFE_INTEGER) ||
+          indices.has(index) ||
+          index <= previousIndex
+        )
+          return
+        previousIndex = index
+        indices.add(index)
+      } else {
+        const parsedPosition = parseRpcQuantity(event['position'])
+        if (
+          parsedPosition === undefined ||
+          parsedPosition > BigInt(children.length) ||
+          parsedPosition < previousPosition
+        )
+          return
+        position = parsedPosition
+        previousPosition = position
+      }
+      bytes += (event.data.length - 2) / 2 + event['topics'].length * 32 + 20
+      if (bytes > MAX_TRACE_LOG_BYTES) {
+        truncated = true
+        break
+      }
+      logs.push({
+        address: event['address'].toLowerCase(),
+        topics: event['topics'],
+        data: event.data,
+        index,
+        order: [...candidate.path, Number(position) * 2, eventNumber++]
+      })
+    }
+    if (logs.length === MAX_TRACE_LOGS || bytes > MAX_TRACE_LOG_BYTES) {
+      truncated ||= stack.length > 0 || children.length > 0
+      break
+    }
+    if (candidate.depth === MAX_CALL_TRACE_DEPTH) {
+      truncated ||= children.length > 0
+      continue
+    }
+    for (let index = Math.min(children.length, MAX_CALL_TRACE_CHILDREN) - 1; index >= 0; index--) {
+      stack.push({
+        value: children[index],
+        depth: candidate.depth + 1,
+        context: emitter,
+        path: [...candidate.path, index * 2 + 1]
+      })
+    }
+  }
+  // Clients may ignore withLog. An empty trace cannot establish log support or
+  // absence of token changes, so keep that evidence unavailable.
+  if (!logs.length && !truncated) return
+  logs.sort((a, b) => {
+    if (ordering === 'index') return a.index! < b.index! ? -1 : a.index! > b.index! ? 1 : 0
+    // A log at position n precedes child n. Ancestor paths interleave parent
+    // events and child frames without inventing transaction-wide indices.
+    for (let index = 0; index < Math.min(a.order.length, b.order.length); index++) {
+      const difference = a.order[index]! - b.order[index]!
+      if (difference) return difference
+    }
+    return a.order.length - b.order.length
+  })
+  const parsed = parseSimulationEffects(logs)
+  return { effects: parsed.effects, truncated: truncated || parsed.truncated }
+}
+
 function parseTraceAccounts(value: unknown) {
   if (!isRecord(value)) return
 
@@ -826,7 +1024,8 @@ async function readPrestateTrace(
   transaction: SimulationCallData,
   send: ChainSend,
   targetChain: Chain,
-  timeoutMs: number
+  timeoutMs: number,
+  block?: TransactionSimulation['executionBlock']
 ): Promise<PrestateTraceEvidence> {
   if (timeoutMs <= 0) {
     return {
@@ -850,7 +1049,7 @@ async function readPrestateTrace(
       method: 'debug_traceCall',
       params: [
         buildEthCall(transaction),
-        'latest',
+        blockSelector(block),
         {
           tracer: 'prestateTracer',
           timeout: `${Math.ceil(timeoutMs)}ms`,
@@ -963,8 +1162,9 @@ async function readCallTrace(
   transaction: SimulationCallData,
   send: ChainSend,
   targetChain: Chain,
-  timeoutMs: number
-): Promise<CallTraceEvidence | undefined> {
+  timeoutMs: number,
+  block?: TransactionSimulation['executionBlock']
+): Promise<{ callTrace: CallTraceEvidence; tokenEvents?: ReturnType<typeof parseTraceEvents> } | undefined> {
   if (timeoutMs <= 0) return
 
   const outcome = await requestRpc(
@@ -975,11 +1175,11 @@ async function readCallTrace(
       method: 'debug_traceCall',
       params: [
         buildEthCall(transaction),
-        'latest',
+        blockSelector(block),
         {
           tracer: 'callTracer',
           timeout: `${Math.ceil(timeoutMs)}ms`,
-          tracerConfig: { onlyTopCall: false, withLog: false }
+          tracerConfig: { onlyTopCall: false, withLog: Boolean(block) }
         }
       ]
     },
@@ -998,12 +1198,17 @@ async function readCallTrace(
   }
 
   const parsed = parseCallTrace(outcome.response.result, transaction)
-  if (!parsed || (!parsed.calls.length && !parsed.truncated)) return
+  if (!parsed || (!block && !parsed.calls.length && !parsed.truncated)) return
 
   return {
-    source: 'debug_traceCall',
-    calls: parsed.calls,
-    ...(parsed.truncated ? { truncated: true } : {})
+    callTrace: {
+      source: 'debug_traceCall',
+      calls: parsed.calls,
+      ...(parsed.truncated ? { truncated: true } : {})
+    },
+    ...(block
+      ? { tokenEvents: parseTraceEvents(outcome.response.result, transaction, parsed.truncated) }
+      : {})
   }
 }
 
@@ -1378,18 +1583,34 @@ async function simulateExecution(
     return { status: 'failed', source: 'eth_simulateV1', reason: 'RPC returned an invalid error' }
   }
 
-  if (!isUnsupportedMethod(simulateError)) {
+  if (!isUnsupportedMethod(simulateError, 'eth_simulateV1')) {
     return errorResult('eth_simulateV1', simulateError)
   }
 
+  const remaining = () => Math.max(0, timeoutMs - (Date.now() - startedAt))
+  let executionBlock = await readExecutionBlock(send, targetChain, remaining())
   const callPayload: JSONRPCRequestPayload = {
     id: 1,
     jsonrpc: '2.0',
     method: 'eth_call',
-    params: [buildEthCall(transaction), 'latest']
+    params: [buildEthCall(transaction), blockSelector(executionBlock)]
   }
-  const remainingTimeout = Math.max(1, timeoutMs - (Date.now() - startedAt))
-  const callOutcome = await requestRpc(send, callPayload, targetChain, remainingTimeout)
+  if (remaining() <= 0)
+    return { status: 'failed', source: 'eth_call', reason: 'RPC execution check timed out' }
+  let callOutcome = await requestRpc(send, callPayload, targetChain, remaining())
+
+  if (executionBlock && 'response' in callOutcome && isRecord(callOutcome.response)) {
+    const selectorError = normalizeRpcError(callOutcome.response.error)
+    if (selectorError && unsupportedBlockSelector(selectorError) && remaining() > 0) {
+      executionBlock = undefined
+      callOutcome = await requestRpc(
+        send,
+        { ...callPayload, params: [buildEthCall(transaction), 'latest'] },
+        targetChain,
+        remaining()
+      )
+    }
+  }
 
   if ('timedOut' in callOutcome) {
     return { status: 'failed', source: 'eth_call', reason: 'RPC execution check timed out' }
@@ -1406,13 +1627,13 @@ async function simulateExecution(
       return { status: 'failed', source: 'eth_call', reason: 'RPC returned an invalid error' }
     }
 
-    return isUnsupportedMethod(callError)
+    return isUnsupportedMethod(callError, 'eth_call')
       ? { status: 'unavailable', source: 'eth_call', reason: 'RPC execution check is unsupported' }
       : errorResult('eth_call', callError)
   }
 
   return isData(callResponse.result)
-    ? { status: 'succeeded', source: 'eth_call' }
+    ? { status: 'succeeded', source: 'eth_call', ...(executionBlock ? { executionBlock } : {}) }
     : { status: 'failed', source: 'eth_call', reason: 'RPC returned an invalid call result' }
 }
 
@@ -1437,18 +1658,27 @@ export async function simulateTransaction(
   const simulationPromise = simulateExecution(transaction, send, targetChain, timeoutMs)
   const prestateTracePromise = simulationPromise.then((simulation) => {
     if (simulation.status !== 'succeeded') return undefined
+    if (simulation.source === 'eth_call' && !simulation.executionBlock) return undefined
 
     return readPrestateTrace(
       transaction,
       send,
       targetChain,
-      Math.max(0, timeoutMs - (Date.now() - startedAt))
+      Math.max(0, timeoutMs - (Date.now() - startedAt)),
+      simulation.executionBlock
     )
   })
   const callTracePromise = simulationPromise.then((simulation) => {
     if (simulation.status !== 'succeeded') return undefined
+    if (simulation.source === 'eth_call' && !simulation.executionBlock) return undefined
 
-    return readCallTrace(transaction, send, targetChain, Math.max(0, timeoutMs - (Date.now() - startedAt)))
+    return readCallTrace(
+      transaction,
+      send,
+      targetChain,
+      Math.max(0, timeoutMs - (Date.now() - startedAt)),
+      simulation.executionBlock
+    )
   })
   const coreStartedAt = Date.now()
   const [simulation, allowance, accountCodeEvidence] = await Promise.all([
@@ -1478,7 +1708,8 @@ export async function simulateTransaction(
   const advancedChecksComplete =
     prestateTrace?.nativeBalanceChanges.status === 'succeeded' &&
     prestateTrace.proxyImplementationCheck.status === 'succeeded' &&
-    callTrace !== undefined
+    callTrace !== undefined &&
+    (simulation.source !== 'eth_call' || callTrace.tokenEvents !== undefined)
   const advancedStatus = advancedChecksComplete ? 'complete' : 'partly-unavailable'
   logReviewTiming('advanced', advancedStartedAt, advancedStatus)
 
@@ -1488,7 +1719,18 @@ export async function simulateTransaction(
     ...(prestateTrace?.proxyImplementationCheck
       ? { proxyImplementationCheck: prestateTrace.proxyImplementationCheck }
       : {}),
-    ...(callTrace ? { callTrace } : {}),
+    ...(callTrace ? { callTrace: callTrace.callTrace } : {}),
+    ...(simulation.source === 'eth_call' && simulation.executionBlock && callTrace?.tokenEvents
+      ? {
+          effects: callTrace.tokenEvents.effects,
+          ...(callTrace.tokenEvents.truncated ? { effectsTruncated: true } : {}),
+          effectsEvidence: {
+            source: 'debug_traceCall' as const,
+            blockHash: simulation.executionBlock.hash,
+            blockNumber: simulation.executionBlock.number
+          }
+        }
+      : {}),
     advancedChecks: { status: advancedStatus }
   }
 }

@@ -145,6 +145,11 @@ const SimulationSchema = z
     reason: ReasonSchema.optional(),
     effects: z.array(EffectSchema).max(100).optional(),
     effectsTruncated: z.boolean().optional(),
+    executionBlock: z.object({ hash: HashSchema, number: QuantitySchema }).strict().optional(),
+    effectsEvidence: z
+      .object({ source: z.literal('debug_traceCall'), blockHash: HashSchema, blockNumber: QuantitySchema })
+      .strict()
+      .optional(),
     allowance: z
       .object({
         token: AddressSchema,

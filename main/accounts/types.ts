@@ -69,6 +69,8 @@ interface Request {
 }
 
 export type Identity = {
+  contractName?: string
+  contractSource?: string
   address: Address
   ens: string
   type: string
@@ -250,6 +252,7 @@ export interface DefaultSignTypedDataRequest extends AccountRequest<'signTypedDa
   payload: RPC.SignTypedData.Request
   typedMessage: TypedMessage
   context: TypedDataContext
+  signingMetadata?: import('../reveal/signingMetadata').SigningMetadata
   approvals: Approval[]
 }
 
@@ -279,6 +282,7 @@ export interface PermitSignatureRequest extends AccountRequest<'signErc20Permit'
   permit: PermitData
   tokenData: TokenData
   context: TypedDataContext
+  signingMetadata?: import('../reveal/signingMetadata').SigningMetadata
   approvals: Approval[]
 }
 

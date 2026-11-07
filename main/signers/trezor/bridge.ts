@@ -74,6 +74,7 @@ class TrezorBridge extends EventEmitter {
   private pendingPrompts = new Map<string, { requestId: string; type: string; generation: number }>()
   private lifecycleGeneration = 0
   private requestQueue: Promise<void> = Promise.resolve()
+  private pendingRequests = new Set<(error: Error) => void>()
   private retryDelays = new Set<{
     timer: ReturnType<typeof setTimeout>
     reject: (error: Error) => void
@@ -107,6 +108,9 @@ class TrezorBridge extends EventEmitter {
 
   async close() {
     ++this.lifecycleGeneration
+    const error = new Error('Trezor bridge closed')
+    this.pendingRequests.forEach((reject) => reject(error))
+    this.pendingRequests.clear()
     this.cancelRetryDelays()
     this.pendingPrompts.clear()
     this.requestQueue = Promise.resolve()
@@ -289,7 +293,21 @@ class TrezorBridge extends EventEmitter {
       () => undefined
     )
 
-    return request
+    // Settle callers on close even if Connect is still awaiting metadata. Keep
+    // the internal chain intact so a caller cancellation cannot overlap calls.
+    return new Promise<T>((resolve, reject) => {
+      this.pendingRequests.add(reject)
+      request.then(
+        (result) => {
+          this.pendingRequests.delete(reject)
+          resolve(result)
+        },
+        (error) => {
+          this.pendingRequests.delete(reject)
+          reject(error)
+        }
+      )
+    })
   }
 
   private async runRequest<T>(fn: () => Response<T>, retries: number, generation: number): Promise<T> {

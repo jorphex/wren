@@ -175,7 +175,7 @@ export const PasswordInput = ({
             aria-describedby={messageId}
             onChange={(event) => setOverrideAccepted(event.target.checked)}
           />
-          <span>I understand this password may be easy to guess.</span>
+          <span>I understand this password may be weak.</span>
         </label>
       ) : null}
       {processing ? (

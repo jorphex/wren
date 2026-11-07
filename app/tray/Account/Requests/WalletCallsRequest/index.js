@@ -1,5 +1,4 @@
 import React from 'react'
-import BigNumber from 'bignumber.js'
 
 import Icon from '../../../../../resources/Components/Icon'
 import AddressIdentity from '../../../../../resources/Components/AddressIdentity'
@@ -8,13 +7,10 @@ import AddressSafetyStatus, {
 } from '../../../../../resources/Components/AddressSafetyStatus'
 import link from '../../../../../resources/link'
 import { resolveLocalAddressIdentity } from '../../../../../resources/domain/addressBook/identity'
+import { ReviewContext } from '../../../../../resources/Components/SigningReview'
+import ReviewAcknowledgements from '../ReviewAcknowledgements'
 import { SimulationAllowance, SimulationEffects } from '../TransactionRequest/ViewData/effects'
-import {
-  createWalletCallsDraft,
-  formatNativeMaximum,
-  parseWalletCallsDraft,
-  walletCallMaximum
-} from './adjustment'
+import { formatNativeMaximum, parseWalletCallsDraft, walletCallMaximum } from './adjustment'
 
 const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/
 
@@ -43,13 +39,6 @@ const formatGwei = (value) => {
   const whole = parsed / 1_000_000_000n
   const fraction = (parsed % 1_000_000_000n).toString().padStart(9, '0').replace(/0+$/, '')
   return `${whole}${fraction ? `.${fraction}` : ''} Gwei`
-}
-
-const formatFiat = (value, decimals, usd) => {
-  const parsed = quantity(value)
-  if (parsed === undefined || !Number.isFinite(usd)) return ''
-  const display = new BigNumber(parsed.toString()).shiftedBy(-decimals).multipliedBy(usd)
-  return display.isFinite() ? `≈ $${display.toFormat(2)}` : ''
 }
 
 const simulationLabel = (simulation) => {
@@ -82,7 +71,7 @@ const preparedCallsMatchRequest = (req, preparedCalls) =>
     )
   })
 
-const preparationData = (req) => {
+export const preparationData = (req) => {
   const preparation = req.preparation
   if (!preparation || preparation.status === 'pending') return { status: 'pending' }
   if (preparation.status === 'failed') return { status: 'failed', reason: preparation.reason }
@@ -163,12 +152,6 @@ export class WalletCallsRequest extends React.Component {
     clearTimeout(this.copyTimer)
     this.setState({ copiedCall: index })
     this.copyTimer = setTimeout(() => this.setState({ copiedCall: -1 }), 1000)
-  }
-
-  openAdjustment = () => {
-    const walletCallsDraft = createWalletCallsDraft(this.props.req)
-    if (!walletCallsDraft) return
-    link.send('nav:update', 'panel', { data: { step: 'adjustWalletCalls', walletCallsDraft } })
   }
 
   renderAdjustment() {
@@ -308,23 +291,21 @@ export class WalletCallsRequest extends React.Component {
   }
 
   renderReview() {
-    const { req, chainData, originName, accountName } = this.props
-    const callLabel = req.calls.length === 1 ? 'transaction' : 'transactions'
+    const { req, chainData, originName } = this.props
     const simulation = simulationLabel(req.simulation)
     const preparation = preparationData(req)
     const decimals = chainData?.nativeCurrencyDecimals ?? 18
     const symbol = chainData?.nativeCurrencySymbol || '?'
-    const usd = chainData?.nativeCurrencyUsd
-    const aggregateFiat = formatFiat(req.preparation?.maxFee, decimals, usd)
 
     return (
       <div className='walletCallsSurface walletCallsReview'>
+        <ReviewContext origin={originName} network={chainData?.chainName || req.chainId} />
         <section className='walletCallsSummary'>
           <div>
-            <div className='walletCallsEyebrow'>
-              {req.calls.length} ordered {req.calls.length === 1 ? 'call' : 'calls'}
-            </div>
-            <h2>Submit {req.calls.length === 1 ? 'one transaction' : `${req.calls.length} transactions`}?</h2>
+            <h2>
+              {req.calls.length} {req.calls.length === 1 ? 'transaction' : 'transactions'}
+            </h2>
+            <p>Sequential execution</p>
           </div>
           {req.calls.length > 1 ? (
             <div className='walletCallsAtomicWarning'>
@@ -336,56 +317,16 @@ export class WalletCallsRequest extends React.Component {
           ) : null}
         </section>
 
-        <section className='walletCallsSection'>
-          <h3>Batch context</h3>
-          <div className='walletCallsContext'>
-            <div>
-              <span>Origin</span>
-              <strong>{originName}</strong>
-            </div>
-            <div>
-              <span>Network</span>
-              <strong>{chainData?.chainName || req.chainId}</strong>
-            </div>
-            <div className='walletCallsContextAccount'>
-              <span>Account</span>
-              <strong>{accountName || shortAddress(req.account)}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className='walletCallsSection walletCallsFeeSummary'>
-          <span>Total maximum network fees</span>
-          <div>
-            <strong>
-              {preparation.status === 'succeeded'
-                ? formatNativeMaximum(preparation.total, decimals, symbol)
-                : preparation.status === 'pending'
-                  ? 'Calculating…'
-                  : 'Unavailable'}
-            </strong>
-            {preparation.status === 'succeeded' && (
-              <small>
-                {aggregateFiat ? `${aggregateFiat} · ` : ''}
-                {req.calls.length} separate {callLabel}
-              </small>
-            )}
-          </div>
-          <button
-            type='button'
-            disabled={preparation.status !== 'succeeded' || req.locked || req.status !== undefined}
-            onClick={this.openAdjustment}
-          >
-            Adjust <span aria-hidden='true'>›</span>
-          </button>
-        </section>
+        <ReviewAcknowledgements req={req} readOnly={this.props.readOnly} />
 
         <section className='walletCallsSection'>
           <div className='walletCallsSectionHeading'>
             <h3>Calls execute in this order</h3>
-            <span className={`walletCallsSimulationState walletCallsSimulationState-${simulation.tone}`}>
-              {simulation.label}
-            </span>
+            {req.simulation?.status !== 'succeeded' ? (
+              <span className={`walletCallsSimulationState walletCallsSimulationState-${simulation.tone}`}>
+                {simulation.label}
+              </span>
+            ) : null}
           </div>
           <div className='walletCallsList'>
             {req.calls.map((call, index) => {
@@ -408,7 +349,7 @@ export class WalletCallsRequest extends React.Component {
                       onClick={() => this.copyCallAddress(index, call.to)}
                     >
                       <strong>{identity.label}</strong>
-                      {call.to && this.state.copiedCall !== index ? (
+                      {call.to ? (
                         <div className='walletCallsDestinationAddress'>
                           <AddressIdentity
                             address={call.to}
@@ -420,33 +361,27 @@ export class WalletCallsRequest extends React.Component {
                           />
                         </div>
                       ) : (
-                        <span>{this.state.copiedCall === index ? 'Address copied' : identity.source}</span>
+                        <span>{identity.source}</span>
                       )}
                     </button>
+                    {this.state.copiedCall === index ? (
+                      <span className='signingReviewCopyStatus' role='status'>
+                        Address copied
+                      </span>
+                    ) : null}
                     {call.to ? (
                       <AddressSafetyStatus address={call.to} assessment={req.addressSafety} />
                     ) : null}
                     <div className='walletCallsCallEvidence'>
                       <span>{identity.method ? `${identity.method} call` : 'Contract call'}</span>
                       <span>Value · {formatNative(call.value, decimals, symbol)}</span>
-                      {preparedTransaction && (
-                        <>
-                          <span>Gas limit · {formatInteger(preparedTransaction.gasLimit)}</span>
-                          <span>
-                            Max rate ·{' '}
-                            {formatGwei(
-                              quantity(preparedTransaction.type) === 2n
-                                ? preparedTransaction.maxFeePerGas
-                                : preparedTransaction.gasPrice
-                            )}
-                          </span>
-                        </>
-                      )}
                       <button
                         type='button'
+                        aria-label={`Call ${index + 1} details`}
+                        aria-expanded={expanded}
                         onClick={() => this.setState({ expandedCall: expanded ? -1 : index })}
                       >
-                        Calldata · {(call.data.length - 2) / 2} bytes {expanded ? '⌃' : '›'}
+                        Details {expanded ? '⌃' : '›'}
                       </button>
                     </div>
                     {targetDelegation && (
@@ -495,7 +430,30 @@ export class WalletCallsRequest extends React.Component {
                         )}
                       </div>
                     )}
-                    {expanded && <div className='walletCallsCalldata'>{call.data}</div>}
+                    {expanded && (
+                      <div className='walletCallsCalldata'>
+                        {preparedTransaction ? (
+                          <div>
+                            Gas limit · {formatInteger(preparedTransaction.gasLimit)}
+                            <br />
+                            Max rate ·{' '}
+                            {formatGwei(
+                              quantity(preparedTransaction.type) === 2n
+                                ? preparedTransaction.maxFeePerGas
+                                : preparedTransaction.gasPrice
+                            )}
+                          </div>
+                        ) : null}
+                        <div>Calldata · {(call.data.length - 2) / 2} bytes</div>
+                        {call.data}
+                        <div>
+                          Maximum fee ·{' '}
+                          {maximum === undefined
+                            ? 'Unavailable'
+                            : formatNativeMaximum(maximum, decimals, symbol)}
+                        </div>
+                      </div>
+                    )}
                     {callSimulation && callSimulation.status !== 'succeeded' && (
                       <div className='walletCallsCallWarning'>
                         Simulation: {callSimulation.status}
@@ -511,12 +469,6 @@ export class WalletCallsRequest extends React.Component {
                         )}
                       </>
                     )}
-                  </div>
-                  <div className='walletCallsCallMaximum'>
-                    <span>Maximum cost</span>
-                    <strong>
-                      {maximum === undefined ? '—' : formatNativeMaximum(maximum, decimals, symbol)}
-                    </strong>
                   </div>
                 </div>
               )
