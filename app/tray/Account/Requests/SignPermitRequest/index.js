@@ -70,7 +70,14 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
           label='Spender'
           name='permit spender address'
           address={spender.address}
-          source={localIdentity || (spender.ens ? { label: spender.ens, source: 'ENS' } : undefined)}
+          source={
+            localIdentity ||
+            (spender.contractName
+              ? { label: spender.contractName, source: spender.contractSource }
+              : spender.ens
+                ? { label: spender.ens, source: 'ENS' }
+                : undefined)
+          }
         />
         <div className='signingPermissionDates'>
           <div>

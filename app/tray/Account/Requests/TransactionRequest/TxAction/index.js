@@ -316,7 +316,7 @@ export class TxSending extends React.Component {
         const {
           amount,
           decimals,
-          spender: { address: recipientAddress, ens: spenderEns },
+          spender: { address: recipientAddress, ens: spenderEns, contractName, contractSource },
           symbol
         } = action.data || {}
         const address = recipientAddress
@@ -387,9 +387,11 @@ export class TxSending extends React.Component {
                           emphasizeEnds={
                             addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'
                           }
-                          label={localIdentity?.label || spenderEns}
+                          label={localIdentity?.label || contractName || spenderEns}
                           revealOnHover={false}
-                          source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
+                          source={
+                            localIdentity?.source || (contractName ? contractSource : spenderEns ? 'ENS' : '')
+                          }
                         />
                         <span className='signingReviewCopyIcon'>
                           <Icon name='copy' size={16} />

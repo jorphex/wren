@@ -137,7 +137,9 @@ it('shows normalized Permit2 authority before the raw typed data', () => {
 
   expect(screen.getByRole('region', { name: 'Permission' })).toBeTruthy()
   expect(screen.getByText('Standing allowance')).toBeTruthy()
-  expect(screen.getByText(permit2.spender)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy Permit2 spender address' }).textContent).toContain(
+    permit2.spender
+  )
   expect(screen.getByRole('button', { name: 'Copy Permit2 spender address' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy Permit2 contract address' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy permission 1 token address' })).toBeTruthy()

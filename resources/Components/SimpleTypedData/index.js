@@ -14,8 +14,10 @@ const tokenForSigning = (tokens, context, address) => {
   const token = matching[0]
   if (!token || matching.some((candidate) => candidate.decimals !== token.decimals)) return
   const symbol = typeof token.symbol === 'string' ? token.symbol.trim() : ''
-  if (!symbol || symbol.length > 24 || /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(symbol)) return
-  return formatTokenBaseUnitAmount('0', token.decimals) === undefined ? undefined : token
+  if (symbol.length > 24 || /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(symbol)) return
+  return formatTokenBaseUnitAmount('0', token.decimals) === undefined
+    ? undefined
+    : { ...token, symbol: symbol || 'Token' }
 }
 
 const signingTime = (seconds) => {
@@ -291,7 +293,7 @@ export const TypedDataDeviceWarning = ({ warning }) =>
     </div>
   ) : null
 
-const Permit2Authority = ({ authority, context, tokenMetadata }) => {
+const Permit2Authority = ({ authority, context, tokenMetadata, spenderIdentity }) => {
   if (!authority) return null
 
   const authorityType = authority.kind === 'allowance' ? 'Standing allowance' : 'One-time transfer'
@@ -349,10 +351,12 @@ const Permit2Authority = ({ authority, context, tokenMetadata }) => {
         </div>
       </section>
       <div className='signingAuthorityFacts'>
-        <div>
-          <span className='signingAuthorityLabel'>Spender</span>
-          <CopyableAuthorityValue label='Permit2 spender address' value={authority.spender} />
-        </div>
+        <ReviewAddress
+          label='Spender'
+          name='Permit2 spender address'
+          address={authority.spender}
+          source={spenderIdentity}
+        />
         <div>
           <span className='signingAuthorityLabel'>Permit2 contract</span>
           <CopyableAuthorityValue label='Permit2 contract address' value={authority.verifyingContract} />
@@ -418,10 +422,15 @@ const Eip3009Authorization = ({ authorization, context, tokenMetadata }) => {
   )
 }
 
-const SigningContext = ({ context, tokenMetadata }) => {
+const SigningContext = ({ context, tokenMetadata, spenderIdentity }) => {
   return (
     <>
-      <Permit2Authority authority={context?.permit2} context={context} tokenMetadata={tokenMetadata} />
+      <Permit2Authority
+        authority={context?.permit2}
+        context={context}
+        tokenMetadata={tokenMetadata}
+        spenderIdentity={spenderIdentity}
+      />
       <Eip3009Authorization
         authorization={context?.eip3009}
         context={context}
@@ -463,6 +472,26 @@ export const SimpleTypedData = ({
 }) => {
   const { context, origin, typedMessage, type } = req
   const hasCompleteSummary = completeAuthoritySummary(context, typedMessage)
+  const rpcTokens = (req.signingMetadata?.tokens || []).filter(
+    (token) => formatTokenBaseUnitAmount('0', token.decimals) !== undefined
+  )
+  const metadata = [
+    ...rpcTokens,
+    ...tokenMetadata.filter(
+      (token) =>
+        !rpcTokens.some(
+          (read) =>
+            read.chainId === token.chainId && read.address.toLowerCase() === token.address?.toLowerCase()
+        )
+    )
+  ]
+  const spender = req.signingMetadata?.spender
+  const spenderIdentity =
+    spender &&
+    Number(context?.domainChainId) === context?.requestChainId &&
+    spender.address === context?.permit2?.spender?.toLowerCase()
+      ? { label: spender.contractName, source: spender.contractSource }
+      : undefined
 
   return type === 'signTypedData' || type === 'signErc20Permit' ? (
     <div className='accountViewScroll cardShow'>
@@ -479,7 +508,8 @@ export const SimpleTypedData = ({
           <TypedDataDeviceWarning warning={deviceWarning} />
           <SigningContext
             account={req.account}
-            {...{ chainName, context, origin, originName, tokenMetadata }}
+            {...{ chainName, context, origin, originName, spenderIdentity }}
+            tokenMetadata={metadata}
           />
           {acknowledgements}
           {Array.isArray(typedMessage.data) ? (
