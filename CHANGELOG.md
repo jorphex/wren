@@ -6,9 +6,9 @@ For release details and platform limits, see
 
 ## Unreleased
 
-- Fixed Lattice native and contract signing with modern firmware. Preserved exact transaction fields and used bundled calldata decoders without external lookups.
-- Accepted Hyperliquid's namespaced typed-data types unchanged in signing and inspection.
-- Reduced token-discovery RPC batches and bounded concurrent scans. Kept successful batches, retained token additions and edits during active reads, preserved saved custom metadata, and allowed time for parent timeout responses over IPC.
+- Fixed Lattice native and contract signing on modern firmware. Used local calldata decoders and preserved transaction fields.
+- Accepted Hyperliquid type names unchanged in signing and inspection.
+- Reduced batch sizes and limited concurrent token reads. Preserved successful batches, token edits and custom metadata. Allowed more time for RPC timeout replies over IPC.
 - Showed spender contract names and readable token amounts in approval and permit reviews when metadata is available.
 - Aligned account setup fields and titles. Kept private-key creation visible under Advanced.
 - Refined dashboard spacing, token rows and Earn actions. Centered recent-recipient confirmations and transaction progress icons.

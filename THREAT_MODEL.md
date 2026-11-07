@@ -308,16 +308,19 @@ broker accepts only bounded latest-block `eth_call` and `eth_getBalance` reads
 for an explicit enabled chain, with strict schemas, request limits, and timeouts.
 The main process selects and owns the configured RPC connection.
 
-Multicall token reads use batches of at most 200 calls, with two batches in flight per
-account/network/read kind. Discovery and tracked-token reads coalesce repeated
-requests independently while a previous scan is active. A failed batch does not
-discard successful batches. Tracked-token additions and metadata changes received
-during a read are merged into a follow-up; stale metadata results are discarded.
-Published balances use current saved custom-token units, names and artwork even
-when an older discovery read finishes later.
-Native reads remain separate. The parent RPC deadline is 12 seconds; the worker allows a further five seconds for the parent's
-response to cross IPC before its channel watchdog expires. Late replies are
-discarded. These limits do not guarantee discovery on an unresponsive RPC.
+Token multicalls use at most 200 calls per batch. For each account on each network,
+discovery and tracked reads each run at most two batches at once. Native balance
+reads run separately.
+
+Wren combines unchanged requests during an active read. Wren keeps successful
+results when other batches fail. Token additions and metadata edits received
+during a read use a follow-up read. Wren discards tracked results with pending
+metadata edits. Late discovery results use current custom token units, names
+and artwork.
+
+The parent allows 12 seconds per RPC request. The worker waits five more seconds
+for the parent's reply over IPC. Wren discards late replies. An unresponsive RPC
+can still prevent discovery.
 
 ### Networks, content, and Earn
 
@@ -521,11 +524,11 @@ stale.
 External links are allowlisted except configured explorers, whose final OS
 launch still permits only credential-free HTTP(S).
 
-Lattice signing uses its configured device relay. Calldata decoder definitions
-come only from Wren's bundled standard ABIs; decoder preparation does not send
-contract addresses or selectors to explorer, 4byte, or chain-metadata services.
-Unknown calldata remains raw device-review data. This local decoder does not
-establish the target contract's identity or prove its behavior.
+Lattice signing uses the configured device relay. Calldata decoders use only
+bundled standard ABIs. Decoder preparation sends no contract addresses or
+selectors to explorers, 4byte.directory or chain metadata services. Unknown
+calldata stays raw for device review. Local decoding cannot prove contract
+identity or behavior.
 
 Approval and permit reviews read token decimals and labels through the configured
 RPC. Optional spender names use the existing Sourcify and Etherscan source

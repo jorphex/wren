@@ -83,16 +83,15 @@ bytes. These paths have not received new physical-device qualification.
 
 ## Lattice transaction review
 
-Modern Lattice firmware receives generic EVM signing requests with the exact
-serialized transaction, including fees and ordered access lists. Wren builds
-device decoders locally from its bundled standard ABI set. Decoder preparation
-does not query Etherscan, 4byte.directory, or remote chain metadata.
-Unrecognized or malformed calldata has no decoder and remains raw
-data for device review; decoder absence does not change the transaction.
+For firmware 0.15 or later, Wren uses generic EVM requests. The requests preserve
+transaction bytes, including fees and ordered access lists.
 
-Signing still uses the configured Lattice relay. Automated coverage exercises
-the real SDK through request preparation with synthetic device responses;
-physical signing and the resulting device display remain unqualified.
+Decoders use bundled standard ABIs without external lookups. Unknown or malformed
+calldata stays raw for device review.
+
+Signing uses the configured Lattice relay. Tests prepare requests with the real
+SDK and use simulated signatures. Physical signing and device display remain
+unverified.
 
 ## Regression guidance
 
