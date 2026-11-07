@@ -348,7 +348,7 @@ const tokenAuthorityReviewRequest = (variant) => {
     {
       token: '0x4444444444444444444444444444444444444444',
       amount: '42',
-      expiration: '2000000000',
+      expiration: variant === 'different-expirations' ? '2100000000' : '2000000000',
       nonce: '8'
     }
   ]
@@ -431,7 +431,7 @@ const addTokenReviewRequest = () => ({
 const permitReviewRequest = () => ({
   account: QUALIFICATION_ACCOUNT,
   type: 'signErc20Permit',
-  status: 'pending',
+  status: undefined,
   handlerId: 'qualification-permit-review',
   origin: 'uniswap',
   context: { requestChainId: 1, domainChainId: '1', risks: [] },

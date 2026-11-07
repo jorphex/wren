@@ -2,6 +2,8 @@ import useCopiedMessage from '../../Hooks/useCopiedMessage'
 import { formatTokenBaseUnitAmount } from '../../domain/token/amount'
 import { getPermit2Authority } from '../../../main/signatures/permit2'
 import { getEip3009Authorization } from '../../../main/signatures/eip3009'
+import Icon from '../Icon'
+import { ReviewAddress, ReviewContext } from '../SigningReview'
 
 const tokenForSigning = (tokens, context, address) => {
   const chainId = context?.requestChainId
@@ -30,16 +32,31 @@ const signingTime = (seconds) => {
   })
 }
 
-const SigningTokenAmount = ({ amount, context, tokenAddress, tokenMetadata, unlimited = false }) => {
+const SigningTokenAmount = ({
+  amount,
+  context,
+  tokenAddress,
+  tokenMetadata,
+  unlimited = false,
+  compact = false
+}) => {
   const token = tokenForSigning(tokenMetadata, context, tokenAddress)
   const formatted = token && formatTokenBaseUnitAmount(amount, token.decimals)
   return (
     <div>
-      <span className='signingAuthorityLabel'>
-        {unlimited || formatted !== undefined ? 'Amount' : 'Amount in base units'}
-      </span>
+      {!compact ? (
+        <span className='signingAuthorityLabel'>
+          {unlimited || formatted !== undefined ? 'Amount' : 'Amount in base units'}
+        </span>
+      ) : null}
       <strong className={formatted === undefined ? '' : 'signingTokenAmountFormatted'}>
-        {unlimited ? 'Unlimited' : formatted === undefined ? amount : `${formatted} ${token.symbol.trim()}`}
+        {unlimited
+          ? 'Unlimited'
+          : formatted === undefined
+            ? `${amount}${compact ? ' base units' : ''}`
+            : compact
+              ? formatted
+              : `${formatted} ${token.symbol.trim()}`}
       </strong>
     </div>
   )
@@ -138,16 +155,18 @@ export const getTypedDataReviewPresentation = (context = {}, typedMessage = {}) 
   }
 }
 
-const TypedDataReviewSummary = ({ context, typedMessage }) => {
+const TypedDataReviewSummary = ({ context, typedMessage, originName, chainName }) => {
   const presentation = getTypedDataReviewPresentation(context, typedMessage)
 
   return (
-    <div className='typedDataReviewSummary'>
-      <div className='typedDataReviewSummaryMain'>
-        <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
-        <div className='typedDataReviewTitle'>{presentation.title}</div>
+    <>
+      <ReviewContext origin={originName} network={chainName} />
+      <div className='typedDataReviewSummary'>
+        <div className='typedDataReviewSummaryMain'>
+          <div className='typedDataReviewTitle'>{presentation.title}</div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -158,10 +177,11 @@ const CopyableAuthorityValue = ({ label, value }) => {
     <button
       type='button'
       aria-label={`Copy ${label}`}
-      className='signingAuthorityCopy'
+      className='signingAuthorityCopy wrenControlCompact'
       onClick={() => copyValue()}
     >
       {value}
+      <Icon name='copy' size={16} />
       <span className='signingCopyFeedback' role='status'>
         {copied ? 'Address copied' : ''}
       </span>
@@ -232,7 +252,11 @@ export const Section = ({ children, first = false, title }) => (
 )
 
 export const TypedDataWarnings = ({ context }) => {
-  const risks = context?.risks || []
+  const risks = (context?.risks || []).filter(
+    (risk) =>
+      !(['permit2-allowance', 'permit2-transfer'].includes(risk) && context?.permit2) &&
+      !(risk === 'eip3009-transfer' && context?.eip3009)
+  )
 
   return risks.length ? (
     <div className='typedDataWarnings' aria-label='Signing warnings'>
@@ -271,15 +295,60 @@ const Permit2Authority = ({ authority, context, tokenMetadata }) => {
   if (!authority) return null
 
   const authorityType = authority.kind === 'allowance' ? 'Standing allowance' : 'One-time transfer'
+  const commonExpiration =
+    authority.kind === 'allowance' &&
+    authority.permissions.length &&
+    authority.permissions.every(({ expiration }) => expiration === authority.permissions[0].expiration)
+      ? authority.permissions[0].expiration
+      : undefined
 
   return (
-    <Section first title='Permission'>
-      <div className='signingAuthorityGrid'>
-        <div>
-          <span className='signingAuthorityLabel'>Permit2 authority</span>
-          <strong>{authorityType}</strong>
-          <small>{authority.batch ? 'Batch request' : 'Single request'}</small>
+    <>
+      <section className='signingPermissionCard' aria-label='Permission'>
+        <span className='signingAuthorityLabel'>
+          {authorityType}
+          {authority.batch ? ' · Batch request' : ''}
+        </span>
+        <div className='signingPermissionList'>
+          {authority.permissions.map(({ token, amount, expiration }, index) => (
+            <div className='signingPermissionRow' key={`${token}:${index}`}>
+              <div className='signingPermissionTokenHeader'>
+                <strong>{tokenForSigning(tokenMetadata, context, token)?.symbol || 'Token'}</strong>
+                <SigningTokenAmount
+                  amount={amount}
+                  context={context}
+                  tokenAddress={token}
+                  tokenMetadata={tokenMetadata}
+                  unlimited={authority.kind === 'allowance' && amount === ((1n << 160n) - 1n).toString()}
+                  compact
+                />
+              </div>
+              <CopyableAuthorityValue label={`permission ${index + 1} token address`} value={token} />
+              {expiration !== undefined && commonExpiration === undefined ? (
+                <div className='signingPermissionExpiration'>
+                  <span className='signingAuthorityLabel'>Spending expires</span>
+                  <strong title={expiration === undefined ? undefined : `${expiration} Unix seconds`}>
+                    {signingTime(expiration)}
+                  </strong>
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
+        <div className='signingPermissionDates'>
+          {commonExpiration !== undefined ? (
+            <div>
+              <span className='signingAuthorityLabel'>Spending expires</span>
+              <strong title={`${commonExpiration} Unix seconds`}>{signingTime(commonExpiration)}</strong>
+            </div>
+          ) : null}
+          <div>
+            <span className='signingAuthorityLabel'>Sign by</span>
+            <strong title={`${authority.deadline} Unix seconds`}>{signingTime(authority.deadline)}</strong>
+          </div>
+        </div>
+      </section>
+      <div className='signingAuthorityFacts'>
         <div>
           <span className='signingAuthorityLabel'>Spender</span>
           <CopyableAuthorityValue label='Permit2 spender address' value={authority.spender} />
@@ -287,87 +356,69 @@ const Permit2Authority = ({ authority, context, tokenMetadata }) => {
         <div>
           <span className='signingAuthorityLabel'>Permit2 contract</span>
           <CopyableAuthorityValue label='Permit2 contract address' value={authority.verifyingContract} />
-          <small>{authority.canonicalContract ? 'Canonical deployment' : 'Noncanonical deployment'}</small>
-        </div>
-        <div>
-          <span className='signingAuthorityLabel'>Signature deadline</span>
-          <strong title={`${authority.deadline} Unix seconds`}>{signingTime(authority.deadline)}</strong>
         </div>
       </div>
-      <div className='signingPermissionList'>
-        {authority.permissions.map(({ token, amount, expiration }, index) => (
-          <div className='signingPermissionRow' key={`${token}:${index}`}>
-            <div>
-              <span className='signingAuthorityLabel'>Token</span>
-              <CopyableAuthorityValue label={`permission ${index + 1} token address`} value={token} />
-            </div>
-            <SigningTokenAmount
-              amount={amount}
-              context={context}
-              tokenAddress={token}
-              tokenMetadata={tokenMetadata}
-              unlimited={authority.kind === 'allowance' && amount === ((1n << 160n) - 1n).toString()}
-            />
-            <div>
-              <span className='signingAuthorityLabel'>Permission expiration</span>
-              <strong title={expiration === undefined ? undefined : `${expiration} Unix seconds`}>
-                {signingTime(expiration)}
-              </strong>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Section>
+    </>
   )
 }
 
 const Eip3009Authorization = ({ authorization, context, tokenMetadata }) => {
   if (!authorization) return null
+  const operation =
+    authorization.kind === 'cancel'
+      ? 'Cancel authorization'
+      : authorization.kind === 'receive'
+        ? 'Recipient-submitted transfer'
+        : 'Relayed transfer'
 
   return (
-    <Section first title='ERC-3009 Authorization'>
-      {authorization.value !== undefined && (
-        <div className='signingPermissionRow'>
-          <SigningTokenAmount
-            amount={authorization.value}
-            context={context}
-            tokenAddress={authorization.verifyingContract}
-            tokenMetadata={tokenMetadata}
-          />
+    <>
+      <section className='signingPermissionCard signingAuthorizationCard' aria-label='ERC-3009 Authorization'>
+        <span className='signingAuthorityLabel'>{operation}</span>
+        {authorization.value !== undefined ? (
+          <div className='signingAuthorizationAmount'>
+            <SigningTokenAmount
+              amount={authorization.value}
+              context={context}
+              tokenAddress={authorization.verifyingContract}
+              tokenMetadata={tokenMetadata}
+            />
+          </div>
+        ) : null}
+        {authorization.to ? (
+          <ReviewAddress label='To' name='recipient address' address={authorization.to} />
+        ) : null}
+        <div className='signingPermissionDates'>
+          {authorization.validAfter !== undefined ? (
+            <div>
+              <span className='signingAuthorityLabel'>Valid from</span>
+              <strong title={authorization.validAfter + ' Unix seconds'}>
+                {authorization.validAfter === '0' ? 'Any time' : signingTime(authorization.validAfter)}
+              </strong>
+            </div>
+          ) : null}
+          {authorization.validBefore !== undefined ? (
+            <div>
+              <span className='signingAuthorityLabel'>Valid until</span>
+              <strong title={authorization.validBefore + ' Unix seconds'}>
+                {signingTime(authorization.validBefore)}
+              </strong>
+            </div>
+          ) : null}
         </div>
-      )}
-      <SimpleJSON
-        copyableKeys={{
-          tokenContract: 'authorization token address',
-          authorizer: 'authorizer address',
-          to: 'recipient address'
-        }}
-        humanizeKeys
-        quoteStrings={false}
-        json={{
-          operation:
-            authorization.kind === 'cancel'
-              ? 'Cancel authorization'
-              : authorization.kind === 'receive'
-                ? 'Recipient-submitted transfer'
-                : 'Relayed transfer',
-          tokenContract: authorization.verifyingContract,
-          authorizer: authorization.authorizer,
-          ...(authorization.to ? { to: authorization.to } : {}),
-          ...(authorization.validAfter ? { validAfter: signingTime(authorization.validAfter) } : {}),
-          ...(authorization.validBefore ? { validBefore: signingTime(authorization.validBefore) } : {}),
-          nonce: authorization.nonce
-        }}
+        {authorization.kind === 'cancel' ? <SimpleJSON json={{ nonce: authorization.nonce }} /> : null}
+      </section>
+      <ReviewAddress
+        label='Token contract'
+        name='authorization token address'
+        address={authorization.verifyingContract}
       />
-    </Section>
+      <ReviewAddress label='Authorizer' name='authorizer address' address={authorization.authorizer} />
+    </>
   )
 }
 
-const SigningContext = ({ account, chainName, context, origin, originName, tokenMetadata }) => {
-  const requestChainId = context?.requestChainId
-  const requestChain =
-    requestChainId !== undefined ? `${chainName || 'Unknown chain'} (${requestChainId})` : 'Unknown chain'
-
+const SigningContext = ({ context, tokenMetadata }) => {
   return (
     <>
       <Permit2Authority authority={context?.permit2} context={context} tokenMetadata={tokenMetadata} />
@@ -376,18 +427,6 @@ const SigningContext = ({ account, chainName, context, origin, originName, token
         context={context}
         tokenMetadata={tokenMetadata}
       />
-      <Section first={!context?.permit2 && !context?.eip3009} title='Signing Context'>
-        <SimpleJSON
-          copyableKeys={{ account: 'signing account address' }}
-          humanizeKeys
-          quoteStrings={false}
-          json={{
-            origin: originName || origin || 'Unknown origin',
-            account,
-            requestNetwork: requestChain
-          }}
-        />
-      </Section>
       <TypedDataWarnings context={context} />
     </>
   )
@@ -414,20 +453,35 @@ const LegacyTypedData = ({ typedData }) => (
   </Section>
 )
 
-export const SimpleTypedData = ({ chainName, deviceWarning, originName, req, tokenMetadata = [] }) => {
+export const SimpleTypedData = ({
+  chainName,
+  deviceWarning,
+  originName,
+  req,
+  tokenMetadata = [],
+  acknowledgements
+}) => {
   const { context, origin, typedMessage, type } = req
   const hasCompleteSummary = completeAuthoritySummary(context, typedMessage)
 
   return type === 'signTypedData' || type === 'signErc20Permit' ? (
     <div className='accountViewScroll cardShow'>
       <div className='txViewData signingReview typedDataSigningReview'>
-        <TypedDataReviewSummary context={context} typedMessage={typedMessage} />
+        <TypedDataReviewSummary
+          context={context}
+          typedMessage={typedMessage}
+          originName={originName || origin}
+          chainName={
+            chainName || (context?.requestChainId ? `Chain ${context.requestChainId}` : 'Unknown network')
+          }
+        />
         <div className='signTypedDataInner'>
           <TypedDataDeviceWarning warning={deviceWarning} />
           <SigningContext
             account={req.account}
             {...{ chainName, context, origin, originName, tokenMetadata }}
           />
+          {acknowledgements}
           {Array.isArray(typedMessage.data) ? (
             <LegacyTypedData typedData={typedMessage.data} />
           ) : hasCompleteSummary ? (

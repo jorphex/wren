@@ -670,6 +670,10 @@ class _AccountBody extends React.Component {
         signer={activeSigner}
         accountName={accountName}
         queueContext={queueContext}
+        readOnly={
+          req.mode !== 'monitor' &&
+          this.store('main.accounts', req.account, 'activeRequestId') !== req.handlerId
+        }
         requestData={data}
         hideBalances={this.store('selected.hideBalances')}
       />

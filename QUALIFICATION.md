@@ -79,6 +79,13 @@ For the current UI, also verify the following in the disposable profile:
   and copy controls do not touch the input. Sweep details scroll above its actions.
 - Request action shelves reserve their rendered height and use a 114px minimum
   at the standard width. Status text does not displace controls.
+- Signing reviews show the app, network, action and full identities before
+  advanced details. Nonce, gas and raw data stay reachable there. Fee and amount
+  editors preserve their values and signing checks.
+- Required acknowledgements leave Sign disabled until the reviewed evidence is
+  accepted. Accepting a warning never signs; changed evidence needs a new review.
+- Known signatures show exact limits and deadlines. Unknown or incomplete
+  summaries keep all signed fields visible.
 - Exact funding values replace rounded rows, and privacy mode hides both forms.
 - Earn positions and guardrail identity remain visible. Active cooldown actions
   are reachable before opening Deposit; the opened form still supports Max.

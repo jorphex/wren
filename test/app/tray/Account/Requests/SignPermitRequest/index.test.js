@@ -41,7 +41,7 @@ const typedData = {
 const req = {
   account: '0x0000000000000000000000000000000000000001',
   type: 'signErc20Permit',
-  status: 'pending',
+  status: undefined,
   handlerId: 'permit-request',
   context: { requestChainId: 5, domainChainId: '1', risks: ['domain-chain-mismatch'] },
   typedMessage: { data: typedData, version: 'V4' },
@@ -74,7 +74,7 @@ it('shows domain mismatch warnings in the specialized permit overview', () => {
   )
 
   expect(screen.getByRole('alert').textContent).toBe('Domain chain 1 does not match request chain 5.')
-  expect(screen.getByText('Workshop Software Account With A Long Name')).toBeTruthy()
+  expect(screen.queryByText('Workshop Software Account With A Long Name')).toBeNull()
 
   expect(screen.getByText(/May 18, 2033.*UTC/)).toBeTruthy()
 })
@@ -123,16 +123,16 @@ it('recognizes a Wren account as the permit spender', () => {
 it('labels the raw permit view with the resolved request chain', () => {
   render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} step='viewRaw' />)
 
-  expect(screen.getByText('Goerli (5)')).toBeTruthy()
+  expect(screen.getByText('Goerli')).toBeTruthy()
   expect(screen.getByText('Type definitions')).toBeTruthy()
 })
 
 it('preserves raw-data navigation and spender copying on named controls', async () => {
   const { user } = render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} />)
 
-  expect(screen.getByText('Review ›')).toBeTruthy()
+  expect(screen.getByText('Signed data')).toBeTruthy()
   expect(screen.getByText('Adjust')).toBeTruthy()
-  expect(screen.getByText('Copy')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy permit spender address' })).toBeTruthy()
 
   await user.click(screen.getByRole('button', { name: 'View raw permit data' }))
   await user.click(screen.getByRole('button', { name: 'Copy permit spender address' }))
@@ -142,7 +142,7 @@ it('preserves raw-data navigation and spender copying on named controls', async 
     secret: false,
     value: req.permit.spender.address
   })
-  expect(await screen.findByText('Permit spender address copied')).toBeTruthy()
+  expect(await screen.findByText('Address copied')).toBeTruthy()
 })
 
 it.each([undefined, 'viewRaw'])('warns about hash-only device review in the %s permit view', (step) => {
@@ -232,7 +232,7 @@ it('shows and allows editing a zero-decimal token permit', async () => {
     />
   )
 
-  expect(screen.getAllByText('1 WHOLE')).toHaveLength(2)
+  expect(screen.getAllByText('1 WHOLE')).toHaveLength(1)
   const editor = screen.getByRole('button', { name: 'Edit permit amount' })
   editor.focus()
   await user.keyboard('{Enter}')
@@ -257,7 +257,7 @@ it('keeps the complete token and spender identities visible while copying', asyn
   const { user } = render(
     <SignPermitRequest req={request} signer={{}} chainData={chainData} accountName='Wallet' />
   )
-  expect(screen.getByText('Signature deadline')).toBeTruthy()
+  expect(screen.getByText('Sign by')).toBeTruthy()
   expect(screen.getByText(/May 18, 2033.*UTC/)).toBeTruthy()
   const tokenCopy = screen.getByRole('button', { name: 'Copy permit token contract' })
   expect(tokenCopy.textContent).toContain(token)
