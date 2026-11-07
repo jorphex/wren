@@ -251,3 +251,87 @@ it('lets the parent timeout arrive over delayed IPC before the worker watchdog',
     retrySucceeded: true
   })
 })
+
+it.each(['added tokens', 'changed metadata', 'new tokens after an upstream failure'])(
+  'retains %s received during an active tracked read without a later polling tick',
+  async (kind) => {
+    const firstToken = tokens(1)[0]
+    const replacement =
+      kind === 'changed metadata'
+        ? [{ ...firstToken, decimals: 2, name: 'Updated token', symbol: 'NEW' }]
+        : tokens(3).slice(1)
+    const observed = []
+    let active = 0
+    let peak = 0
+    let release
+    const hold = new Promise((resolve) => {
+      release = resolve
+    })
+    server = await startJsonRpcFixture(async (payload) => {
+      const calls = multicall.decodeFunctionData('tryAggregate', payload.params[0].data)[1]
+      observed.push(calls.map(({ target }) => target.toLowerCase()))
+      active++
+      peak = Math.max(peak, active)
+      try {
+        if (observed.length === 1) {
+          await hold
+          if (kind === 'new tokens after an upstream failure') throw new Error('Fixture initial read failed')
+        }
+        return {
+          result: multicall.encodeFunctionResult('tryAggregate', [
+            calls.map(() => [true, erc20.encodeFunctionResult('balanceOf', [123n])])
+          ])
+        }
+      } finally {
+        active--
+      }
+    })
+    const rpc = createDappClient(server.url, 'https://issue105.invalid')
+    worker = balanceWorkerHarness({
+      connections: { ethereum: { 1: {} } },
+      send(payload, callback) {
+        rpc.request(payload.method, payload.params).then(
+          (result) => callback({ result }),
+          (error) => callback({ error })
+        )
+      }
+    })
+    try {
+      await waitUntil(() => worker.events.some(({ name }) => name === 'ready'))
+      worker.controller.updateKnownTokenBalances(account, [firstToken])
+      await waitUntil(() => observed.length === 1)
+      for (const token of replacement) worker.controller.updateKnownTokenBalances(account, [token])
+      release()
+      await waitUntil(() => observed.length > 1, 1000)
+      await waitUntil(() => {
+        const loaded = worker.events
+          .filter(({ name }) => name === 'tokenBalances')
+          .flatMap(({ args }) => args[1])
+        return replacement.every((token) =>
+          loaded.some((balance) => balance.address === token.address && balance.decimals === token.decimals)
+        )
+      })
+      expect(peak).toBe(1)
+      expect(observed).toHaveLength(2)
+      expect(new Set(observed[1])).toEqual(new Set(replacement.map(({ address }) => address)))
+      const loaded = worker.events
+        .filter(({ name }) => name === 'tokenBalances')
+        .flatMap(({ args }) => args[1])
+      if (kind === 'changed metadata') {
+        expect(loaded).toEqual([
+          expect.objectContaining({
+            decimals: 2,
+            name: 'Updated token',
+            symbol: 'NEW',
+            displayBalance: '1.23'
+          })
+        ])
+      }
+      if (kind === 'new tokens after an upstream failure')
+        expect(loaded.some(({ address }) => address === firstToken.address)).toBe(false)
+      evidence.push({ case: kind, observed, peak, results: loaded })
+    } finally {
+      release()
+    }
+  }
+)

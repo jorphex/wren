@@ -213,7 +213,21 @@ async function updateBlacklist(address: Address, chains: number[]) {
   }
 }
 
-const tokenReadsInFlight = new Set<string>()
+interface TokenRead {
+  requested: Map<string, Token>
+  pending: Map<string, Token>
+}
+
+const tokenReadsInFlight = new Map<string, TokenRead>()
+
+function sameTokenMetadata(left: Token, right: Token) {
+  return (
+    left.decimals === right.decimals &&
+    left.name === right.name &&
+    left.symbol === right.symbol &&
+    (left.logoURI || '') === (right.logoURI || '')
+  )
+}
 
 async function loadTokenBalances(address: Address, tokens: Token[], kind: 'discovery' | 'tracked') {
   const byChain = new Map<number, Token[]>()
@@ -227,13 +241,34 @@ async function loadTokenBalances(address: Address, tokens: Token[], kind: 'disco
   await Promise.all(
     [...byChain].map(async ([chainId, chainTokens]) => {
       const key = `${kind}:${address.toLowerCase()}:${chainId}`
-      if (tokenReadsInFlight.has(key)) return
-      tokenReadsInFlight.add(key)
+      const active = tokenReadsInFlight.get(key)
+      if (active) {
+        if (kind === 'tracked') {
+          for (const token of chainTokens) {
+            const tokenId = toTokenId(token)
+            const requested = active.requested.get(tokenId)
+            if (requested && sameTokenMetadata(requested, token)) active.pending.delete(tokenId)
+            else active.pending.set(tokenId, token)
+          }
+        }
+        return
+      }
+      const read: TokenRead = { requested: new Map(), pending: new Map() }
+      tokenReadsInFlight.set(key, read)
       try {
-        const loaded = await balances.getTokenBalances(address, chainTokens)
-        const tokenBalances =
-          kind === 'discovery' ? loaded.filter((balance) => BigInt(balance.balance) > 0n) : loaded
-        sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+        let targets = chainTokens
+        while (targets.length) {
+          if (kind === 'tracked') {
+            for (const token of targets) read.requested.set(toTokenId(token), token)
+          }
+          const loaded = await balances.getTokenBalances(address, targets)
+          const tokenBalances = loaded.filter((balance) =>
+            kind === 'discovery' ? BigInt(balance.balance) > 0n : !read.pending.has(toTokenId(balance))
+          )
+          sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+          targets = [...read.pending.values()]
+          read.pending.clear()
+        }
       } finally {
         tokenReadsInFlight.delete(key)
       }

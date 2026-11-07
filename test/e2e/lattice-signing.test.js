@@ -143,6 +143,21 @@ it.each(['0x0', '0x1', '0x2'])('signs a %s approval with only a bundled decoder'
   expect(data.decoder.length).toBeGreaterThan(0)
 })
 
+it.each([
+  ['transfer(address,uint256)', [target, (1n << 256n) - 1n]],
+  [
+    'safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)',
+    [account, target, [1n, 2n], [10n, 20n], '0x1234']
+  ]
+])(
+  'preserves %s calldata and prepares its bundled decoder without network lookups',
+  async (signature, args) => {
+    const abi = new Interface([`function ${signature}`])
+    const data = await signFixture({ ...base, value: '0x0', data: abi.encodeFunctionData(signature, args) })
+    expect(data.decoder.length).toBeGreaterThan(0)
+  }
+)
+
 it('preserves device rejection without producing a signed transaction', async () => {
   client.sign.mockRejectedValue({ responseCode: 132, errorMessage: 'User declined' })
   const outcome = await new Promise((resolve) => {
