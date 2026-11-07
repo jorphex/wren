@@ -1,5 +1,6 @@
 import { Component, createRef } from 'react'
 import Restore from 'react-restore'
+import { createPortal } from 'react-dom'
 
 import { WREN_LICENSE_URL } from '../../../resources/constants'
 import link from '../../../resources/link'
@@ -88,6 +89,16 @@ const CompanionRevokeActions = styled.div`
     font-size: 12px;
   }
 `
+
+const RecentRecipientsDialog = ({ children, ...props }) =>
+  createPortal(
+    <div className='recentRecipientsOverlay'>
+      <DialogSurface {...props} as={CompanionRevokeDialog} className='recentRecipientsDialog' modal>
+        {children}
+      </DialogSurface>
+    </div>,
+    document.body
+  )
 
 const RecentRecipientActions = styled.div`
   display: flex;
@@ -818,11 +829,9 @@ export class Settings extends Component {
                 Remember recipients from successful sends on this device. Excluded from backups.
               </div>
               {this.state.recentDisableConfirm ? (
-                <DialogSurface
-                  as={CompanionRevokeDialog}
-                  className='recentRecipientsDialog'
+                <RecentRecipientsDialog
                   role='alertdialog'
-                  modal={false}
+                  busy={this.state.recentPrivacyPending}
                   labelledBy='recent-recipients-disable-title'
                   describedBy='recent-recipients-disable-body'
                   initialFocusRef={this.recentDisableCancelRef}
@@ -855,7 +864,7 @@ export class Settings extends Component {
                       Turn off and clear
                     </button>
                   </CompanionRevokeActions>
-                </DialogSurface>
+                </RecentRecipientsDialog>
               ) : null}
             </div>
             <div className='signerPermission localSetting localSettingExplained recentRecipientsClear'>
@@ -877,11 +886,9 @@ export class Settings extends Component {
                 Remove all recent recipients from this device. Saved contacts are not affected.
               </div>
               {this.state.recentClearConfirm ? (
-                <DialogSurface
-                  as={CompanionRevokeDialog}
-                  className='recentRecipientsDialog'
+                <RecentRecipientsDialog
                   role='alertdialog'
-                  modal={false}
+                  busy={this.state.recentPrivacyPending}
                   labelledBy='recent-recipients-clear-title'
                   describedBy='recent-recipients-clear-body'
                   initialFocusRef={this.recentClearCancelRef}
@@ -914,7 +921,7 @@ export class Settings extends Component {
                       Clear recipients
                     </button>
                   </CompanionRevokeActions>
-                </DialogSurface>
+                </RecentRecipientsDialog>
               ) : null}
             </div>
             <div className='recentRecipientsStatus' role='status' aria-live='polite' aria-atomic='true'>

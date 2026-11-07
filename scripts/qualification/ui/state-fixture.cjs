@@ -283,6 +283,119 @@ const typedDataReviewRequest = () => ({
   }
 })
 
+const authorizationReviewRequest = (variant) => {
+  const req = typedDataReviewRequest()
+  const verifyingContract = '0x1111111111111111111111111111111111111111'
+  const from = QUALIFICATION_ACCOUNT
+  const to = '0x3333333333333333333333333333333333333333'
+  const message = {
+    from,
+    to,
+    value: '1000000000000000001',
+    validAfter: '0',
+    validBefore: '2000000000',
+    nonce: `0x${'ab'.repeat(32)}`
+  }
+  req.context = {
+    requestChainId: 1,
+    domainChainId: '1',
+    risks: ['eip3009-transfer'],
+    eip3009: {
+      kind: 'transfer',
+      primaryType: 'TransferWithAuthorization',
+      verifyingContract,
+      authorizer: from,
+      ...message,
+      grantsAuthority: true,
+      maximumAmount: false
+    }
+  }
+  req.typedMessage.data = {
+    domain: { name: 'Workshop token', chainId: 1, verifyingContract },
+    primaryType: 'TransferWithAuthorization',
+    message,
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' }
+      ],
+      TransferWithAuthorization: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'validAfter', type: 'uint256' },
+        { name: 'validBefore', type: 'uint256' },
+        { name: 'nonce', type: 'bytes32' }
+      ]
+    }
+  }
+  if (variant === 'eip3009-extra-domain') {
+    req.typedMessage.data.domain.salt = `0x${'cd'.repeat(32)}`
+    req.typedMessage.data.types.EIP712Domain.push({ name: 'salt', type: 'bytes32' })
+  }
+  return req
+}
+
+const tokenAuthorityReviewRequest = (variant) => {
+  if (variant.startsWith('eip3009')) return authorizationReviewRequest(variant)
+  const req = typedDataReviewRequest()
+  const token = '0x1111111111111111111111111111111111111111'
+  const spender = '0x3333333333333333333333333333333333333333'
+  const verifyingContract = '0x000000000022d473030f116ddee9f6b43ac78ba3'
+  const details = [
+    { token, amount: '1000000000000000001', expiration: '2000000000', nonce: '7' },
+    {
+      token: '0x4444444444444444444444444444444444444444',
+      amount: '42',
+      expiration: variant === 'different-expirations' ? '2100000000' : '2000000000',
+      nonce: '8'
+    }
+  ]
+  req.context = {
+    requestChainId: 1,
+    domainChainId: variant === 'wrong-chain' ? '8453' : '1',
+    risks: variant === 'wrong-chain' ? ['domain-chain-mismatch', 'permit2-allowance'] : ['permit2-allowance'],
+    permit2: {
+      kind: 'allowance',
+      primaryType: 'PermitBatch',
+      verifyingContract,
+      canonicalContract: true,
+      spender,
+      deadline: '1900000000',
+      permissions: details.map(({ token, amount, expiration }) => ({ token, amount, expiration })),
+      batch: true,
+      witness: false,
+      grantsAuthority: true,
+      maximumAmount: false
+    }
+  }
+  req.typedMessage.data = {
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' }
+      ],
+      PermitDetails: [
+        { name: 'token', type: 'address' },
+        { name: 'amount', type: 'uint160' },
+        { name: 'expiration', type: 'uint48' },
+        { name: 'nonce', type: 'uint48' }
+      ],
+      PermitBatch: [
+        { name: 'details', type: 'PermitDetails[]' },
+        { name: 'spender', type: 'address' },
+        { name: 'sigDeadline', type: 'uint256' }
+      ]
+    },
+    primaryType: 'PermitBatch',
+    domain: { name: 'Permit2', chainId: variant === 'wrong-chain' ? 8453 : 1, verifyingContract },
+    message: { details, spender, sigDeadline: '1900000000' }
+  }
+  return req
+}
+
 const addChainReviewRequest = () => ({
   handlerId: 'qualification-add-chain-review',
   type: 'addChain',
@@ -318,7 +431,7 @@ const addTokenReviewRequest = () => ({
 const permitReviewRequest = () => ({
   account: QUALIFICATION_ACCOUNT,
   type: 'signErc20Permit',
-  status: 'pending',
+  status: undefined,
   handlerId: 'qualification-permit-review',
   origin: 'uniswap',
   context: { requestChainId: 1, domainChainId: '1', risks: [] },
@@ -347,7 +460,7 @@ const permitReviewRequest = () => ({
     }
   },
   permit: {
-    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract' },
+    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract', contractName: 'SwapRouter', contractSource: 'sourcify' },
     verifyingContract: {
       address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
       ens: '',
@@ -428,7 +541,7 @@ const RPC_WARNING_FIXTURES = Object.freeze({
     type: 'approveBroadTokenAuthority',
     title: 'Broad Token Approval',
     message: 'Your RPC reports broad access. Check the spender and limit.',
-    confirmLabel: 'Approve anyway'
+    confirmLabel: 'Accept token access'
   },
   'existing-token-allowance': {
     type: 'approveExistingTokenAllowanceChange',
@@ -657,7 +770,7 @@ const responsiveTransactionRequest = (variant) => {
       signature: 'transfer(address,uint256)',
       source: 'bundled-selector-directory'
     }
-  } else if (variant === 'asset-changes') {
+  } else if (variant === 'asset-changes' || variant === 'trace-asset-changes') {
     const token = '0x3333333333333333333333333333333333333333'
     request.data.to = token
     request.data.value = '0x0'
@@ -681,6 +794,18 @@ const responsiveTransactionRequest = (variant) => {
         amount: '1000000000000000000'
       }
     ]
+    if (variant === 'trace-asset-changes') {
+      request.simulation.source = 'eth_call'
+      request.simulation.effectsEvidence = {
+        source: 'debug_traceCall',
+        blockHash: `0x${'ab'.repeat(32)}`,
+        blockNumber: '0x123'
+      }
+      request.simulation.executionBlock = {
+        hash: request.simulation.effectsEvidence.blockHash,
+        number: '0x123'
+      }
+    }
     request.simulation.nativeBalanceChanges = {
       status: 'succeeded',
       source: 'debug_traceCall',
@@ -1785,7 +1910,7 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.panel.account.moduleOrder = ['chains']
-    state.panel.account.modules.chains.height = scenario.logicalWidth <= 540 ? 108 : 56
+    state.panel.account.modules.chains.height = 66
   }
 
   if (scenario.state === 'account-empty-perch') {
@@ -1911,6 +2036,25 @@ const fixtureFor = (scenario) => {
         }
       ]
     }
+  }
+
+  if (scenario.state === 'account-approvals') {
+    prepareSelectedAccount(state)
+    state.main.accounts[QUALIFICATION_ACCOUNT].signer = 'qualification-approval-signer'
+    state.main.signers = { 'qualification-approval-signer': { type: 'seed', status: 'ok' } }
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.tokens.known[QUALIFICATION_ACCOUNT] = [
+      { address: '0x1111111111111111111111111111111111111111', chainId: 1, symbol: 'TST', decimals: 18 }
+    ]
+    state.selected.hideBalances = Boolean(scenario.approvalsPrivacy)
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'approvals', account: QUALIFICATION_ACCOUNT, title: 'Approvals' }
+      }
+    ]
   }
 
   if (scenario.state === 'account-permissions') {
@@ -2237,16 +2381,59 @@ const fixtureFor = (scenario) => {
       scenario.state === 'signature-message-review'
         ? messageReviewRequest()
         : scenario.state === 'signature-typed-data-review'
-          ? typedDataReviewRequest()
+          ? scenario.authorityReview
+            ? tokenAuthorityReviewRequest(scenario.authorityReview)
+            : typedDataReviewRequest()
           : scenario.state === 'add-chain-review'
             ? addChainReviewRequest()
             : addTokenReviewRequest()
+    if (scenario.rpcMetadata) {
+      const token = request.context.eip3009?.verifyingContract || request.context.permit2.permissions[0].token
+      const amount = '1000001'
+      if (request.context.eip3009) {
+        request.context.eip3009.value = amount
+        request.typedMessage.data.message.value = amount
+      } else {
+        request.context.permit2.permissions[0].amount = amount
+        request.typedMessage.data.message.details[0].amount = amount
+      }
+      request.signingMetadata = {
+        tokens: (request.context.permit2?.permissions.map(({ token }) => token) || [token]).map((address, index) => ({ address, chainId: 1, symbol: index ? 'USDT' : 'USDC', name: index ? 'Tether USD' : 'USD Coin', decimals: 6 })),
+        ...(request.context.permit2 ? { spender: {
+          address: request.context.permit2.spender.toLowerCase(),
+          contractName: 'SwapRouter', contractSource: 'sourcify'
+        }} : {})
+      }
+    }
     prepareSelectedAccount(state, request)
     state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'ledger'
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.main.origins = { workshop: { name: 'workshop.example' } }
+    if (scenario.authorityReview) {
+      state.main.tokens = {
+        custom: [],
+        known: {
+          [QUALIFICATION_ACCOUNT]: [
+            {
+              chainId: 1,
+              address: '0x1111111111111111111111111111111111111111',
+              symbol: 'TST',
+              name: 'Workshop token',
+              decimals: 18
+            },
+            {
+              chainId: 8453,
+              address: '0x4444444444444444444444444444444444444444',
+              symbol: 'OTHER',
+              name: 'Other network token',
+              decimals: 6
+            }
+          ]
+        }
+      }
+    }
     state.windows.panel.nav = [
       {
         view: 'requestView',
@@ -2525,12 +2712,17 @@ const fixtureFor = (scenario) => {
 
   if (scenario.state === 'transaction-responsive') {
     const request = responsiveTransactionRequest(scenario.variant)
+    if (scenario.namedSpender) {
+      Object.assign(request.recognizedActions[0].data.spender, {
+        contractName: 'SwapRouter', contractSource: 'sourcify'
+      })
+    }
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.main.origins = { workshop: { name: 'workshop.example' } }
-    if (scenario.variant === 'asset-changes') {
+    if (scenario.variant === 'asset-changes' || scenario.variant === 'trace-asset-changes') {
       state.main.balances[QUALIFICATION_ACCOUNT] = [
         {
           chainId: 1,
@@ -2610,6 +2802,37 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (['getTokenApprovals', 'refreshTokenApprovals'].includes(method)) {
+    if (scenario.approvalsEmpty) return []
+    return [
+      {
+        id: 'a'.repeat(64),
+        account: QUALIFICATION_ACCOUNT.toLowerCase(),
+        chainId: 1,
+        token: '0x1111111111111111111111111111111111111111',
+        spender: '0x3333333333333333333333333333333333333333',
+        observedAt: 1,
+        status: 'current',
+        amount: '1000000000000000001',
+        checkedAt: Date.now()
+      },
+      {
+        id: 'b'.repeat(64),
+        account: QUALIFICATION_ACCOUNT.toLowerCase(),
+        chainId: 1,
+        token: '0x4444444444444444444444444444444444444444',
+        spender: '0x5555555555555555555555555555555555555555',
+        observedAt: 2,
+        status: 'unavailable'
+      }
+    ]
+  }
+  if (method === 'revokeTokenApproval')
+    return {
+      account: QUALIFICATION_ACCOUNT,
+      handlerId: '11111111-1111-4111-8111-111111111111',
+      type: 'transaction'
+    }
   if (method === 'getApprovalBalance') return '123456789'
   if (
     (scenario.adjustApproval || scenario.state === 'signature-permit-amount-editor') &&

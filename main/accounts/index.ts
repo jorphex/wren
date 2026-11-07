@@ -1521,6 +1521,12 @@ export class Accounts extends EventEmitter {
       const approval = (request.approvals || []).find((a) => a.type === approvalType)
 
       if (approval) {
+        if (
+          typeof approval.data?.['consentFingerprint'] === 'string' &&
+          approvalData?.['consentFingerprint'] !== approval.data['consentFingerprint']
+        ) {
+          throw new Error('Approval changed. Review it again.')
+        }
         approval.approve(approvalData)
       }
     }
@@ -1590,6 +1596,7 @@ export class Accounts extends EventEmitter {
       permitReq.typedMessage.data.message.value = normalizedAmount
       permitReq.permit.value = normalizedAmount
       currentAccount.syncPermitApprovalRisk(permitReq)
+      currentAccount.syncSignatureApprovalRisk(permitReq)
       currentAccount.update()
       return true
     }
@@ -2750,6 +2757,15 @@ export class Accounts extends EventEmitter {
       const replacementStatus = getReplacementStatus(storedRequest, transactionRequests(currentAccount))
       if (!replacementStatus.replacement || !replacementStatus.possible) {
         throw new Error('Replacement fees or nonce are no longer valid')
+      }
+    }
+
+    if (isSignatureRequest(storedRequest)) {
+      currentAccount.syncSignatureApprovalRisk(storedRequest)
+      if (storedRequest.type === 'signErc20Permit') currentAccount.syncPermitApprovalRisk(storedRequest)
+      if ((storedRequest.approvals || []).some((approval) => !approval.approved)) {
+        currentAccount.update()
+        throw new Error('Signature approvals changed. Review them again.')
       }
     }
 

@@ -8,6 +8,10 @@ import { applyRequestUpdate } from './updateRequest'
 import { enforceRequestOriginAuthorization } from './requestAuthorization'
 import { respondToExtensionPairing } from '../api/extensionPairing'
 import { revokeCompanionAccess } from '../api/companionAccess'
+import { tokenApprovals } from '../tokenApprovals/runtime'
+import { TokenApprovalRevocations } from '../tokenApprovals/revocations'
+import { originIdForName, WREN_INTERNAL_ORIGIN } from '../../resources/domain/origin'
+import { RequestStatus } from '../accounts/types'
 import {
   respondToNativePairing,
   revokeNativePeerCredential as revokePairedNative
@@ -65,7 +69,87 @@ const revokeNativeAccess = (fingerprint) => {
   revokePairedNative(fingerprint)
 }
 
+let approvalRpcId = 0
+const approvalRevocations = new TokenApprovalRevocations({
+  service: tokenApprovals,
+  canReview: (account) => {
+    const current = accounts.current()
+    return (
+      current?.id.toLowerCase() === account &&
+      Boolean(current.signer) &&
+      store('main.signers', current.signer, 'type') !== 'watch'
+    )
+  },
+  queue: (transaction) =>
+    new Promise((resolve, reject) => {
+      const chainId = Number(BigInt(transaction.chainId))
+      const network = store('main.networks.ethereum', chainId)
+      if (!network?.on || !network.connection.endpoints.some((endpoint) => endpoint.connected)) {
+        return reject(new Error('Connect this network to review revocation'))
+      }
+      const duplicate = Object.values(accounts.current()?.requests || {}).some(
+        (request) =>
+          request.type === 'transaction' &&
+          request.data?.to?.toLowerCase() === transaction.to &&
+          request.data.chainId === transaction.chainId &&
+          request.data.data === transaction.data &&
+          ![
+            RequestStatus.Confirmed,
+            RequestStatus.Declined,
+            RequestStatus.Error,
+            RequestStatus.Success
+          ].includes(request.status)
+      )
+      if (duplicate) return reject(new Error('This revocation is already in Requests'))
+      let queued = false
+      provider.sendTransaction(
+        {
+          id: ++approvalRpcId,
+          jsonrpc: '2.0',
+          method: 'eth_sendTransaction',
+          chainId: transaction.chainId,
+          _origin: originIdForName(WREN_INTERNAL_ORIGIN),
+          params: [{ ...transaction }]
+        },
+        (response) => {
+          if (!queued && response?.error)
+            reject(new Error(response.error.message || 'Could not open revocation review'))
+        },
+        { type: 'ethereum', id: chainId },
+        (handlerId) => {
+          queued = true
+          resolve(handlerId)
+        }
+      )
+    })
+})
+
 const rpc = {
+  getTokenApprovals: (account, cb) => {
+    try {
+      cb(null, tokenApprovals.list(account))
+    } catch (error) {
+      cb(error)
+    }
+  },
+  refreshTokenApprovals: (account, ids, cb) => {
+    tokenApprovals.refresh(account, ids).then(
+      (entries) => cb(null, entries),
+      (error) => cb(error)
+    )
+  },
+  revokeTokenApproval: (account, id, cb) => {
+    approvalRevocations.request(account, id).then(
+      (reference) => cb(null, reference),
+      (error) => cb(error)
+    )
+  },
+  clearTokenApprovals: (account, cb) => {
+    callbackWhenDone(() => {
+      tokenApprovals.clear(account)
+      commitMainState(store('main'))
+    }, cb)
+  },
   getState: (cb) => {
     cb(null, rendererVisibleState(store()))
   },

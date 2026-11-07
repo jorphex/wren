@@ -1,14 +1,19 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import puppeteer from 'puppeteer'
+import { parseArgs } from 'node:util'
+import renderAssets from './render-brand-assets.cjs'
 
 const root = process.cwd()
+const { values } = parseArgs({ options: { 'output-dir': { type: 'string' } } })
+const outputRoot = path.resolve(values['output-dir'] || root)
+const jobs = []
+const copies = []
 const masterPath = path.join(root, 'asset/brand/wren-mark.svg')
 const grainPath = path.join(root, 'resources/svg/wren-grain.svg')
 const socialHeaderSourcePath = path.join(root, 'asset/social/source/wren-night-rounds-v1.png')
-const brandDirectory = path.join(root, 'asset/brand')
+const brandDirectory = path.join(outputRoot, 'asset/brand')
 const exportDirectory = path.join(brandDirectory, 'exports')
-const socialDirectory = path.join(root, 'asset/social')
+const socialDirectory = path.join(outputRoot, 'asset/social')
 const master = await readFile(masterPath, 'utf8')
 const grain = await readFile(grainPath, 'utf8')
 const socialHeaderSource = await readFile(socialHeaderSourcePath)
@@ -29,8 +34,6 @@ const palette = {
   accent: '#a68a61'
 }
 const appMarkScale = 1.2
-
-const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
 
 const svg = ({ content, viewBox = '0 0 1000 1000', extraDefs = '' }) => `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
@@ -97,18 +100,12 @@ const socialHeader = () =>
   })
 
 const render = async (source, outputPath, width, height = width) => {
-  const page = await browser.newPage()
-  try {
-    await page.setViewport({ width, height, deviceScaleFactor: 1 })
-    await page.setContent(
-      `<style>html,body{margin:0;width:100%;height:100%;background:transparent}svg{display:block;width:100%;height:100%}</style>${source}`
-    )
-    const output = await page.screenshot({ omitBackground: true, type: 'png' })
-    await mkdir(path.dirname(outputPath), { recursive: true })
-    await writeFile(outputPath, output)
-  } finally {
-    await page.close()
-  }
+  jobs.push({
+    html: `<style>html,body{margin:0;width:100%;height:100%;background:transparent}svg{display:block;width:100%;height:100%}</style>${source}`,
+    outputPath,
+    width,
+    height
+  })
 }
 
 const writeProductionAssets = async () => {
@@ -118,6 +115,8 @@ const writeProductionAssets = async () => {
   const markExportDirectory = path.join(exportDirectory, 'mark')
   const trayExportDirectory = path.join(exportDirectory, 'tray')
   const webExportDirectory = path.join(exportDirectory, 'web')
+
+  await mkdir(markExportDirectory, { recursive: true })
 
   for (const size of appSizes) {
     await render(appIcon(), path.join(appExportDirectory, `wren-app-icon-${size}.png`), size)
@@ -151,7 +150,7 @@ const writeProductionAssets = async () => {
   const appOutput = path.join(appExportDirectory, 'wren-app-icon-512.png')
 
   for (const outputPath of ['main/windows/AppIcon.png', 'build/icons/512x512.png', 'build/icons/icon.png']) {
-    await writeFile(path.join(root, outputPath), await readFile(appOutput))
+    copies.push([appOutput, path.join(outputRoot, outputPath)])
   }
 
   const trayAssets = [
@@ -200,7 +199,7 @@ const writeProductionAssets = async () => {
   for (const [exportName, runtimeName, size, fill, symbol, scale, y, x = 0] of trayAssets) {
     const exportPath = path.join(trayExportDirectory, exportName)
     await render(mark({ fill, symbol, scale, x, y }), exportPath, size)
-    await writeFile(path.join(root, 'main/windows', runtimeName), await readFile(exportPath))
+    copies.push([exportPath, path.join(outputRoot, 'main/windows', runtimeName)])
   }
 
   await render(socialAvatar(), path.join(socialDirectory, 'wren-profile-400.png'), 400)
@@ -262,23 +261,22 @@ const writeProofSheet = async () => {
       <figure class="social-header"><div class="sample"><div class="social-header-preview">${header}</div><div class="crop-guide top"></div><div class="crop-guide bottom"></div></div><figcaption>1500 × 500 X header · possible crop area shown</figcaption></figure>
     </div>
   `
-  const page = await browser.newPage()
-  try {
-    await page.setViewport({ width: 1240, height: 1380, deviceScaleFactor: 1 })
-    await page.setContent(html)
-    await mkdir(brandDirectory, { recursive: true })
-    await page.screenshot({ path: path.join(brandDirectory, 'wren-brand-sheet.png'), fullPage: true })
-  } finally {
-    await page.close()
-  }
+  jobs.push({
+    html,
+    outputPath: path.join(brandDirectory, 'wren-brand-sheet.png'),
+    width: 1240,
+    height: 1380,
+    fullPage: true
+  })
 }
 
-try {
-  await mkdir(exportDirectory, { recursive: true })
-  await writeProductionAssets()
-  await writeProofSheet()
-} finally {
-  await browser.close()
+await mkdir(exportDirectory, { recursive: true })
+await writeProductionAssets()
+await writeProofSheet()
+await renderAssets(jobs, outputRoot)
+for (const [source, destination] of copies) {
+  await mkdir(path.dirname(destination), { recursive: true })
+  await copyFile(source, destination)
 }
 
 console.log('Wren brand assets generated')

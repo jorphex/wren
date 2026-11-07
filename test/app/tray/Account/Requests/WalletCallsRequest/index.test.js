@@ -1,9 +1,11 @@
+import Restore from 'react-restore'
+import { SigningDecisionSummary } from '../../../../../../app/tray/Footer/SigningDecisionSummary'
 import { cleanup, render, screen } from '../../../../../componentSetup'
 import { WalletCallsRequest } from '../../../../../../app/tray/Account/Requests/WalletCallsRequest'
 import { createWalletCallsDraft } from '../../../../../../app/tray/Account/Requests/WalletCallsRequest/adjustment'
 import link from '../../../../../../resources/link'
 
-jest.mock('../../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({ send: jest.fn(), invoke: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
@@ -69,22 +71,20 @@ it('shows the approved hierarchy, ordered call identities, values, and disclosed
     />
   )
 
-  expect(screen.getByRole('heading', { name: 'Submit 2 transactions?' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: '2 transactions' })).toBeTruthy()
   expect(screen.queryByText(/Wren will submit these calls in order/)).toBeNull()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Ethereum')).toBeTruthy()
-  expect(screen.getByText('Main account')).toBeTruthy()
+  expect(screen.queryByText('Main account')).toBeNull()
   expect(screen.getByText('USD Coin (USDC)')).toBeTruthy()
   expect(screen.getByText('transfer call')).toBeTruthy()
   expect(screen.getByText('Contract call')).toBeTruthy()
   expect(screen.getByText('Value · 0 ETH')).toBeTruthy()
   expect(screen.getByText('Value · <0.000001 ETH')).toBeTruthy()
-  expect(screen.getByText('Gas limit · 21,000')).toBeTruthy()
-  expect(screen.getByText('Gas limit · 50,000')).toBeTruthy()
-  expect(screen.getByText('Max rate · 1 Gwei')).toBeTruthy()
-  expect(screen.getByText('Max rate · 2 Gwei')).toBeTruthy()
-
-  await user.click(screen.getAllByRole('button', { name: /Calldata · 4 bytes/i })[0])
+  expect(screen.queryByText('Gas limit · 21,000')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Call 1 details' }))
+  expect(screen.getByText(/Gas limit · 21,000/)).toBeTruthy()
+  expect(screen.getByText(/Max rate · 1 Gwei/)).toBeTruthy()
   expect(screen.getByText('0xa9059cbb')).toBeTruthy()
 
   await user.click(screen.getByRole('button', { name: /USD Coin.*0x2222/i }))
@@ -116,22 +116,35 @@ it('shows full lookalike destinations with highlighted ends and an inline warnin
   )
 })
 
-it('renders per-transaction and aggregate maximum fees and opens a separate editor', async () => {
+it('keeps aggregate fees and adjustment beside the decision while per-call fees remain in details', async () => {
   const req = preparedRequest()
-  const { user } = render(
-    <WalletCallsRequest
-      originName='example.test'
-      chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
-      req={req}
-    />
+  const localStore = Restore.create(
+    {
+      main: {
+        accounts: { [account]: { name: 'Main account', activeRequestId: req.handlerId } },
+        networks: { ethereum: { 1: { name: 'Ethereum' } } },
+        networksMeta: { ethereum: { 1: { nativeCurrency: { symbol: 'ETH', decimals: 18 } } } }
+      }
+    },
+    {}
   )
-
-  expect(screen.getByText('Total maximum network fees')).toBeTruthy()
+  const Summary = Restore.connect(SigningDecisionSummary, localStore)
+  const { user } = render(
+    <>
+      <WalletCallsRequest
+        originName='example.test'
+        chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
+        req={req}
+      />
+      <Summary req={req} />
+    </>
+  )
+  expect(screen.getByText('Maximum network fees')).toBeTruthy()
   expect(screen.getByText('0.000121 ETH')).toBeTruthy()
-  expect(screen.getByText('2 separate transactions')).toBeTruthy()
-  expect(screen.getByText('0.000021 ETH')).toBeTruthy()
-  expect(screen.getByText('0.0001 ETH')).toBeTruthy()
-
+  await user.click(screen.getByRole('button', { name: 'Call 1 details' }))
+  expect(screen.getByText(/Maximum fee · 0.000021 ETH/)).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Call 2 details' }))
+  expect(screen.getByText(/Maximum fee · 0.0001 ETH/)).toBeTruthy()
   await user.click(screen.getByRole('button', { name: /Adjust/i }))
   expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', {
     data: { step: 'adjustWalletCalls', walletCallsDraft: createWalletCallsDraft(req) }
@@ -237,7 +250,7 @@ it('shows delegated execution evidence on each affected target', async () => {
   expect(screen.getAllByText(/Target delegates execution to/)).toHaveLength(2)
   expect(screen.getAllByRole('status')).toHaveLength(2)
 
-  await user.click(screen.getAllByRole('button', { name: /Calldata/ })[0])
+  await user.click(screen.getAllByRole('button', { name: /details/i })[0])
   expect(screen.getByText(new RegExp(`This call runs code from ${delegate}`))).toBeTruthy()
 })
 
@@ -261,7 +274,7 @@ it('qualifies empty delegate bytecode instead of implying that execution is impo
 
   const { user } = render(<WalletCallsRequest originName='example.test' req={req} />)
   expect(screen.getByText(/RPC returned empty code/)).toBeTruthy()
-  await user.click(screen.getAllByRole('button', { name: /Calldata/ })[0])
+  await user.click(screen.getAllByRole('button', { name: /details/i })[0])
   expect(screen.getByText(/precompiles can execute without bytecode/i)).toBeTruthy()
 })
 

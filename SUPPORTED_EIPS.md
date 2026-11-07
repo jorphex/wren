@@ -41,15 +41,15 @@ not mean that accounts or applications can use the standard end to end.
 
 ## Signing and account intent
 
-| Standard                                            | Status      | Wren behavior and limit                                                                                                                                                                                                                                                                       |
-| --------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [EIP-712](https://eips.ethereum.org/EIPS/eip-712)   | Implemented | Validates and reviews V3/V4 structured data, nested fields, and domain-chain risks. V1 arrays are separately identified as legacy compatibility, not EIP-712. Hardware capabilities differ.                                                                                                   |
-| [EIP-2612](https://eips.ethereum.org/EIPS/eip-2612) | Review-only | Detects exact signed permits, including owner, spender, amount, expiry, nonce, chain, and contract. It does not implement permit contracts.                                                                                                                                                   |
-| [Permit2](https://github.com/Uniswap/permit2)       | Review-only | Summarizes exact allowance, transfer, batch, and witness declarations without changing payloads. Explicit consent is required for authority, maximum amounts, and noncanonical contracts. It does not execute Permit2 or resolve token metadata.                                              |
-| [ERC-3009](https://eips.ethereum.org/EIPS/eip-3009) | Review-only | Summarizes exact V4 transfer, receive, and cancellation authorizations. It enforces signer authorization and transfer consent. It does not execute ERC-3009 or infer token support.                                                                                                           |
-| [ERC-4361](https://eips.ethereum.org/EIPS/eip-4361) | Review-only | Parses and reviews SIWE-shaped `personal_sign` messages and warns about origin, account, chain, time, and malformed data. It does not authenticate sessions or verify server nonces.                                                                                                          |
-| [ERC-1271](https://eips.ethereum.org/EIPS/eip-1271) | Unsupported | Wren has a bounded configured-RPC `isValidSignature` verifier for a future pinned adapter, but no selectable contract account, signature-production adapter, or user-facing validation path. It does not infer Safe or other families from bytecode. See [Smart Accounts](SMART_ACCOUNTS.md). |
-| [ERC-6492](https://eips.ethereum.org/EIPS/eip-6492) | Unsupported | Requires a pinned rollback-capable universal validator and the wrapper → ERC-1271/prepare → no-code-only EOA recovery order, using the selected adapter's exact factory payload and deployments. See [Smart Accounts](SMART_ACCOUNTS.md).                                                     |
+| Standard                                            | Status      | Wren behavior and limit                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [EIP-712](https://eips.ethereum.org/EIPS/eip-712)   | Implemented | Validates and reviews V3/V4 structured data, nested fields, and domain-chain risks. V1 arrays are separately identified as legacy compatibility, not EIP-712. Hardware capabilities differ.                                                                                                                                                     |
+| [EIP-2612](https://eips.ethereum.org/EIPS/eip-2612) | Review-only | Detects exact signed permits, including owner, spender, amount, expiry, nonce, chain, and contract. It does not implement permit contracts.                                                                                                                                                                                                     |
+| [Permit2](https://github.com/Uniswap/permit2)       | Review-only | Summarizes exact allowance, transfer, batch, and witness declarations without changing payloads. Explicit consent is required for authority, maximum amounts, and noncanonical contracts. Uses exact token units only from matching local metadata; otherwise shows base units. Raw signed data remains available. It does not execute Permit2. |
+| [ERC-3009](https://eips.ethereum.org/EIPS/eip-3009) | Review-only | Summarizes exact V4 transfer, receive, and cancellation authorizations. It enforces signer authorization and transfer consent. Uses matching local token metadata for amounts and keeps raw signed data available. It does not execute ERC-3009 or infer token support.                                                                         |
+| [ERC-4361](https://eips.ethereum.org/EIPS/eip-4361) | Review-only | Parses and reviews SIWE-shaped `personal_sign` messages and warns about origin, account, chain, time, and malformed data. It does not authenticate sessions or verify server nonces.                                                                                                                                                            |
+| [ERC-1271](https://eips.ethereum.org/EIPS/eip-1271) | Unsupported | Wren has a bounded configured-RPC `isValidSignature` verifier for a future pinned adapter, but no selectable contract account, signature-production adapter, or user-facing validation path. It does not infer Safe or other families from bytecode. See [Smart Accounts](SMART_ACCOUNTS.md).                                                   |
+| [ERC-6492](https://eips.ethereum.org/EIPS/eip-6492) | Unsupported | Requires a pinned rollback-capable universal validator and the wrapper → ERC-1271/prepare → no-code-only EOA recovery order, using the selected adapter's exact factory payload and deployments. See [Smart Accounts](SMART_ACCOUNTS.md).                                                                                                       |
 
 Raw `eth_sign` remains available for compatibility. It is dangerous and
 requires explicit risk consent. See [RPC Compatibility](RPC_COMPATIBILITY.md)
@@ -70,9 +70,12 @@ for the method boundary.
 
 ## Simulation evidence
 
-Wren uses configured-RPC `eth_simulateV1` when available. Otherwise it uses
-bounded `eth_call`. Successful single transactions can also request bounded
-`debug_traceCall` prestate and optional call traces.
+Wren uses configured-RPC `eth_simulateV1` when available. An unsupported-method
+reply falls back to bounded `eth_call` for single transactions. Successful
+calls can also request bounded `debug_traceCall` prestate and call traces.
+Fallback token events require execution and traces at the same canonical block
+hash. Missing tracing or block-selector support leaves the preview limited.
+See [Simulation fallback](SIMULATION_FALLBACK.md) for coverage and tested endpoints.
 
 Wren can show native Wei deltas and summarized nested calls or creations. The
 results can omit fees or details and remain RPC claims. Wren hides raw trace

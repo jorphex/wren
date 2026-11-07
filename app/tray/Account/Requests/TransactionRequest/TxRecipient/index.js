@@ -1,3 +1,4 @@
+import Icon from '../../../../../../resources/Components/Icon'
 import React from 'react'
 import Restore from 'react-restore'
 
@@ -57,6 +58,9 @@ class TxRecipient extends React.Component {
     const yearnAction = (req.recognizedActions || []).find(({ id }) => id?.startsWith('yearn:'))
     const yearnData = yearnAction?.data || {}
     const addressSafety = addressSafetyTarget(req.addressSafety, address)
+    const tokenAction = (req.recognizedActions || []).some(
+      (action) => action.id === 'erc20:approve' || action.id === 'erc20:transfer'
+    )
     const title = yearnAction
       ? 'Calling Yearn Contract'
       : req.recipientType === 'contract'
@@ -73,7 +77,9 @@ class TxRecipient extends React.Component {
                 this.copyAddress(address)
               }}
             >
-              <span className='transactionReviewMetaLabel transactionReviewRecipientLabel'>To</span>
+              <span className='transactionReviewMetaLabel transactionReviewRecipientLabel'>
+                {tokenAction ? 'Token contract' : req.recipientType === 'contract' ? 'Contract' : 'To'}
+              </span>
               <div className='clusterAddress'>
                 <AddressIdentity
                   address={address}
@@ -83,6 +89,9 @@ class TxRecipient extends React.Component {
                   revealOnHover={false}
                   source={localIdentity?.source || (ensName ? 'ENS' : '')}
                 />
+                <span className='signingReviewCopyIcon'>
+                  <Icon name='copy' size={16} />
+                </span>
                 <AddressSafetyStatus address={address} assessment={req.addressSafety} />
               </div>
               <span
@@ -95,7 +104,7 @@ class TxRecipient extends React.Component {
             <ClusterStatus>{this.state.copied ? 'Transaction recipient address copied' : ''}</ClusterStatus>
           </ClusterRow>
 
-          {req.decodedData && req.decodedData.method ? (
+          {this.props.technical && req.decodedData && req.decodedData.method ? (
             <ClusterRow>
               <ClusterValue>
                 <span className={'clusterTag'} style={{ color: 'var(--good)', fontSize: '16px' }}>
@@ -106,7 +115,7 @@ class TxRecipient extends React.Component {
                 </span>
               </ClusterValue>
             </ClusterRow>
-          ) : yearnAction ? (
+          ) : this.props.technical && yearnAction ? (
             <ClusterRow>
               <ClusterValue>
                 <div className='clusterTag' style={{ color: 'var(--good)' }}>
@@ -114,7 +123,7 @@ class TxRecipient extends React.Component {
                 </div>
               </ClusterValue>
             </ClusterRow>
-          ) : req.recipientType === 'contract' ? (
+          ) : this.props.technical && req.recipientType === 'contract' ? (
             <ClusterRow>
               <ClusterValue>
                 <div className='clusterTag'>
@@ -125,14 +134,14 @@ class TxRecipient extends React.Component {
               </ClusterValue>
             </ClusterRow>
           ) : null}
-          {yearnAction ? (
+          {this.props.technical && yearnAction ? (
             <ClusterRow>
               <ClusterValue>
                 <div className='clusterTag'>Allowlisted vault: {yearnData.vaultName}</div>
               </ClusterValue>
             </ClusterRow>
           ) : null}
-          {req.decodedData && req.decodedData.source && (
+          {this.props.technical && req.decodedData && req.decodedData.source && (
             <ClusterRow>
               <ClusterValue>
                 <div className='clusterTag'>{'abi source: ' + req.decodedData.source}</div>

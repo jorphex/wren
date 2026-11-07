@@ -3,6 +3,9 @@ import { z } from 'zod'
 import { keccak256 } from 'ethers'
 import { decodeLocalCalldata } from '../inspector/localDecode'
 import { parseSimulationEffects } from '../transaction/effects'
+import { parseErc20ApprovalIntent } from '../../resources/domain/transaction/allowance'
+import type { ObservedTokenApprovalCall, TokenApprovalsService } from '../tokenApprovals/service'
+import type { TokenApprovalObservation } from '../../resources/domain/tokenApprovals'
 import type { ActivityEntry } from '../store/state/types/activity'
 import type { AccountActivityCursor, ObservedActivity } from '../store/state/types/accountActivity'
 
@@ -87,8 +90,10 @@ export interface ActivityScannerDependencies {
     chainId: number,
     cursor: AccountActivityCursor,
     entries: ActivityEntry[],
-    reorgAfter?: number
+    reorgAfter?: number,
+    approvals?: TokenApprovalObservation[]
   ) => void
+  tokenApprovals?: TokenApprovalsService
   notify: (entry: ActivityEntry) => void
   clearedAt: () => number
   active: () => boolean
@@ -108,6 +113,22 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
       check()
       return value
     }
+    const acceptApproval = deps.tokenApprovals?.captureObservationGuard()
+    const commit = (
+      cursor: AccountActivityCursor,
+      entries: ActivityEntry[],
+      reorgAfter?: number,
+      approvals: ObservedTokenApprovalCall[] = []
+    ) => {
+      if (deps.tokenApprovals) {
+        deps.tokenApprovals.commitActivity(
+          chainId,
+          approvals.filter((call) => acceptApproval?.(call.from)),
+          reorgAfter,
+          (observations) => deps.commit(chainId, cursor, entries, reorgAfter, observations)
+        )
+      } else deps.commit(chainId, cursor, entries, reorgAfter)
+    }
     try {
       const accounts = [
         ...new Set(
@@ -124,8 +145,7 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
       if (!cursor) {
         const initial = Header.parse(await rpc('eth_getBlockByNumber', [hex(safeHead), false]))
         if (height(initial.number) !== safeHead) throw new Error('Activity baseline block mismatch')
-        deps.commit(
-          chainId,
+        commit(
           {
             number: safeHead,
             hash: initial.hash,
@@ -168,9 +188,9 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
           ...ancestor,
           history: cursor.history.filter((b) => b.number < ancestor!.number)
         }
-        deps.commit(chainId, cursor, [], ancestor.number)
+        commit(cursor, [], ancestor.number)
       }
-      deps.commit(chainId, cursor, [])
+      commit(cursor, [])
       const end = Math.min(safeHead, cursor.number + ACTIVITY_BLOCK_BATCH)
       const blocks: Array<z.infer<typeof Block>> = []
       let parentHash = cursor.hash
@@ -235,6 +255,7 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
         )
         if (watched.length) transfersByBlock.get(number)?.forEach((hash) => candidates.add(hash))
         const entries: ActivityEntry[] = []
+        const approvals: ObservedTokenApprovalCall[] = []
         const notifications: ActivityEntry[] = []
         const notified: Set<string> = new Set(cursor.notified)
         for (const hash of candidates) {
@@ -256,6 +277,15 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
           const local = deps.localActivity(chainId, hash)
           const decoded =
             tx.input.length <= 524290 ? decodeLocalCalldata(tx.input) : { status: 'unavailable' as const }
+          if (
+            receipt.status === '0x1' &&
+            tx.to &&
+            watched.includes(tx.from) &&
+            local?.account !== tx.from &&
+            parseErc20ApprovalIntent(tx.input)
+          ) {
+            approvals.push({ from: tx.from, to: tx.to, data: tx.input, hash })
+          }
           for (const account of watched) {
             if (local?.account === account) continue
             const transfers = effects.filter((e) => e.from === account || e.to === account)
@@ -323,7 +353,7 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
           notified: [...notified].slice(-1000)
         }
         check()
-        deps.commit(chainId, cursor, entries)
+        commit(cursor, entries, undefined, approvals)
         notifications.forEach(deps.notify)
       }
       return cursor.number < safeHead

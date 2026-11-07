@@ -1,0 +1,724 @@
+// Shared signing hierarchy: context, consequence, identities, details, decision.
+.signingReviewContext
+  display flex
+  min-height 32px
+  align-items center
+  justify-content space-between
+  gap 16px
+  margin-bottom 20px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-ui)
+  font-size 14px
+  line-height 20px
+
+.signingReviewOrigin
+  display flex
+  min-width 0
+  align-items center
+  gap 8px
+  overflow-wrap anywhere
+  font-weight 550
+
+.signingReviewNetwork
+  flex 0 1 auto
+  min-width 0
+  max-width 46%
+  color var(--wren-text-muted)
+  font-size 13px
+  text-align right
+  overflow-wrap anywhere
+
+.signingReviewLabel,
+.signingReviewTechnical
+  color var(--wren-text-muted)
+  font-family var(--wren-font-ui)
+  font-size 13px
+  line-height 20px
+
+.signingReviewTechnical
+  margin 12px 0
+
+.signingReviewAddressRow
+  position relative
+  display grid
+  grid-template-columns 112px minmax(0, 1fr)
+  align-items center
+  gap 12px
+  padding 8px 0
+
+  &:not(:has(> .signingReviewLabel))
+    grid-template-columns minmax(0, 1fr)
+
+.signingReviewAddress
+  appearance none
+  display flex
+  min-width 0
+  min-height 32px
+  align-items center
+  gap 8px
+  padding 4px 0
+  border 0
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background transparent
+  text-align left
+  cursor pointer
+
+  .clusterAddress
+    min-width 0
+    flex 1 1 auto
+
+  > svg
+    flex none
+    color var(--wren-text-muted)
+
+  &:hover
+    background var(--wren-surface-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.signingReviewCopyStatus
+  position absolute
+  width 1px
+  height 1px
+  overflow hidden
+  clip-path inset(50%)
+
+.signingReviewDetails
+  margin 12px 0 20px
+  padding 0
+
+  > summary
+    display flex
+    min-height 44px
+    align-items center
+    justify-content space-between
+    gap 12px
+    padding 8px 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size 14px
+    line-height 20px
+    list-style none
+    cursor pointer
+
+    &::-webkit-details-marker
+      display none
+
+    &:hover
+      background var(--wren-surface-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+  &[open] > summary > svg
+    transform rotate(90deg)
+
+.signingReviewDetailsBody
+  padding 8px 0 12px
+
+.approveTransaction
+  font-family var(--wren-font-ui)
+  padding 8px 24px 24px
+  overflow-y auto
+  scrollbar-gutter stable both-edges
+
+  .transactionReviewMain
+    .transactionReviewOverview > .clusterRow:first-child .clusterValue,
+    ._txDescription
+      min-height 0
+
+    ._txDescription
+      padding 0 0 20px
+
+    ._txDescriptionSummary
+      display block
+
+    ._txDescriptionSummaryMain
+      font-family var(--wren-font-ui)
+      padding 0
+      font-size 25px
+      line-height 32px
+
+    .transactionReviewStatusRow
+      border 0
+
+    .transactionReviewSummaryStatus
+      padding 4px 0 12px
+
+  .transactionReviewRecipient > ._txMainInner > ._txLabel
+    display none
+
+  .transactionReviewRecipient .clusterValue
+    min-height 48px
+
+  .transactionReviewMetaLabel
+    font-family var(--wren-font-ui)
+
+  .transactionReviewTokenApproval
+    padding 16px 20px
+    margin 0 0 20px
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    background var(--wren-surface-card)
+
+    > ._txMainInner > ._txLabel
+      display none
+
+    .clusterRow,
+    .clusterValue
+      border 0
+      background transparent
+
+    .transactionReviewApprovalLimit
+      display grid
+      grid-template-columns minmax(0, 1fr) auto
+      gap 4px 16px
+      padding 0 0 16px
+
+      > .transactionReviewMetaLabel
+        grid-column 1
+
+      > strong
+        grid-column 1
+        font-size 27px
+        line-height 34px
+        overflow-wrap anywhere
+
+      > .transactionReviewApprovalAdjust
+        grid-column 2
+        grid-row 1 / span 2
+        align-self center
+
+    .transactionReviewApprovalSpender
+      grid-template-columns 112px minmax(0, 1fr)
+      padding 4px 0
+
+  .transactionReviewAssetChanges
+    margin 0 0 20px
+
+  .transactionReviewAssetChangesInner
+    padding 16px 20px
+
+  .transactionReviewAssetChangesHeader
+    margin-bottom 10px
+
+  .transactionReviewAssetChange
+    min-height 62px
+
+  .transactionReviewAssetChangeIdentity
+    font-size 16px
+
+  .transactionReviewAssetChangeAmount
+    font-size 22px
+    line-height 30px
+
+    .displayValue
+      font-size inherit
+
+  .transactionReviewFee,
+  .transactionReviewNonce
+    margin 0
+
+  .transactionReviewNonceHint
+    display none
+
+  .transactionReviewDataRow
+    margin-top 12px
+
+  .transactionDataDisclosure
+    color var(--wren-text-secondary)
+
+  .signingReviewDetails .transactionReviewFeeSubline
+    display flex
+
+.approveTransaction,
+.signingReview,
+.signingDecisionSummary,
+.walletCallsReview
+  .clusterAddressRecipient,
+  .clusterAddressRecipientComplete,
+  .clusterAddressEvidence,
+  .clusterFira
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 19px
+    overflow-wrap anywhere
+
+  .clusterAddressRecipientFullNoHover
+    display none
+
+.signingDecisionShelf
+  display grid
+  gap 10px
+  min-height 114px
+  padding 16px 24px 20px
+  background var(--wren-bg-subtle)
+  color var(--wren-text-primary)
+
+  .signingDecisionAccount
+    display flex
+    align-items center
+    justify-content space-between
+    min-height 24px
+    gap 16px
+    font-size 13px
+
+    > strong
+      min-width 0
+      overflow hidden
+      white-space nowrap
+      text-overflow ellipsis
+      font-weight 550
+
+  .signingDecisionSummary > .signingReviewAddressRow
+    padding 0
+    margin-bottom 4px
+
+    .signingReviewAddress
+      justify-content flex-end
+
+    .clusterAddress
+      flex 0 1 auto
+
+    .clusterAddressRecipient
+      display inline
+
+  .signingReviewLabel
+    flex none
+    font-size 12px
+
+  .requestNotice,
+  .requestNoticeInner
+    display block
+    width 100%
+    height auto
+    min-height 0
+    margin 0
+    padding 0
+    border 0
+    background transparent
+    box-shadow none
+
+  .requestApprove
+    display grid
+    grid-template-columns minmax(0, 1fr)
+    min-height 44px
+    height auto
+    width 100%
+    margin 0
+    padding 0
+    border 0
+    border-radius 0
+    background transparent
+    box-shadow none
+    animation none
+    gap 8px
+
+  .requestActionContext
+    width 100%
+    min-height 0
+    margin 0
+    padding 0
+
+    &:has(.requestActionContextCopy > strong:empty):not(:has(.requestActionError))
+      display none
+
+  .requestActionContextCopy > strong:empty
+    display none
+
+  .requestActionButtons
+    display grid
+    grid-template-columns repeat(2, minmax(0, 1fr))
+    width 100%
+    gap 12px
+
+    > button
+      position relative
+      inset auto
+      flex none
+      width 100%
+      min-width 0
+      max-width none
+      min-height 44px
+
+.signingDecisionFee
+  display flex
+  min-height 32px
+  align-items center
+  gap 12px
+  color var(--wren-text-primary)
+  font-size 13px
+
+.signingDecisionFeeValue
+  min-width 0
+  margin-left auto
+  font-family var(--wren-font-mono)
+  font-size 12px
+
+.signingDecisionFeeAdjust
+  appearance none
+  flex none
+  min-height 32px
+  padding 4px 0 4px 4px
+  border 0
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size 13px
+  cursor pointer
+
+  &:hover
+    background var(--wren-surface-hover)
+
+.signingReviewAcknowledgements
+  margin 16px 0
+
+.signingReviewAcknowledgement.approveTransactionWarning
+  box-sizing border-box
+  height auto
+  margin 0 0 12px
+  padding 14px 16px
+  border 1px solid rgba(221, 180, 103, .18)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-warning-soft)
+
+  .approveTransactionWarningBody
+    display grid
+    gap 8px
+    padding 0
+
+  .approveTransactionWarningTitle
+    display flex
+    align-items center
+    gap 8px
+    margin 0
+    padding 0
+    color var(--wren-warning)
+    font-size 14px
+    line-height 20px
+    text-transform none
+
+  .approveTransactionWarningIcon
+    display flex
+    width 20px
+    height 20px
+    margin 0
+
+    svg
+      width 20px
+      height 20px
+
+  .approveTransactionWarningMessage
+    margin 0
+    padding 0
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 19px
+    text-align left
+
+  .approveTransactionWarningActions
+    display flex
+    justify-content flex-start
+    margin 0
+    padding 0
+
+.signingReviewAcknowledgementError
+  color var(--wren-danger)
+  font-size 13px
+
+.signingReview
+  width auto
+  margin 0
+  padding 8px 24px 24px
+
+  .typedDataReviewSummary
+    display block
+    padding 0 0 20px
+
+  .typedDataReviewTitle
+    margin 0
+    font-size 25px
+    line-height 32px
+
+  .simpleJsonHeader
+    border 0
+    padding 14px 0 8px
+
+  .simpleJson > .simpleJsonChild
+    padding 7px 0
+    grid-template-columns 128px minmax(0, 1fr)
+
+  .signingRawDisclosure
+    border 0
+
+    > summary
+      padding-right 0
+      padding-left 0
+
+  .signingAuthorityCopy
+    appearance none
+    border 0
+    border-radius var(--wren-radius-sm)
+    background transparent
+    font-family var(--wren-font-mono)
+    text-align left
+    cursor pointer
+    display flex
+    align-items center
+    gap 8px
+    width 100%
+    min-width 0
+    min-height 32px
+    padding 4px 0
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 19px
+    word-break break-all
+
+    > svg
+      flex none
+      color var(--wren-text-muted)
+
+    &:hover
+      background var(--wren-surface-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+  .signingPermissionList
+    display grid
+    gap 18px
+    margin-top 16px
+
+  .signingPermissionRow
+    display block
+    padding 0
+    border 0
+
+  .signingPermissionTokenHeader
+    display flex
+    align-items baseline
+    justify-content space-between
+    gap 16px
+
+    > strong
+      color var(--wren-text-primary)
+      font-size 16px
+
+    > div
+      min-width 0
+      max-width 70%
+      overflow-wrap anywhere
+      text-align right
+
+      > strong
+        font-family var(--wren-font-mono)
+        font-size 14px
+        line-height 22px
+
+  .signingPermissionExpiration
+    margin-top 6px
+
+  .signingAuthorityFacts > div
+    display grid
+    grid-template-columns 112px minmax(0, 1fr)
+    align-items center
+    gap 12px
+    padding 8px 0
+
+  .signMessageRaw
+    margin 0 0 16px
+    padding 18px 20px
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    background var(--wren-surface-card)
+    font-family var(--wren-font-ui)
+    font-size 16px
+    line-height 25px
+
+.signingPermissionCard
+  padding 16px 20px
+  margin 0 0 20px
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-card)
+
+.signingAuthorityLabel
+  display block
+  color var(--wren-text-muted)
+  font-family var(--wren-font-ui)
+  font-size 13px
+  font-weight 400
+  line-height 20px
+
+.signingPermissionDates
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap 16px
+  margin-top 16px
+
+  strong
+    display block
+    font-family var(--wren-font-ui)
+    font-size 13px
+    line-height 20px
+
+.signingPermitReview
+  .signingReviewTitle
+    margin 0 0 20px
+    font-size 25px
+    line-height 32px
+
+  .signingPermitLimit
+    display flex
+    min-width 0
+    align-items center
+    justify-content space-between
+    gap 16px
+    margin-bottom 16px
+
+    > div
+      min-width 0
+
+      > strong
+        display block
+        margin-top 4px
+        font-size 27px
+        line-height 34px
+        overflow-wrap anywhere
+
+.signingReviewDataLink
+  appearance none
+  display flex
+  min-height 44px
+  width 100%
+  align-items center
+  justify-content space-between
+  gap 12px
+  margin-top 12px
+  padding 8px 0
+  border 0
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size 14px
+  cursor pointer
+
+  &:hover
+    background var(--wren-surface-hover)
+
+.walletCallsReview
+  font-family var(--wren-font-ui)
+  padding 8px 24px 24px
+  scrollbar-gutter stable both-edges
+
+  .walletCallsSummary
+    min-height 0
+    padding 0 0 20px
+    grid-template-columns minmax(0, 1fr)
+    gap 14px
+
+    h2
+      margin 0
+      font-size 25px
+      line-height 32px
+
+    p
+      color var(--wren-text-muted)
+      font-size 13px
+
+  .walletCallsAtomicWarning
+    padding-left 0
+    border 0
+
+  .walletCall
+    grid-template-columns 28px minmax(0, 1fr)
+
+  .walletCallsCallEvidence
+    margin-top 8px
+
+  .walletCallsDestinationAddress
+    font-size 12px
+
+#panel:has(.signingDecisionShelf)
+  .footerModule
+    height auto !important
+
+  .accountViewRequest
+    bottom var(--wren-measured-footer-height, 192px) !important
+    transition none
+
+@media (max-height: 800px)
+  .signingReviewContext
+    margin-bottom 16px
+
+  .signingPermissionCard
+    padding 14px 16px
+    margin-bottom 16px
+
+  .signingReview .signingPermissionList
+    gap 12px
+
+@media (max-width: 480px)
+  .signingReviewAddressRow,
+  .signingReview .signingAuthorityFacts > div
+    grid-template-columns minmax(0, 1fr)
+    gap 0
+
+  .signingDecisionAccount
+    align-items start
+    flex-direction column
+    gap 4px
+
+  .signingPermissionDates
+    grid-template-columns minmax(0, 1fr)
+
+.approveTransaction
+  .clusterValueClickable .clusterAddressRecipient,
+  .clusterValueClickable .clusterAddressEvidence
+    color var(--wren-text-secondary)
+
+  .transactionReviewRecipient .clusterAddress,
+  .transactionReviewApprovalSpender .clusterAddress
+    display grid
+    grid-template-columns minmax(0, 1fr) 16px
+    align-items center
+    gap 8px
+
+    .addressSafetyStatus
+      grid-column 1 / -1
+
+  .clusterAddress .clusterAddressRecipientFullNoHover
+    display none
+
+.signingReviewCopyIcon
+  display flex
+  align-items center
+  color var(--wren-text-muted)
+
+.signingDecisionFeeAdjust:focus-visible,
+.signingReviewDataLink:focus-visible
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
+
+.accountViewScroll:has(> .signingReview)
+  scrollbar-gutter stable both-edges
+
+.signingAuthorizationAmount
+  margin 12px 0
+
+  .signingTokenAmountFormatted,
+  > div > strong
+    display block
+    font-family var(--wren-font-mono)
+    font-size 24px
+    line-height 34px
+    overflow-wrap anywhere

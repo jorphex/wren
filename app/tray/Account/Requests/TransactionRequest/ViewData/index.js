@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import Icon from '../../../../../../resources/Components/Icon'
 import { SimpleJSON } from '../../../../../../resources/Components/SimpleTypedData'
 import { parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
+import { hasSimulationEffects } from '../../../../../../resources/domain/transaction/effects'
 import {
   SimulationAllowance,
   SimulationAdvancedChecks,
@@ -187,9 +188,7 @@ export class ViewData extends React.Component {
       accountCodeEvidence?.sender,
       ...(accountCodeEvidence?.targets || [])
     ].some((evidence) => evidence?.status === 'delegated' || evidence?.status === 'unavailable')
-    const showActions =
-      Boolean(data?.data && data.data !== '0x') ||
-      (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
+    const showActions = Boolean(data?.data && data.data !== '0x') || hasSimulationEffects(simulation)
     const showPermissions =
       Boolean(simulation.allowance) ||
       accountCodeNeedsAttention ||

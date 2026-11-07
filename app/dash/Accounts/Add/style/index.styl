@@ -785,7 +785,6 @@
     padding var(--wren-space-5) 0 var(--wren-space-3)
     overflow-y auto
     box-sizing border-box
-    scrollbar-width thin
 
   .generatedWalletGuidance,
   .generatedWalletConsequence,
@@ -936,11 +935,11 @@
 
   .generatedWalletVerifyField
     display grid
-    grid-template-columns 72px minmax(0, 1fr)
+    grid-template-columns 60px minmax(0, 1fr) 60px
     gap var(--wren-space-3)
     align-items center
     width 100%
-    max-width 440px
+    max-width 560px
     margin-top var(--wren-space-3)
     color var(--wren-text-secondary)
     font-size 13px
@@ -1133,3 +1132,28 @@
   &:has(.addAccountItem)
     overflow hidden
     scrollbar-gutter auto
+
+// Center the title and input mass; supporting icons and labels sit beside that axis.
+.addAccountItem .addAccountItemTopType
+  display grid
+  grid-template-columns 1fr max-content 1fr
+  column-gap var(--wren-space-3)
+  padding 0 var(--wren-space-5)
+  box-sizing border-box
+
+  .addAccountItemIcon
+    justify-self end
+    width 24px
+    height 32px
+    margin 0
+
+  .addAccountItemTopTitle
+    grid-column 2
+    text-align center
+
+.generatedWalletVerifyField > span
+  text-align right
+
+.addAccountItem .addAccountItemOptionPasswordConsent
+  max-width 440px
+  padding 0

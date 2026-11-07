@@ -118,9 +118,7 @@ describe('confirming password', () => {
     await advanceToPassword(view)
 
     await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), weakPassword)
-    await view.user.click(
-      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
-    )
+    await view.user.click(screen.getByRole('checkbox', { name: 'I understand this password may be weak.' }))
     await view.user.click(screen.getByRole('button', { name: 'Continue' }))
     view.rerender(<AddPhrase accountSetupStep='confirm' />)
     await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), weakPassword)

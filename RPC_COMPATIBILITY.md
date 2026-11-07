@@ -63,6 +63,9 @@ widen the EIP-2255 grant and are not disclosed as a dapp capability.
 
 ### Transactions
 
+For transaction preview fallbacks and tested RPC support, see
+[Simulation fallback](SIMULATION_FALLBACK.md).
+
 Normalizes, decodes, checks, simulates, reviews, signs, and broadcasts legacy,
 type-1, and type-2 transactions. Immediately before invoking a signer, Wren
 checks the configured RPC's pending native balance against value plus the

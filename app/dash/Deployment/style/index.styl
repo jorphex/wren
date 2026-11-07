@@ -197,15 +197,14 @@
   color var(--wren-danger)
 
 .deploymentActionShelf
-  position sticky
+  position relative
   z-index 4
-  bottom 0
   display flex
   justify-content flex-end
   gap var(--wren-space-3)
-  margin 0 calc(-1 * var(--wren-page-gutter)) calc(-1 * var(--wren-space-6))
-  padding var(--wren-space-4) var(--wren-page-gutter) var(--wren-space-4)
-  background var(--wren-bg-canvas)
+  margin 0
+  padding var(--wren-space-4) 0 0
+  background transparent
   pointer-events none
 
   button
@@ -277,11 +276,6 @@
       padding var(--wren-space-1) 0
 
   .deploymentActionShelf
-    margin-right calc(-1 * var(--wren-space-3))
-    margin-left calc(-1 * var(--wren-space-3))
-    padding-right var(--wren-space-3)
-    padding-left var(--wren-space-3)
-
     button
       min-width 0
       flex 1

@@ -1265,6 +1265,7 @@
 #panel:has(.balancesExpandedView),
 #panel:has(.activityModuleExpanded),
 #panel:has(.permissionsLedgerView),
+#panel:has(.tokenApprovalsView),
 #panel:has(.accountSettingsExpandedView),
 #panel:has(.requestViewScroll)
   --wren-bg-elevated #121813
@@ -1309,7 +1310,7 @@
     right 0
     bottom 0
     left 0
-    padding 2px 18px 16px
+    padding 16px 18px 16px
     scroll-padding-bottom 40px
     box-sizing border-box
     border-radius 0
@@ -1999,6 +2000,10 @@ button.accountHomeRename.wrenControl
     padding 0 12px
 
 @media (max-width: 550px)
+  .accountPortfolioCard
+    height auto
+    min-height 144px
+
   .accountPortfolioActions
     position relative
     right auto

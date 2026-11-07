@@ -38,6 +38,10 @@ checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
 
 ## 2. Prepare a candidate
 
+Confirm Wren's right to redistribute Trezor Connect before publishing a candidate
+that includes it. The installed SDK carries T-RSL; a separate grant is not yet
+recorded. See the [SDK license prerequisite](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
+
 1. Use a clean, reviewed default-branch commit. Set a new SemVer-compatible
    `package.json` version and regenerate `package-lock.json` with the pinned
    Node/npm toolchain. Do not reuse a published tag.

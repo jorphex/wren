@@ -52,6 +52,9 @@ checksums, compatibility metadata, and source-bound SBOM.
 The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
+It also covers single-call simulation fallbacks, snapshot-bound trace events,
+provider errors, and partial evidence. Retain the Jest result and
+`compiled/simulation-fallback-e2e.json` before the next compile clears that folder.
 The native smoke matrix builds real unsigned Linux arm64 and Windows x64 packages
 plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares
 packaged runtime evidence
@@ -76,6 +79,16 @@ For the current UI, also verify the following in the disposable profile:
   and copy controls do not touch the input. Sweep details scroll above its actions.
 - Request action shelves reserve their rendered height and use a 114px minimum
   at the standard width. Status text does not displace controls.
+- Signing reviews show the app, network, action and full identities before
+  advanced details. Nonce, gas and raw data stay reachable there. Fee and amount
+  editors preserve their values and signing checks.
+- Required acknowledgements leave Sign disabled until the reviewed evidence is
+  accepted. Accepting a warning never signs; changed evidence needs a new review.
+- Known signatures show exact limits and deadlines. Unknown or incomplete
+  summaries keep all signed fields visible. Token amounts use valid decimals
+  from the same chain and contract; missing decimals keep exact base units.
+- Contract spender names retain their source and full address. Unavailable
+  metadata does not delay signing or change its checks.
 - Exact funding values replace rounded rows, and privacy mode hides both forms.
 - Earn positions and guardrail identity remain visible. Active cooldown actions
   are reachable before opening Deposit; the opened form still supports Max.

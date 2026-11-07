@@ -5,7 +5,6 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import TxBar, { isUnconfirmedSubmission } from './TxBar'
-import TxApproval from './TxApproval'
 
 import Icon from '../../../../resources/Components/Icon'
 import QrCode from '../../../../resources/Components/QrCode'
@@ -507,6 +506,7 @@ export class RequestCommand extends React.Component {
   signOrDecline() {
     const { req } = this.props
     const allowApproval =
+      !getRequiredRequestApproval(req) &&
       !this.state.requestActionPending &&
       canApproveTransaction(this.state.allowInput, req.simulation, this.state.feeDraftSafe)
     const chain = {
@@ -537,9 +537,6 @@ export class RequestCommand extends React.Component {
     return (
       <div className='requestApprove requestApproveTransaction'>
         <div className='requestActionContext'>
-          <span className='requestActionContextIcon'>
-            <Icon name='verify' size={19} />
-          </span>
           <span className='requestActionContextCopy'>
             <strong>
               {this.state.requestActionPending
@@ -548,7 +545,7 @@ export class RequestCommand extends React.Component {
                   ? 'Checking transaction'
                   : advancedPending
                     ? 'Final checks'
-                    : 'Ready for review'}
+                    : ''}
             </strong>
 
             {this.state.requestActionError ? (
@@ -627,25 +624,14 @@ export class RequestCommand extends React.Component {
 
   renderTxCommand() {
     const { req } = this.props
-    const { notice, mode } = req
+    const { notice } = req
 
     if (req.status === 'declined') return this.declinedStatus(true, req.notice)
     if (req.status === 'error' && req.retainedPreBroadcastError) {
       return this.retainedPreBroadcastFailureStatus(req)
     }
 
-    const showWarning = mode !== 'monitor'
-    const requiredApproval = showWarning && getRequiredRequestApproval(req)
-
-    if (requiredApproval) {
-      return (
-        <div className='requestNotice requestNoticeApproval'>
-          <div className='requestNoticeInner requestNoticeInnerApproval'>
-            <TxApproval req={this.props.req} approval={requiredApproval} />
-          </div>
-        </div>
-      )
-    } else if (req.type === 'transaction' && req.status === 'pending') {
+    if (req.type === 'transaction' && req.status === 'pending') {
       return this.signingStatus(req)
     } else {
       const monitoring = notice || req.status !== undefined
@@ -890,16 +876,6 @@ export class RequestCommand extends React.Component {
 
     const requiredApproval = getRequiredRequestApproval(req)
 
-    if (requiredApproval) {
-      return (
-        <div className='requestNotice requestNoticeApproval'>
-          <div className='requestNoticeInner requestNoticeInnerApproval'>
-            <TxApproval req={req} approval={requiredApproval} />
-          </div>
-        </div>
-      )
-    }
-
     return (
       <div>
         {notice ? (
@@ -947,11 +923,8 @@ export class RequestCommand extends React.Component {
         ) : (
           <div className='requestApprove requestApproveSignature'>
             <div className='requestActionContext'>
-              <span className='requestActionContextIcon requestActionContextIconSign'>
-                <Icon name='sign' size={19} />
-              </span>
               <span className='requestActionContextCopy'>
-                <strong>{this.state.requestActionPending ? 'Preparing to sign' : 'Ready to sign'}</strong>
+                <strong>{this.state.requestActionPending ? 'Preparing to sign' : ''}</strong>
               </span>
             </div>
             <div className='requestActionButtons'>
@@ -970,9 +943,11 @@ export class RequestCommand extends React.Component {
               <button
                 type='button'
                 className='requestSign'
-                disabled={!this.state.allowInput || this.state.requestActionPending}
+                disabled={
+                  !this.state.allowInput || this.state.requestActionPending || Boolean(requiredApproval)
+                }
                 onClick={() => {
-                  if (this.state.allowInput) {
+                  if (this.state.allowInput && !requiredApproval) {
                     this.checkSignerCompatibility(req, () => this.approve(req.handlerId, req))
                   }
                 }}
@@ -999,7 +974,7 @@ export class RequestCommand extends React.Component {
     if (!req) return null
     const crumb = this.store('windows.panel.nav')[0] || {}
 
-    if (req.type === 'transaction' && crumb.data?.step === 'confirm') {
+    if (req.type === 'transaction' && ['confirm', 'adjustFee'].includes(crumb.data?.step)) {
       return this.renderTxCommand()
     } else if (isSignatureRequest(req)) {
       return this.renderSignDataCommand()

@@ -133,6 +133,7 @@
 
   .recentRecipientsDialog
     width 100%
+    box-sizing border-box
 
   .contractVerificationCredential
     height auto
@@ -172,6 +173,8 @@
       flex none
 
   .contractVerificationCredentialInput
+    padding 0 var(--wren-space-3)
+    min-width 0
     width auto
     height 44px
     box-sizing border-box
@@ -194,6 +197,9 @@
     box-sizing border-box
 
   .recentRecipientsStatus
+    &:empty
+      display none
+
     min-height 18px
     padding 4px var(--wren-space-2) 0
     color var(--wren-text-secondary)
@@ -768,3 +774,23 @@
 
 .localSettings .wrenSettingsSection .localSetting.recentRecipientsClear
   border-bottom 0
+
+.recentRecipientsOverlay
+  position fixed
+  z-index 50000000
+  inset 0
+  display flex
+  align-items center
+  justify-content center
+  padding var(--wren-space-5)
+  box-sizing border-box
+  background rgba(9, 12, 10, .72)
+  backdrop-filter blur(4px)
+
+  .recentRecipientsDialog
+    width 100%
+    max-width 440px
+    max-height 100%
+    overflow-y auto
+    margin 0
+    box-sizing border-box
