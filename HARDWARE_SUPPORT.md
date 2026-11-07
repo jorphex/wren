@@ -81,6 +81,19 @@ deterministic adapter coverage. The installed Trezor Connect API has no type-1
 request, so Wren rejects type-1 Trezor transactions rather than changing their
 bytes. These paths have not received new physical-device qualification.
 
+## Lattice transaction review
+
+Modern Lattice firmware receives generic EVM signing requests with the exact
+serialized transaction, including fees and ordered access lists. Wren builds
+device decoders locally from its bundled standard ABI set. It does not query
+Etherscan, 4byte.directory, or remote chain metadata to prepare a Lattice
+signature. Unrecognized or malformed calldata has no decoder and remains raw
+data for device review; decoder absence does not change the transaction.
+
+Signing still uses the configured Lattice relay. Automated coverage exercises
+the real SDK through request preparation with synthetic device responses;
+physical signing and the resulting device display remain unqualified.
+
 ## Regression guidance
 
 Use a test account and network with no valuable assets. For a Safe 7 test:

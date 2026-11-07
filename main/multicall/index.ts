@@ -150,30 +150,36 @@ export default function (chainId: number, eth: EthereumProvider) {
 
   return {
     call,
-    batchCall: async function <R, T>(calls: Call<R, T>[], batchSize = 2000) {
+    batchCall: async function <R, T>(calls: Call<R, T>[], batchSize = 200) {
+      if (!Number.isSafeInteger(batchSize) || batchSize < 1) {
+        throw new Error('multicall batch size must be a positive integer')
+      }
       const numBatches = Math.ceil(calls.length / batchSize)
+      const fetchResults: CallResult<T>[][] = new Array(numBatches)
+      let nextBatch = 0
 
-      const fetches = [...Array(numBatches).keys()].map(async (_, batchIndex) => {
-        const batchStart = batchIndex * batchSize
-        const batchEnd = batchStart + batchSize
-        const batchCalls = calls.slice(batchStart, batchEnd)
+      const fetches = Array.from({ length: Math.min(2, numBatches) }, async () => {
+        while (nextBatch < numBatches) {
+          const batchIndex = nextBatch++
+          const batchStart = batchIndex * batchSize
+          const batchEnd = Math.min(batchStart + batchSize, calls.length)
+          const batchCalls = calls.slice(batchStart, batchEnd)
 
-        try {
-          const results = await call(batchCalls)
-
-          return results
-        } catch (e) {
-          log.error(
-            `multicall error (batch ${batchStart}-${batchEnd}), chainId: ${chainId}, first call: ${JSON.stringify(
-              calls[batchStart]
-            )}`,
-            e
-          )
-          return [...Array(batchCalls.length).keys()].map(() => ({ success: false, returnValues: [] }))
+          try {
+            fetchResults[batchIndex] = await call(batchCalls)
+          } catch (e) {
+            log.error(
+              `multicall error (batch ${batchStart}-${batchEnd}), chainId: ${chainId}, first call: ${JSON.stringify(
+                calls[batchStart]
+              )}`,
+              e
+            )
+            fetchResults[batchIndex] = batchCalls.map(() => ({ success: false, returnValues: [] }))
+          }
         }
       })
 
-      const fetchResults = await Promise.all(fetches)
+      await Promise.all(fetches)
       const callResults = ([] as CallResult<T>[]).concat(...fetchResults)
 
       return callResults

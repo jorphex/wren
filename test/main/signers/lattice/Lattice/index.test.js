@@ -831,7 +831,9 @@ describe('#signTransaction', () => {
 
   beforeEach(() => {
     lattice.appVersion = { major: 1, minor: 1, patch: 0 }
-    lattice.connection = { sign: jest.fn(), getFwVersion: async () => ({ major: 1, minor: 3, fix: 5 }) }
+    // Exercise the older transaction-object path; modern firmware uses the
+    // generic request below and is also covered against the real SDK in E2E.
+    lattice.connection = { sign: jest.fn(), getFwVersion: () => ({ major: 0, minor: 14, fix: 0 }) }
   })
 
   it('signs a legacy transaction', (done) => {
@@ -940,36 +942,22 @@ describe('#signTransaction', () => {
     })
   })
 
-  it('uses the ETH currency for modern generic transaction signing', (done) => {
+  it('uses a general signing request for modern firmware', async () => {
     lattice.connection.getFwVersion = () => ({ major: 0, minor: 15, fix: 0 })
-    const txToSign = { ...tx, type: '0x0' }
+    lattice.connection.sign.mockResolvedValue({ sig: { ...expectedSignature.sig, v: 27n } })
 
-    lattice.connection.sign.mockImplementation(async (opts) => {
-      try {
-        expect(opts.currency).toBe('ETH')
-        expect(opts.data.payload).toBeTruthy()
-        expect(opts.data.signerPath[4]).toBe(4)
-
-        return {
-          sig: {
-            ...expectedSignature.sig,
-            v: 27n
-          }
-        }
-      } catch (e) {
-        done(e)
-      }
+    const result = await new Promise((resolve, reject) => {
+      lattice.signTransaction(4, { ...tx, type: '0x0' }, (error, signed) => {
+        if (error) reject(error)
+        else resolve(signed)
+      })
     })
 
-    lattice.signTransaction(4, txToSign, (err, res) => {
-      try {
-        expect(err).toBe(null)
-        expect(res).toBe('0xcf8080808080801b833ea8cd8396f7a0')
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
+    const [options] = lattice.connection.sign.mock.calls[0]
+    expect(options.currency).toBeUndefined()
+    expect(options.data.payload).toBeTruthy()
+    expect(options.data.signerPath[4]).toBe(4)
+    expect(result).toBe('0xcf8080808080801b833ea8cd8396f7a0')
   })
 })
 

@@ -3,7 +3,7 @@ import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import { normalizeAccessList, type RpcAccessList } from '../transaction/accessList'
 import { parseRpcQuantity, toRpcQuantity } from '../transaction/quantity'
-import { parseTypedMessage } from '../typedData'
+import { isTypedDataTypeName, parseTypedMessage } from '../typedData'
 
 export const MAX_INSPECTOR_INPUT_BYTES = 256 * 1024
 export const MAX_INSPECTOR_CALLDATA_BYTES = 128 * 1024
@@ -12,7 +12,7 @@ export const MAX_INSPECTOR_JSON_NODES = 4096
 
 const ADDRESS = /^0x[0-9a-f]{40}$/i
 const DATA = /^0x(?:[0-9a-f]{2})*$/i
-const TYPE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/
+const validTypeName = (name: string) => name.length <= 64 && isTypedDataTypeName(name)
 const FIELD_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/
 const ARRAY_SUFFIX = /\[(?:|[1-9][0-9]{0,5})\]$/
 const INTEGER_TYPE =
@@ -376,7 +376,7 @@ export function parseEip712TypedData(value: unknown, version: 'V3' | 'V4' = 'V4'
   ) {
     throw new Error('EIP-712 types must contain 1 to 64 definitions')
   }
-  if (typeof value.primaryType !== 'string' || !TYPE_NAME.test(value.primaryType)) {
+  if (typeof value.primaryType !== 'string' || !validTypeName(value.primaryType)) {
     throw new Error('EIP-712 primaryType is invalid')
   }
   if (!isRecord(value.domain) || !isRecord(value.message)) {
@@ -388,7 +388,7 @@ export function parseEip712TypedData(value: unknown, version: 'V3' | 'V4' = 'V4'
   if (!customTypes.has('EIP712Domain')) throw new Error('EIP-712 domain type is not defined')
   const types: Record<string, InspectorTypedDataField[]> = {}
   Object.entries(value.types).forEach(([name, fields]) => {
-    if (!TYPE_NAME.test(name) || !Array.isArray(fields) || fields.length > 64) {
+    if (!validTypeName(name) || !Array.isArray(fields) || fields.length > 64) {
       throw new Error(`EIP-712 type '${name}' is invalid`)
     }
     const names = new Set<string>()

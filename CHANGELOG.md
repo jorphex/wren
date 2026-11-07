@@ -6,6 +6,9 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Fixed Lattice native and contract signing with modern firmware. Preserved exact transaction fields and used bundled calldata decoders without external lookups.
+- Accepted Hyperliquid's namespaced typed-data types unchanged in signing and inspection.
+- Reduced token-discovery RPC batches and bounded concurrent scans. Kept successful batches and allowed time for parent timeout responses over IPC.
 - Added an account Approvals list with current RPC allowances and reviewed revocation.
 - Included successful direct approvals found by Activity outside Wren.
 - Stopped queued allowance checks after history or account removal. Refreshed affected allowances together after confirmation.

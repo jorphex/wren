@@ -34,7 +34,15 @@ const environment = {
 const jest = path.join(projectRoot, 'node_modules', 'jest', 'bin', 'jest.js')
 const child = spawn(
   process.execPath,
-  [jest, '--config', 'jest.e2e.config.json', '--runInBand', '--detectOpenHandles'],
+  [
+    '--experimental-vm-modules',
+    jest,
+    '--config',
+    'jest.e2e.config.json',
+    '--runInBand',
+    '--detectOpenHandles',
+    ...process.argv.slice(2)
+  ],
   { cwd: projectRoot, env: environment, stdio: 'inherit' }
 )
 

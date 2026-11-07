@@ -1,6 +1,6 @@
 {
   "roots": ["test/e2e"],
-  "testEnvironment": "node",
+  "testEnvironment": "<rootDir>/test/e2e/setup/environment.js",
   "testTimeout": 10000,
   "setupFiles": ["<rootDir>/test/e2e/setup/isolation.js"],
   "transform": {

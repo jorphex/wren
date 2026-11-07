@@ -83,6 +83,7 @@ interface UnknownRecord extends Record<string, unknown> {
 type TypeDefinitions = Record<string, Array<{ name: string; type: string }>>
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+const HYPERLIQUID_TYPE = /^HyperliquidTransaction:[A-Za-z_$][A-Za-z0-9_$]*$/
 const ARRAY_TYPE = /\[(?:[1-9][0-9]*)?\]$/
 const ARRAY_SUFFIXES = /(\[(?:[1-9][0-9]*)?\])+$/
 const INTEGER_TYPE = /^(u?int)([0-9]+)$/
@@ -91,6 +92,12 @@ const MAX_UINT256 = (1n << 256n) - 1n
 const hasOwn = (value: object, property: PropertyKey) => Object.prototype.hasOwnProperty.call(value, property)
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// Hyperliquid uses this namespace in deployed signing schemas. Preserve it
+// verbatim: normalizing a type name would change the signed hash.
+export function isTypedDataTypeName(name: string) {
+  return IDENTIFIER.test(name) || HYPERLIQUID_TYPE.test(name)
+}
 
 function invalidParams(message: string): EVMError {
   return { code: -32602, message: `Invalid params: ${message}` }
@@ -135,7 +142,7 @@ function isValidFieldType(type: string, types: TypeDefinitions) {
   if (suffix && !ARRAY_SUFFIXES.test(suffix)) return false
   if (isAtomicType(baseType)) return true
   if (/^(?:u?int|bytes)[0-9]*$/.test(baseType)) return false
-  return IDENTIFIER.test(baseType) && hasOwn(types, baseType)
+  return isTypedDataTypeName(baseType) && hasOwn(types, baseType)
 }
 
 function containsRecursiveTypes(types: TypeDefinitions, roots: string[]) {
@@ -165,7 +172,11 @@ function validateTypeDefinitions(value: unknown): TypeDefinitions {
   if (entries.length === 0) throw invalidParams('typed data types must not be empty')
 
   for (const [typeName, fields] of entries) {
-    if (!IDENTIFIER.test(typeName) || isAtomicType(typeName) || /^(?:u?int|bytes)[0-9]*$/.test(typeName)) {
+    if (
+      !isTypedDataTypeName(typeName) ||
+      isAtomicType(typeName) ||
+      /^(?:u?int|bytes)[0-9]*$/.test(typeName)
+    ) {
       throw invalidParams(`typed data type name ${typeName || '<empty>'} is invalid`)
     }
     if (!Array.isArray(fields)) {

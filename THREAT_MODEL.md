@@ -308,6 +308,14 @@ broker accepts only bounded latest-block `eth_call` and `eth_getBalance` reads
 for an explicit enabled chain, with strict schemas, request limits, and timeouts.
 The main process selects and owns the configured RPC connection.
 
+Multicall token reads use batches of at most 200 calls, with two batches in flight per
+account/network/read kind. Discovery and tracked-token reads coalesce repeated
+requests independently while a previous scan is active. A failed batch does not
+discard successful batches. Native reads remain separate. The parent RPC
+deadline is 12 seconds; the worker allows a further five seconds for the parent's
+response to cross IPC before its channel watchdog expires. Late replies are
+discarded. These limits do not guarantee discovery on an unresponsive RPC.
+
 ### Networks, content, and Earn
 
 #### RPC and execution evidence
@@ -509,6 +517,12 @@ stale.
 
 External links are allowlisted except configured explorers, whose final OS
 launch still permits only credential-free HTTP(S).
+
+Lattice signing uses its configured device relay. Calldata decoder definitions
+come only from Wren's bundled standard ABIs; preparing a signature does not send
+contract addresses or selectors to explorer, 4byte, or chain-metadata services.
+Unknown calldata remains raw device-review data. This local decoder does not
+establish the target contract's identity or prove its behavior.
 
 Contract verification deliberately publishes user-selected source and compiler
 metadata to Sourcify after an explicit permanent-public acknowledgement.

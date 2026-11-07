@@ -1,6 +1,6 @@
 import log from 'electron-log'
 import { encode } from 'rlp'
-import { Client, Utils, Constants } from 'gridplus-sdk'
+import { Client, Calldata, Constants } from 'gridplus-sdk'
 import { padToEven, addHexPrefix, stripHexPrefix } from '@ethereumjs/util'
 import { TypedTransaction } from '@ethereumjs/tx'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
@@ -9,6 +9,7 @@ import Signer from '../../Signer'
 import { sign, signerCompatibility, londonToLegacy } from '../../../transaction'
 import { Derivation, getDerivationPath } from '../../Signer/derive'
 import { hexToInt } from '../../../../resources/utils'
+import { decodeLocalCalldata } from '../../../inspector/localDecode'
 
 import type { TypedData, TypedMessage } from '../../../accounts/types'
 import type { TransactionData } from '../../../../resources/domain/transaction'
@@ -589,11 +590,24 @@ export default class Lattice extends Signer {
     if (fwVersion && (fwVersion.major > 0 || fwVersion.minor >= 15)) {
       const payload = tx.type ? tx.getMessageToSign(false) : encode(tx.getMessageToSign(false))
 
-      const to = tx.to?.toString() ?? undefined
-
-      const callDataDecoder = to
-        ? await Utils.fetchCalldataDecoder(tx.data, to, unsignedTx.chainId)
-        : undefined
+      let decoder: Buffer | undefined
+      if (tx.to && tx.data.length >= 4) {
+        const decoded = decodeLocalCalldata(addHexPrefix(tx.data.toString('hex')))
+        if (decoded.status === 'decoded') {
+          try {
+            const { def } = Calldata.EVM.parsers.parseSolidityJSONABI(decoded.selector.slice(2), [
+              {
+                type: 'function',
+                name: decoded.method,
+                inputs: decoded.arguments.map(({ name, type }) => ({ name, type }))
+              }
+            ])
+            if (Array.isArray(def)) decoder = Buffer.from(encode(def))
+          } catch {
+            log.verbose('Bundled Lattice calldata decoder unavailable')
+          }
+        }
+      }
 
       const data = {
         payload,
@@ -601,10 +615,10 @@ export default class Lattice extends Signer {
         hashType: Constants.SIGNING.HASHES.KECCAK256,
         encodingType: Constants.SIGNING.ENCODINGS.EVM,
         signerPath: unsignedTx.signerPath,
-        ...(callDataDecoder && { decoder: Buffer.from(callDataDecoder.def) })
+        ...(decoder && { decoder })
       }
 
-      return { data, currency: 'ETH' as const }
+      return { data }
     }
 
     return { currency: 'ETH' as const, data: unsignedTx } as unknown as LatticeSignOptions

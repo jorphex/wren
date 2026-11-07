@@ -19,7 +19,6 @@ import type { Token } from '../../store/state'
 import type { NativeCurrencyTarget } from './scan'
 
 const BOOTSTRAP_TIMEOUT_SECONDS = 20
-const PARENT_RPC_TIMEOUT_MS = BALANCE_RPC_TIMEOUT_MS - 1_000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -199,7 +198,7 @@ export default class BalancesWorkerController extends EventEmitter {
         id: request.id,
         error: { code: -32002, message: 'Balance RPC request timed out' }
       })
-    }, PARENT_RPC_TIMEOUT_MS)
+    }, BALANCE_RPC_TIMEOUT_MS)
 
     this.rpcRequests.set(request.id, timer)
 

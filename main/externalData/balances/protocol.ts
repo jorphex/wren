@@ -6,6 +6,7 @@ import type { CurrencyBalance, TokenBalance } from './scan'
 export const BALANCE_RPC_MAX_IN_FLIGHT = 32
 export const BALANCE_RPC_MAX_QUEUED = 8192
 export const BALANCE_RPC_TIMEOUT_MS = 12_000
+export const BALANCE_RPC_RESPONSE_GRACE_MS = 5_000
 export const BALANCE_RPC_QUEUE_TIMEOUT_MS = 60_000
 export const BALANCE_RPC_MAX_REQUEST_BYTES = 8 * 1024 * 1024
 export const BALANCE_RPC_MAX_RESPONSE_BYTES = 8 * 1024 * 1024

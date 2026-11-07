@@ -10,6 +10,15 @@ const WREN_LIVE_PORTS = new Set([1248, 8421])
 const profile = process.env.WREN_E2E_PROFILE
 const runRoot = process.env.WREN_E2E_RUN_ROOT
 const namespace = process.env.WREN_E2E_NAMESPACE
+const originalChildProcess = Object.fromEntries(
+  ['exec', 'execFile', 'fork', 'spawn', 'spawnSync'].map((method) => [method, childProcess[method]])
+)
+const originalCreateSocket = dgram.createSocket
+const dnsMethods = ['lookup', 'resolve', 'resolve4', 'resolve6', 'resolveAny', 'reverse']
+const originalDns = Object.fromEntries(dnsMethods.map((method) => [method, dns[method]]))
+const originalPromiseDns = dns.promises
+  ? Object.fromEntries(dnsMethods.map((method) => [method, dns.promises[method]]))
+  : undefined
 
 function fail(message) {
   throw new Error(`E2E isolation violation: ${message}`)
@@ -120,7 +129,21 @@ for (const method of ['resolve', 'resolve4', 'resolve6', 'resolveAny', 'reverse'
 }
 
 Object.defineProperty(global, '__WREN_E2E_ISOLATION__', {
-  value: Object.freeze({ allowedPorts, namespace, profile: resolvedProfile, runRoot: resolvedRoot }),
+  value: Object.freeze({
+    allowedPorts,
+    namespace,
+    profile: resolvedProfile,
+    runRoot: resolvedRoot,
+    restore() {
+      net.Socket.prototype.connect = originalConnect
+      net.Server.prototype.listen = originalListen
+      if (originalFetch) global.fetch = originalFetch
+      Object.assign(childProcess, originalChildProcess)
+      dgram.createSocket = originalCreateSocket
+      Object.assign(dns, originalDns)
+      if (originalPromiseDns) Object.assign(dns.promises, originalPromiseDns)
+    }
+  }),
   enumerable: false,
   configurable: false,
   writable: false

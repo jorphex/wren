@@ -15,6 +15,7 @@ import {
   BALANCE_RPC_MAX_QUEUED,
   BALANCE_RPC_QUEUE_TIMEOUT_MS,
   BALANCE_RPC_TIMEOUT_MS,
+  BALANCE_RPC_RESPONSE_GRACE_MS,
   BalanceRpcRequest,
   BalanceRpcResponse,
   BalancesWorkerEvent,
@@ -99,7 +100,7 @@ class ParentRpcProvider {
   handleResponse(response: BalanceRpcResponse) {
     const request = this.pending.get(response.id)
     if (!request) {
-      log.warn(`received response for unknown balance RPC request ${response.id}`)
+      log.debug(`discarded late balance RPC response ${response.id}`)
       return
     }
 
@@ -144,13 +145,15 @@ class ParentRpcProvider {
         continue
       }
 
+      // The parent owns the RPC deadline. This watchdog also allows time for
+      // its timeout response to cross a busy IPC channel.
       const timer = setTimeout(() => {
         const pending = this.pending.get(id)
         if (!pending) return
         this.pending.delete(id)
         pending.reject(new BalanceRpcError(-32002, 'Balance RPC request timed out'))
         this.drainQueue()
-      }, BALANCE_RPC_TIMEOUT_MS)
+      }, BALANCE_RPC_TIMEOUT_MS + BALANCE_RPC_RESPONSE_GRACE_MS)
 
       this.pending.set(id, { resolve: queued.resolve, reject: queued.reject, timer })
 
@@ -210,6 +213,34 @@ async function updateBlacklist(address: Address, chains: number[]) {
   }
 }
 
+const tokenReadsInFlight = new Set<string>()
+
+async function loadTokenBalances(address: Address, tokens: Token[], kind: 'discovery' | 'tracked') {
+  const byChain = new Map<number, Token[]>()
+  for (const token of tokens) {
+    const chainTokens = byChain.get(token.chainId) || []
+    chainTokens.push(token)
+    byChain.set(token.chainId, chainTokens)
+  }
+  if (!byChain.size) sendToMainProcess({ type: 'tokenBalances', address, balances: [] })
+
+  await Promise.all(
+    [...byChain].map(async ([chainId, chainTokens]) => {
+      const key = `${kind}:${address.toLowerCase()}:${chainId}`
+      if (tokenReadsInFlight.has(key)) return
+      tokenReadsInFlight.add(key)
+      try {
+        const loaded = await balances.getTokenBalances(address, chainTokens)
+        const tokenBalances =
+          kind === 'discovery' ? loaded.filter((balance) => BigInt(balance.balance) > 0n) : loaded
+        sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+      } finally {
+        tokenReadsInFlight.delete(key)
+      }
+    })
+  )
+}
+
 async function tokenBalanceScan(address: Address, tokensToOmit: Token[] = [], chains: number[]) {
   try {
     // for chains that support multicall, we can attempt to load every token that we know about,
@@ -219,11 +250,7 @@ async function tokenBalanceScan(address: Address, tokensToOmit: Token[] = [], ch
     const tokenList = tokenLoader.getTokens(eligibleChains)
     const tokens = tokenList.filter((token) => !omitSet.has(toTokenId(token)))
 
-    const tokenBalances = (await balances.getTokenBalances(address, tokens)).filter(
-      (balance) => parseInt(balance.balance) > 0
-    )
-
-    sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+    await loadTokenBalances(address, tokens, 'discovery')
   } catch (e) {
     log.error('error scanning for token balances', e)
   }
@@ -235,9 +262,7 @@ async function fetchTokenBalances(address: Address, tokens: Token[]) {
     const filteredTokens = tokens.filter(
       (token) => isYearnSystemToken(token) || !blacklistSet.has(toTokenId(token))
     )
-    const tokenBalances = await balances.getTokenBalances(address, filteredTokens)
-
-    sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+    await loadTokenBalances(address, filteredTokens, 'tracked')
   } catch (e) {
     log.error('error fetching token balances', e)
   }
