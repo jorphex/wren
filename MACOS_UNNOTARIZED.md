@@ -4,12 +4,9 @@ Wren 0.1.4 and later releases may include separate Intel (`x64`) and Apple
 Silicon (`arm64`) macOS artifacts. They remain unqualified previews until their
 architecture-specific physical checks pass.
 
-These previews are ad-hoc signed so macOS can validate their executable code
-seals, but they have no Apple Developer ID, Apple Team ID, trusted publisher, or
-notarization ticket. Apple has not checked them for malicious software. macOS
-therefore blocks the first launch until the user explicitly creates an exception.
-Wren plans to continue using ad-hoc signatures without an Apple publisher
-identity or notarization.
+These previews use ad-hoc code signatures. They have no Apple Developer ID,
+Team ID or notarization ticket. macOS blocks first launch until you approve an
+exception. The current release process uses this signature policy.
 
 ## Choose and verify the download
 
@@ -43,13 +40,10 @@ remove quarantine attributes globally. A managed Mac may prohibit the override.
 
 ## Support boundary
 
-- The preview is not a signed-publisher or notarization claim and is not a Mac
-  App Store package.
-- GitHub checksums and attestations bind the downloaded DMG to Wren's public
-  source and release workflow; they do not replace Apple notarization.
+- Checksums and GitHub attestations identify the release and its source.
+  They do not provide Apple notarization.
 - Automatic macOS updates are not published. Download and verify each later
   version independently.
 - macOS has no Wren OS-backed device-protection layer. Software-signer records
   remain password-encrypted, and profile backups remain password-protected.
-- Until the applicable physical checklist passes, macOS remains an unqualified
-  preview. Start with a disposable account and test funds only.
+- Physical qualification remains pending. Use a disposable account and test funds.

@@ -26,10 +26,10 @@ request does not include account addresses, balances, or transaction details.
 See the [network data and privacy disclosures](README.md#privacy).
 
 Automated tests cover units, integrations, components, production bundles,
-and Electron windows in an isolated virtual display. Manual Linux-package evidence
-covers a Base deposit, partial and full withdrawal, and physical Trezor
-signing. This evidence does not qualify contract economics, every
-product/signer combination, or configured-RPC correctness outside those flows.
+and Electron windows in an isolated virtual display. Earlier Linux package tests
+covered a Base deposit, partial and full withdrawal, and physical Trezor signing.
+Each release candidate needs its own checks. Results apply to the tested flows,
+products, signers and RPCs.
 
 ## Curated products
 

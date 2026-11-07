@@ -60,10 +60,7 @@ exists, Wren cannot recover the device-bound files.
 
 ## Security limits
 
-This feature cannot stop malware or another process that can use the logged-in
-user’s unlocked credential service. In
-particular, DPAPI helps protect copied or offline profile files from other
-Windows users, but it does not isolate Wren from other applications running as
-the same logged-in user. The outer layer is not hardware custody, passwordless
-signing, or continuous authorization. Prefer a hardware signer for high-value
-accounts and keep independently verified encrypted backups.
+Device protection helps protect copied or offline profile files. It does not
+isolate Wren from other apps that can use the same unlocked credential store.
+The signer password is still required. Keep a portable encrypted backup as
+described above.

@@ -1,9 +1,9 @@
 # Code signing policy
 
-Wren signs Windows release packages only from reviewed source in the public
-[`jorphex/wren`](https://github.com/jorphex/wren) repository. A release request
-must come from Wren's GitHub Actions release workflow, match an immutable release
-tag, pass the documented release gates, and receive manual approval.
+Windows release signing requires reviewed source in the public
+[`jorphex/wren`](https://github.com/jorphex/wren) repository. Requests must come
+from Wren's release workflow, match an immutable release tag, pass release checks
+and receive manual approval.
 
 Free code signing provided by [SignPath.io](https://signpath.io/), certificate by
 [SignPath Foundation](https://signpath.org/).
@@ -25,7 +25,6 @@ listed there.
 
 ## Current release boundary
 
-The Wren 0.1.9 Windows preview is unsigned. SignPath Foundation setup is still
-in progress. Release notes and filenames state the
-signature status. Wren will not claim a trusted publisher until the protected
-signing workflow is approved and qualified.
+Current Windows previews are unsigned. Release notes and filenames state the
+signature status. Publisher signing needs an approved workflow and completed
+qualification.

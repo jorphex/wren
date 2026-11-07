@@ -1,10 +1,10 @@
 # Trezor clear signing investigation
 
-Checked 26 October 2026. Wren uses Connect 10.0.1, the current stable release.
-Its existing signing path already handles clear-signing definition requests.
-Wren now settles active and queued bridge callers on close, even during a
-metadata lookup. SDK lookup cancellation and format selection remain pending.
-No upstream SDK or dependency changed.
+Checked 26 October 2026 against Connect 10.0.1. Its signing path handles
+clear-signing definition requests. Wren settles active and queued callers when
+the bridge closes, including during a metadata lookup.
+SDK lookup cancellation and format selection remain pending. The bridge fix does
+not modify the SDK.
 
 ## What already works in code
 
@@ -62,9 +62,9 @@ confirmed one. Confirm modification and redistribution rights with Trezor before
 preparing a distributable SDK patch or publishing packages that include it.
 See the [SDK license](https://github.com/trezor/trezor-suite/blob/2ee7bd0636889196bab33e6069e2736393a58f3c/packages/connect/LICENSE.md).
 
-SDK code remains unchanged. Wren-owned shutdown handling is independent of that
-patch. A downgrade or copying upstream development code does not resolve the
-license prerequisite.
+The SDK source is unmodified. Bridge shutdown handling does not depend on the
+proposed SDK patch. Connect 9.7.3 has the same license prerequisite. Review the
+license of any replacement before adopting it.
 
 ## Bridge lookup qualification
 
