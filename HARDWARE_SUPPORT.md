@@ -36,7 +36,8 @@ using the USB connection can block Wren’s access.
 Wren 0.1.11 user testing covered Safe 7 mainnet signing, cancellation and USB
 reconnect with Connect 10. Model One was also user-tested with Connect 10.
 The full Safe 7 pairing, address, message and EIP-712 checks were not repeated.
-The planned 0.1.12 release needs its own candidate checks.
+For 0.1.12, user checks covered Linux startup, Trezor signing and reconnect.
+The model and firmware were not recorded for those checks.
 
 Connect 10 already handles firmware clear-signing definition requests. Trezor
 lists Model T, Safe 3, Safe 5, and Safe 7 with Universal firmware 2.12.4 or later

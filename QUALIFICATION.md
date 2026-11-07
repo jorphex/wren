@@ -16,34 +16,39 @@ protection has an additional
 unnotarized macOS releases have a separate
 [architecture-specific checklist](MACOS_UNNOTARIZED_QUALIFICATION.md).
 
-## 0.1.12 preparation record
+<a name="0112-preparation-record"></a>
 
-Development baseline: `c17f8495` (package version 0.1.11).
-[Quality and native package checks](https://github.com/jorphex/wren/actions/runs/42351576753)
-and [CodeQL](https://github.com/jorphex/wren/actions/runs/42351576750) passed.
-The run passed 5,478 unit tests, 111 isolated E2E cases and 10 Ledger adapter checks.
-The audit reported no high or critical findings; 12 low and 34 moderate findings remain.
+## 0.1.12 release record
 
-The local follow-up passed 123 isolated E2E cases and 414 provider checks.
-It rejects nested namespaced structs in signing and Inspector.
-Flat Hyperliquid V3/V4 requests and ordinary nested messages retain their signed
-fields. Software signatures and Ledger request hashes pass independent encoder
-checks. Ledger testing used APDU replay, without a physical device.
+Published 7 November 2026 from `cb772162ae0bb84090cf41bd7612e464072b28b7`.
+The [release](https://github.com/jorphex/wren/releases/tag/v0.1.12) has seven files.
+[Quality and native package checks](https://github.com/jorphex/wren/actions/runs/42362055080),
+[CodeQL](https://github.com/jorphex/wren/actions/runs/42362055086) and the
+[release build](https://github.com/jorphex/wren/actions/runs/42362171541) passed.
 
-The candidate package and lockfile use version 0.1.12.
+Checks passed: 5,478 unit tests, 123 isolated E2E cases, 10 Ledger adapter checks
+and 114 renderer scenarios. The audit had no high or critical findings;
+12 low and 34 moderate findings remain.
 
-Before publication:
+All release checksums, the 491-component source-bound SBOM and ten build/SBOM
+attestations were verified. Anonymous public downloads match the tested files.
+Linux application payloads and 22 native modules matched in two independent
+builds. Only the permitted AppImage container, update and checksum bytes varied.
 
-1. Confirm [Trezor SDK redistribution rights](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
-2. Review the 0.1.12 notes and prepare fresh artifacts from the candidate commit.
-   The September 30 draft and its startup-fix artifacts are obsolete.
-3. Run the [release procedure](RELEASE.md) on the final commit. Record package
-   checksums, reproducibility and the applicable manual checks below.
+User testing covered startup, Trezor signing and reconnect with the published
+Linux deb. The model and firmware were not recorded. Windows and macOS remain
+previews without physical qualification.
 
+Nested namespaced structs are rejected in signing and Inspector. Flat Hyperliquid
+V3/V4 requests and ordinary nested messages retain their signed fields.
+Software signatures and Ledger request hashes passed independent encoder checks.
+Ledger testing used APDU replay, without a physical device.
+
+The obsolete September 30 draft was archived and replaced. SDK license
+clarification, metadata cancellation and firmware-format work remain in the
+[Trezor investigation](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
 Physical Lattice signing and display checks remain pending. The cause of the
 reported 21-hour balance-worker heartbeat failure is still unproven.
-SDK metadata cancellation and firmware-format work remain in the
-[Trezor investigation](TREZOR_CLEAR_SIGNING.md).
 
 ## Historical 0.1.11 candidate record
 

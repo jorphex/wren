@@ -53,17 +53,19 @@ The format check uses released
 [Core 2.13.0 source](https://github.com/trezor/trezor-firmware/blob/037e506db454691bda188df2803df2fc26c75f36/core/embed/rust/src/definitions/constants.rs)
 and [Model One 1.14.2 source](https://github.com/trezor/trezor-firmware/blob/037e506db454691bda188df2803df2fc26c75f36/legacy/firmware/ethereum_definitions_constants.h.mako).
 
-## SDK license prerequisite
+<a name="sdk-license-prerequisite"></a>
+
+## SDK license clarification
 
 The official Connect and connect-core 10.0.1 packages include T-RSL. Its grant
 covers read-only reference use and excludes redistribution. Connect 9.7.3 has
-the same terms. No separate Wren grant is recorded, and the maintainer has not
-confirmed one. Confirm modification and redistribution rights with Trezor before
-preparing a distributable SDK patch or publishing packages that include it.
+the same terms. No separate Wren grant is recorded. The applicable terms for
+bundling Connect in Wren need clarification. Review any integration agreement
+and confirm rights before preparing a distributable SDK patch.
 See the [SDK license](https://github.com/trezor/trezor-suite/blob/2ee7bd0636889196bab33e6069e2736393a58f3c/packages/connect/LICENSE.md).
 
 The SDK source is unmodified. Bridge shutdown handling does not depend on the
-proposed SDK patch. Connect 9.7.3 has the same license prerequisite. Review the
+proposed SDK patch. Connect 9.7.3 carries the same terms. Review the
 license of any replacement before adopting it.
 
 ## Bridge lookup qualification

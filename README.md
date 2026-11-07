@@ -10,15 +10,14 @@
   <a href="https://getwren.xyz">Website</a> ·
   <a href="https://github.com/jorphex/wren/releases">Download</a> ·
   <a href="https://github.com/jorphex/wren-companion/releases">Companion</a> ·
-  <a href="release-notes/v0.1.11.md">What’s new</a> ·
+  <a href="release-notes/v0.1.12.md">What’s new</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="RPC_COMPATIBILITY.md">Developer reference</a>
 </p>
 
 Review app requests in Wren. Each app has its own account permission and network route.
 
-The latest release is **0.1.11**. This branch contains the
-[**0.1.12 candidate**](release-notes/v0.1.12.md).
+The latest release is [**0.1.12**](release-notes/v0.1.12.md).
 
 ## Highlights
 
@@ -47,7 +46,7 @@ after reconnecting. Alerts appear while Wren is hidden; use **Wallet activity
 notifications** in Settings to turn them off. Alerts omit amounts and addresses.
 Monitoring does not include internal-call traces or activity from before it began.
 
-## Token approvals (0.1.12 candidate)
+## Token approvals
 
 On the wallet's account screen, open **Approvals** below the balance card and
 **Receive / Send** buttons. The list includes approvals sent through Wren and
@@ -62,7 +61,7 @@ up to a year, with a limit of 500. They are excluded from profile backups.
 
 ## Support
 
-Wren 0.1.11 works with Companion 0.1.3 over pairing protocol 3.
+Wren 0.1.12 works with Companion 0.1.3 over pairing protocol 3.
 Companion 0.1.2 also works; 0.1.3 adds connection retry fixes.
 Linux x64 is the main release target. Windows and macOS are unqualified previews.
 Linux arm64 has automated package checks only. Read
@@ -84,14 +83,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.11.AppImage
-./Wren-0.1.11.AppImage
+chmod +x Wren-0.1.12.AppImage
+./Wren-0.1.12.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.11_amd64.deb
+sudo apt install ./wren_0.1.12_amd64.deb
 ```
 
 Linux packages are unsigned. Checksums and GitHub attestations verify their
@@ -125,7 +124,7 @@ Wren does not read Frame’s live profile. To import a private copy:
 3. Run this command before Wren creates its profile:
 
 ```bash
-./Wren-0.1.11.AppImage --import-frame-profile
+./Wren-0.1.12.AppImage --import-frame-profile
 ```
 
 The import copies only the supported configuration and encrypted signer files.

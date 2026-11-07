@@ -6,7 +6,7 @@ For release details and platform limits, see
 
 ## Unreleased
 
-Candidate for [0.1.12](release-notes/v0.1.12.md).
+## 0.1.12 - 2026-11-07
 
 - Added an Approvals list with RPC allowance checks and reviewed revocation. Included direct approvals found by Activity.
 - Bound token-access consent to the reviewed request. Detected unlimited token and NFT operator approvals in call batches.

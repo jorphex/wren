@@ -30,15 +30,13 @@ DPAPI qualification also needs the
 
 ## 2. Prepare a candidate
 
-Confirm Wren's right to redistribute Trezor Connect before publishing a candidate
-that includes it. The installed SDK carries T-RSL; a separate grant is not yet
-recorded. See the [SDK license prerequisite](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
+Review the licenses of bundled dependencies. Trezor Connect carries T-RSL;
+no separate Wren grant is recorded. Its applicable integration and redistribution
+terms remain a [clarification item](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
 
-For 0.1.12, resolve the open items in the
-[preparation record](QUALIFICATION.md#0112-preparation-record) before freezing
-the candidate. The September 30 draft contains older code and artifacts.
-Delete that unpublished draft before creating its replacement. The workflow
-refuses to overwrite an existing release.
+Check the qualification record for the candidate version. If an unpublished
+draft contains older artifacts, archive its files before removing it.
+The workflow refuses to overwrite an existing release.
 
 1. Use a clean, reviewed default-branch commit. Set a new SemVer-compatible
    `package.json` version and regenerate `package-lock.json` with the pinned
