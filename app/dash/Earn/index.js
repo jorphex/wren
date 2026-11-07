@@ -1,3 +1,4 @@
+import Icon from '../../../resources/Components/Icon'
 import React from 'react'
 import Restore from 'react-restore'
 import yearnLogo from 'url:./assets/yearn-logo-white.svg'
@@ -274,9 +275,7 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBala
           <VaultArtwork vault={vault} />
           <div>
             <div className='earnVaultName'>{vault.name}</div>
-            <div className='earnVaultAsset'>
-              {vault.asset.symbol} · {vault.chainName}
-            </div>
+            <div className='earnVaultAsset'>{vault.asset.symbol}</div>
           </div>
         </div>
         <div className='earnApy'>
@@ -529,12 +528,13 @@ const WorkflowCard = ({
                 {step.txHash ? (
                   <button
                     type='button'
-                    className='earnReceiptLink wrenControl wrenControlGhost wrenControlCompact'
+                    className='earnReceiptLink wrenControl wrenControlSecondary wrenControlCompact'
                     onClick={() =>
                       link.send('tray:openExplorer', { type: 'ethereum', id: workflow.chainId }, step.txHash)
                     }
                   >
                     View transaction
+                    <Icon name='external' size={16} />
                   </button>
                 ) : null}
                 {step.receiptTransfers?.length ? (

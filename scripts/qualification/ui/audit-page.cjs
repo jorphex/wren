@@ -136,7 +136,7 @@ const auditPage = async ({
         if (fails)
           violations.push({
             kind: 'required-layout',
-            detail: `${expectation.selector} is not ${expectation.kind} in ${expectation.container}`
+            detail: `${expectation.selector} is not ${expectation.kind} in ${expectation.container}: inner ${inner.left},${inner.top} ${inner.width}x${inner.height}; outer ${outer.left},${outer.top} ${outer.width}x${outer.height}; transform ${getComputedStyle(element).transform}; container display ${getComputedStyle(container).display}, padding ${getComputedStyle(container).padding}, columns ${getComputedStyle(container).gridTemplateColumns}, gap ${getComputedStyle(container).gap}, justify ${getComputedStyle(container).justifyItems}`
           })
       }
     } else if (expectation.kind === 'full-width') {
@@ -269,7 +269,13 @@ const auditPage = async ({
     } else if (expectation.kind === 'computed-style') {
       for (const element of elements) {
         const actual = getComputedStyle(element)[expectation.property]
-        if (actual !== expectation.value) {
+        const matches =
+          expectation.minimum === undefined
+            ? actual === expectation.value
+            : /^\d+(?:\.\d+)?px$/u.test(actual) &&
+              Number.parseFloat(actual) >= expectation.minimum &&
+              Number.parseFloat(actual) <= expectation.maximum
+        if (!matches) {
           violations.push({
             kind: 'required-layout',
             detail: `${expectation.selector} has ${expectation.property} ${actual}; expected ${expectation.value}`

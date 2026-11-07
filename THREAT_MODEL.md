@@ -217,7 +217,7 @@ envelopes over an explicit recovery allowlist. They include configuration,
 validated contacts and their provenance, and validated encrypted
 software-signer records, but exclude activity, address-safety memory, pending
 work, runtime observations, caches, installed dapp content, and Companion
-credentials; hardware devices keep their keys. Export writes a new mode-`0600`
+credentials and observed token approvals; hardware devices keep their keys. Export writes a new mode-`0600`
 regular file. When OS-backed device protection is enabled, export first
 verifies the all-or-nothing local policy and removes only that outer layer in
 main memory; the backup contains the original password-encrypted signer record
@@ -250,6 +250,13 @@ Hardware keys are expected to stay on-device, but Wren controls the presented
 request and depends on firmware, vendor libraries, and USB drivers. Blind or
 incomplete displays are risky. Claims require physical-device evidence in
 [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md).
+
+During Ethereum transaction signing, Trezor Connect can fetch signed definitions
+from `data.trezor.io`. Lookups can disclose IP address, chain ID, target/token
+address, and function selector. They omit amounts, full calldata, and private keys.
+Metadata and contract display coverage depend on firmware and the vendor registry.
+See the
+[clear-signing investigation](TREZOR_CLEAR_SIGNING.md).
 
 ### Renderer and IPC
 
@@ -313,6 +320,13 @@ gas, and needs Geth-compatible tracing. Internal-call evidence is accepted
 only when the root matches reviewed sender/destination/value/calldata; depth,
 frames, children, input size, and error text are bounded and raw input/return
 data stays out of the renderer.
+
+Token events collected after an `eth_call` fallback require a shared canonical
+block hash and matching reviewed call fields, including gas. Reverted subtrees
+are excluded; emitters and event ordering are validated. Log count, bytes, and
+displayed effects are bounded. Missing or ambiguous logs leave the preview
+limited; capped evidence is marked partial. Details retain the separate execution
+and event sources. See [Simulation fallback](SIMULATION_FALLBACK.md).
 
 An empty code response does not prove that an account is an EOA. A nonempty
 response does not prove an interface. Decoding and traces help explain
@@ -401,6 +415,39 @@ signer boundary and stops remaining sequential calls on drift. A
 user-initiated Cancel is exempt so a dapp policy cannot trap transaction
 recovery; Speed Up remains constrained.
 
+#### Observed token approvals
+
+Wren retains at most 500 locally observed ERC-20 approval pairs for one year.
+Each record holds the account, chain, token, spender, last observed hash, and time.
+It also retains a submission hash for execution checks across scan catch-up.
+It does not retain the approved amount or calldata. Records stay out of renderer
+bootstrap state, profile backups, and diagnostics. Removing an account or using
+**Forget observed approvals** removes its records.
+
+Pairs come from Wren broadcast attempts and successful direct calls found by the
+Activity monitor. Wren records the signed hash before sending, so a missing RPC
+reply does not lose the pair. An attempt is not confirmation or allowance evidence.
+External calls use the monitor's existing block and receipt checks. Observations
+and scan progress are saved together. Replaying a known call keeps one record;
+clearing the list also excludes calls from an unfinished scan.
+
+The account view reads allowances through the configured RPC, at most 20 pairs
+per refresh with four concurrent reads and a five-second deadline. Results stay
+in memory for one minute. Missing, malformed, or failed replies remain unavailable;
+they are not treated as zero. Wren execution evidence triggers a new check.
+An external approval change or Activity reorg clears cached allowances until
+refresh. Late replies cannot restore cleared history or overwrite a newer check.
+Queued reads stop after history or account removal. Receipt updates clear all
+affected allowances before starting fresh lookups.
+Canonical receipt approval events also match known pairs when several approvals
+are pending. Event amounts are not used as current allowances. A Wren reorg clears
+cached allowances for its account and network.
+
+Revocation rechecks the selected account and allowance, then queues the exact
+token's `approve(spender, 0)` through normal transaction review. It does not sign,
+broadcast, or retry automatically. RPC evidence does not prove token semantics.
+The list does not discover older approvals, NFT authority, or signed permits.
+
 #### Account activity monitoring
 
 The desktop reads blocks, receipts, and filtered transfer logs through each enabled,
@@ -462,6 +509,14 @@ stale.
 
 External links are allowlisted except configured explorers, whose final OS
 launch still permits only credential-free HTTP(S).
+
+Approval and permit reviews read token decimals and labels through the configured
+RPC. Optional spender names use the existing Sourcify and Etherscan source
+lookups, which share the contract address, chain, IP address and timing with
+those services. They do not send the signed message or amount. Names remain
+informational; the full address stays visible. Each metadata read is bounded,
+and missing data does not block signing. Permit batches read at most 32 distinct
+tokens in groups of four; remaining unknown amounts retain exact base units.
 
 Contract verification deliberately publishes user-selected source and compiler
 metadata to Sourcify after an explicit permanent-public acknowledgement.

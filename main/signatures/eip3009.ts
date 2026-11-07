@@ -1,5 +1,3 @@
-import { SignTypedDataVersion } from '@metamask/eth-sig-util'
-
 import type { MessageTypeProperty } from '@metamask/eth-sig-util'
 import type { Eip3009Authorization, TypedMessage } from '../../resources/domain/typedData'
 
@@ -47,7 +45,7 @@ const nonce = (value: unknown) =>
   typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value) ? value : undefined
 
 export function getEip3009Authorization(typedMessage: TypedMessage): Eip3009Authorization | undefined {
-  if (typedMessage.version !== SignTypedDataVersion.V4 || Array.isArray(typedMessage.data)) return
+  if (typedMessage.version !== 'V4' || Array.isArray(typedMessage.data)) return
 
   const { domain, message, primaryType, types } = typedMessage.data
   if (

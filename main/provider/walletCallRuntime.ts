@@ -1,5 +1,6 @@
 import type { TransactionData } from '../../resources/domain/transaction'
 import type { Chain } from '../chains'
+import { hashSignedTransaction } from './walletCallExecution'
 import {
   executePreparedWalletCallBatch,
   snapshotPreparedWalletCallExecutionInput,
@@ -32,6 +33,7 @@ export interface WalletCallRuntimeDependencies {
   ledger: WalletCallRuntimeLedger
   evidenceAvailable?(): void
   recordSubmittedTarget?(address: string, submittedAt: number): void
+  recordSubmittedApproval?(transaction: Readonly<TransactionData>, hash: string): void
   assertBeforeSign?(): void
   revalidateBeforeCall?(transaction: Readonly<TransactionData>, index: number): Promise<void>
 }
@@ -71,6 +73,8 @@ export async function executeWalletCallRuntime(
     (dependencies.evidenceAvailable !== undefined && typeof dependencies.evidenceAvailable !== 'function') ||
     (dependencies.recordSubmittedTarget !== undefined &&
       typeof dependencies.recordSubmittedTarget !== 'function') ||
+    (dependencies.recordSubmittedApproval !== undefined &&
+      typeof dependencies.recordSubmittedApproval !== 'function') ||
     (dependencies.assertBeforeSign !== undefined && typeof dependencies.assertBeforeSign !== 'function') ||
     (dependencies.revalidateBeforeCall !== undefined &&
       typeof dependencies.revalidateBeforeCall !== 'function')
@@ -149,6 +153,14 @@ export async function executeWalletCallRuntime(
         }
 
         try {
+          const transaction = snapshot.preparation.calls[index]?.transaction
+          if (transaction) {
+            try {
+              dependencies.recordSubmittedApproval?.(transaction, hashSignedTransaction(rawTransaction))
+            } catch {
+              // Observation must never change broadcast settlement.
+            }
+          }
           send(
             {
               id: index + 1,

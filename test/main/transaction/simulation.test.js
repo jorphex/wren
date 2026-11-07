@@ -105,6 +105,10 @@ function rpcError(code, message) {
 const withAccountCode =
   (send, response = { result: '0x' }, traceResponse = rpcError(-32601, 'Method not found')) =>
   (payload, callback, targetChain) => {
+    if (payload.method === 'eth_getBlockByNumber') {
+      callback({ id: payload.id, jsonrpc: '2.0', error: { code: -32601, message: 'Method not found' } })
+      return
+    }
     if (payload.method === 'eth_getCode') {
       callback({ id: payload.id, jsonrpc: '2.0', ...response })
       return
@@ -1128,9 +1132,7 @@ it.each([-32601, -32004])('falls back to eth_call for unsupported-method code %s
     accountCodeEvidence: transactionAccountCodeEvidence,
     advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
-    source: 'eth_call',
-    nativeBalanceChanges: unsupportedNativeBalanceChanges,
-    proxyImplementationCheck: unsupportedProxyImplementationCheck
+    source: 'eth_call'
   })
   expect(send.mock.calls[1][0]).toEqual({
     id: 1,

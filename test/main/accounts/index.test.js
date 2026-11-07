@@ -1303,7 +1303,10 @@ describe('#updateRequest', () => {
       approved: false
     })
 
-    Accounts.confirmRequestApproval(permitRequest.handlerId, ApprovalType.TokenPermitRisk, {})
+    expect(permitRequest.approvals[0].data.consentFingerprint).toMatch(/^[0-9a-f]{64}$/)
+    Accounts.confirmRequestApproval(permitRequest.handlerId, ApprovalType.TokenPermitRisk, {
+      consentFingerprint: permitRequest.approvals[0].data.consentFingerprint
+    })
     expect(permitRequest.approvals[0].approved).toBe(true)
 
     Accounts.updateRequest(permitRequest.handlerId, { amount: '0' }, null)
@@ -1325,6 +1328,36 @@ describe('#updateRequest', () => {
     Accounts.confirmRequestApproval(permitRequest.handlerId, ApprovalType.TokenPermitRisk, {})
 
     expect(approve).not.toHaveBeenCalled()
+  })
+
+  it('rejects an approval acknowledgement for evidence the user is no longer reviewing', () => {
+    const activeAccount = Accounts.current()
+    const approve = jest.fn()
+    const approval = {
+      type: ApprovalType.TokenApprovalRisk,
+      data: { consentFingerprint: 'a'.repeat(64) },
+      approved: false,
+      approve
+    }
+    const pending = {
+      handlerId: 'stale-authority-consent',
+      type: 'transaction',
+      approvals: [approval]
+    }
+    activeAccount.requests[pending.handlerId] = pending
+    activeAccount.activeReviewHandlerId = pending.handlerId
+
+    expect(() =>
+      Accounts.confirmRequestApproval(pending.handlerId, approval.type, {
+        consentFingerprint: 'b'.repeat(64)
+      })
+    ).toThrow('Approval changed. Review it again.')
+    expect(approve).not.toHaveBeenCalled()
+
+    Accounts.confirmRequestApproval(pending.handlerId, approval.type, {
+      consentFingerprint: approval.data.consentFingerprint
+    })
+    expect(approve).toHaveBeenCalledTimes(1)
   })
 
   it('rejects approval confirmation for a forged queued request reference', () => {

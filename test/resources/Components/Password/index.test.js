@@ -50,9 +50,9 @@ describe('creating password', () => {
     await enterPassword('aaaaaaaaaaaa')
 
     expect(screen.getByRole('alert').textContent).toBe('Repeats like "aaa" are easy to guess')
-    expect(
-      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' }).checked
-    ).toBe(false)
+    expect(screen.getByRole('checkbox', { name: 'I understand this password may be weak.' }).checked).toBe(
+      false
+    )
     expect(getSubmitButton().disabled).toBe(true)
   })
 
@@ -64,9 +64,7 @@ describe('creating password', () => {
     await user.keyboard('{Enter}')
     expect(onCreate).not.toHaveBeenCalled()
 
-    await user.click(
-      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
-    )
+    await user.click(screen.getByRole('checkbox', { name: 'I understand this password may be weak.' }))
     expect(getSubmitButton().disabled).toBe(false)
     await user.click(getSubmitButton())
 
@@ -78,15 +76,15 @@ describe('creating password', () => {
 
     await enterPassword('aaaaaaaa')
     const consent = screen.getByRole('checkbox', {
-      name: 'I understand this password may be easy to guess.'
+      name: 'I understand this password may be weak.'
     })
     await user.click(consent)
     expect(getSubmitButton().disabled).toBe(false)
     await user.type(screen.getByRole('textbox', { name: 'Create password' }), 'a')
 
-    expect(
-      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' }).checked
-    ).toBe(false)
+    expect(screen.getByRole('checkbox', { name: 'I understand this password may be weak.' }).checked).toBe(
+      false
+    )
     expect(getSubmitButton().disabled).toBe(true)
   })
 
@@ -95,9 +93,7 @@ describe('creating password', () => {
 
     await enterPassword(minimumPassword)
     expect(getSubmitButton().disabled).toBe(true)
-    await user.click(
-      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
-    )
+    await user.click(screen.getByRole('checkbox', { name: 'I understand this password may be weak.' }))
 
     expect(getSubmitButton().textContent).toBe('Continue')
     expect(getSubmitButton().disabled).toBe(false)

@@ -16,6 +16,7 @@ import { pruneOutboundAddressMemory } from './types/outboundAddressMemory'
 import { pruneActivityTransactionReferences } from './types/activityTransactionReference'
 import { pruneRecentRecipientUses } from '../../../resources/domain/recentRecipients'
 import { applyPendingRemovalJournals } from './pendingRemovals'
+import { pruneObservedTokenApprovals } from '../../../resources/domain/tokenApprovals'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -233,6 +234,9 @@ const mainState = {
   contractVerificationJobs: main('contractVerificationJobs', []),
   outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),
   recentRecipientUses: pruneRecentRecipientUses(main('recentRecipientUses', [])),
+  observedTokenApprovals: pruneObservedTokenApprovals(main('observedTokenApprovals', [])).filter((entry) =>
+    Object.keys(pendingRemovalState.accounts).some((account) => account.toLowerCase() === entry.account)
+  ),
   addressBook: main('addressBook', {}),
   ...(persistedMigrationVersion < 7 && get('addresses') !== undefined ? { addresses: get('addresses') } : {}),
   permissions: pendingRemovalState.permissions,

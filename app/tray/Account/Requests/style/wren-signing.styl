@@ -878,37 +878,6 @@
   ._txBody > ._txMain:last-child
     padding-top var(--wren-space-2)
 
-  .permitReviewLedger
-    .clusterRow + .clusterRow
-      border-top 1px solid rgba(43, 53, 45, .68)
-
-    .clusterValue
-      min-height 58px
-
-  .permitReviewRow
-    display grid
-    width 100%
-    min-height 58px
-    box-sizing border-box
-    padding var(--wren-space-2)
-    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
-    align-items center
-    gap var(--wren-space-4)
-
-  .permitReviewLabel
-    color var(--wren-text-tertiary)
-    font-size var(--wren-type-small)
-    line-height 18px
-
-  .permitReviewValue
-    min-width 0
-    color var(--wren-text-primary)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-small)
-    font-weight 500
-    text-align right
-    overflow-wrap anywhere
-
   .clusterAddress
     min-width 0
     padding 0
@@ -917,258 +886,6 @@
     .clusterAddressRecipientLabeled
       justify-content flex-end
       text-align right
-
-.approvePermitPerch
-  display flex
-  gap 0
-  padding 18px 30px 24px
-  flex-direction column
-  background transparent
-
-  .typedDataWarnings
-    margin 0
-
-.permitOriginCard,
-.permitActionCard,
-.permitDetailsCard
-  flex none
-  box-sizing border-box
-  border 0
-  border-radius 0
-  background transparent
-  box-shadow none
-
-.permitOriginCard
-  display grid
-  min-height 62px
-  padding 0 0 12px
-  grid-template-columns 36px minmax(0, 1fr) auto
-  align-items center
-  gap 12px
-
-.permitOriginMark
-  display grid
-  width 36px
-  height 36px
-  place-items center
-  border 1px solid var(--wren-border-default)
-  border-radius var(--wren-radius-md)
-  color var(--wren-accent-primary-hover)
-  background var(--wren-bg-elevated)
-
-.permitOriginIdentity
-  min-width 0
-
-  strong,
-  span
-    display block
-    overflow hidden
-    text-overflow ellipsis
-    white-space nowrap
-
-  strong
-    color var(--wren-text-primary)
-    font-size 14px
-    font-weight 650
-
-  span
-    margin-top 2px
-    color var(--wren-text-secondary)
-    font-size var(--wren-type-caption)
-
-.permitOriginKind
-  color var(--wren-text-secondary)
-  font-family var(--wren-font-utility)
-  font-size 13px
-
-.permitActionCard,
-.permitDetailsCard
-  padding 14px 0
-
-  h2
-    margin 0
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-ui)
-    font-size var(--wren-type-small)
-    font-weight 650
-    letter-spacing 0
-    text-transform none
-
-.permitActionCard
-  > strong
-    display block
-    margin-top 8px
-    color var(--wren-text-primary)
-    font-size 18px
-    font-weight 620
-    line-height 22px
-
-.permitActionSpender
-  margin 2px 0 0
-  color var(--wren-text-tertiary)
-  font-size var(--wren-type-caption)
-
-.permitRawAction
-  appearance none
-  display flex
-  width 100%
-  min-height 58px
-  margin-top 10px
-  padding 10px 0
-  box-sizing border-box
-  border 0
-  border-radius 0
-  color var(--wren-text-secondary)
-  background transparent
-  font-family var(--wren-font-mono)
-  font-size 12px
-  line-height 19px
-  text-align left
-  cursor pointer
-  flex-direction column
-
-  .permitRawActionHeader
-    display flex
-    width 100%
-    align-items center
-    justify-content space-between
-    gap var(--wren-space-3)
-    color var(--wren-text-primary)
-    font-family var(--wren-font-ui)
-
-    strong
-      font-size var(--wren-type-small)
-      font-weight 650
-
-    > span
-      flex none
-      color var(--wren-accent-primary-hover)
-      font-size var(--wren-type-caption)
-      font-weight 600
-
-  .permitRawActionSignature
-    margin-top var(--wren-space-1)
-
-  code
-    color var(--wren-text-tertiary)
-    font inherit
-
-  &:hover
-    color var(--wren-text-primary)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-.permitDetailsCard
-  dl
-    margin 8px 0 0
-
-    > div
-      display grid
-      min-height 42px
-      padding 0
-      grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
-      align-items center
-
-  dt
-    color var(--wren-text-tertiary)
-    font-size 13px
-
-  dd
-    min-width 0
-    margin 0
-    overflow hidden
-    color var(--wren-text-primary)
-    font-family var(--wren-font-mono)
-    font-size 13px
-    text-align left
-    text-overflow ellipsis
-    white-space nowrap
-
-.permitAccountIdentity
-  display grid
-  min-width 0
-  gap 2px
-
-  strong,
-  span
-    display block
-    min-width 0
-
-  strong
-    overflow hidden
-    color var(--wren-text-primary)
-    font: inherit
-    font-weight 500
-    text-overflow ellipsis
-    white-space nowrap
-
-  .permitAccountAddress
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-mono)
-    font-size 12px
-    white-space normal
-    overflow-wrap anywhere
-
-.permitEditAmount,
-.permitCopySpender
-  appearance none
-  display flex
-  width calc(100% + 8px)
-  min-height 44px
-  margin-left -8px
-  padding 0 var(--wren-space-2)
-  align-items center
-  justify-content space-between
-  gap var(--wren-space-2)
-  border 1px solid transparent
-  border-radius var(--wren-radius-sm)
-  color inherit
-  background transparent
-  font inherit
-  cursor pointer
-
-  &:hover:not(:disabled)
-    border-color var(--wren-border-subtle)
-    background var(--wren-ledger-hover)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-.permitEditAmount:disabled
-  cursor default
-
-.permitCopyStatus
-  display block
-  min-height 18px
-  margin-top 4px
-  color var(--wren-text-tertiary)
-  font-size 12px
-  text-align left
-
-  &:empty
-    display none
-
-.permitCopySpender
-  width 100%
-
-.permitInlineAction
-  flex none
-  color var(--wren-accent-primary-hover)
-  font-family var(--wren-font-ui)
-  font-size var(--wren-type-caption)
-  font-weight 600
-
-.approvePermitPerch .permitCopySpender
-  .clusterAddressRecipient,
-  .clusterAddressRecipientLabeled
-    justify-content flex-start
-    text-align left
-
-.approvePermitPerch .permitReviewValue
-  text-align left
 
 .requestNoticeTransactionReview
   height var(--wren-request-review-shelf-height, 114px)
@@ -1636,6 +1353,7 @@
   width 24px
   height 24px
   margin-left -12px
+  padding 0
   box-sizing border-box
   border 1px solid var(--wren-border-strong)
   border-radius var(--wren-radius-sm)
@@ -2102,13 +1820,6 @@
 .footerModule:has(.requestApproveRecoverable)
   height auto !important
   transition none
-.approvePermitPerch .permitDetailsCard dd
-  white-space normal
-  overflow-wrap anywhere
-
-.approvePermitPerch .permitDetailsCard .lightweightRequestCopy
-  max-width 100%
-  text-align left
 .fundingAmounts
   min-width 0
 
@@ -2159,9 +1870,6 @@
 .walletCallsFundingRecovery .requestActionContextCopy span
   font-family var(--wren-font-ui)
   line-height 18px
-
-.approvePermitPerch .permitDetailsCard dl > div
-  column-gap 12px
 
 // Keep the status title and icon on one row; detail length cannot move either.
 .requestApproveTransaction.requestApproveRecoverable

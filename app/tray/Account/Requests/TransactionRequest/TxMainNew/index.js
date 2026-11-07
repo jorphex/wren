@@ -2,14 +2,9 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import RequestItem from '../../../../../../resources/Components/RequestItem'
-import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
-import { ClusterStatus } from '../../../../../../resources/Components/Cluster'
 import { getReplacementStatus } from '../../../../../../resources/domain/transaction/replacement'
 import { getOriginDisplayName } from '../../../../../../resources/domain/origin'
-import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
-import { getAddress } from '../../../../../../resources/utils'
 import useCopiedMessage from '../../../../../../resources/Hooks/useCopiedMessage'
-import link from '../../../../../../resources/link'
 import TxOverview from './overview'
 
 const replacementNotices = {
@@ -86,27 +81,9 @@ export const DeploymentReviewEvidence = ({ deployment }) => {
 }
 
 export class TxMain extends React.Component {
-  constructor(...args) {
-    super(...args)
-    this.state = {
-      copied: false
-    }
-  }
-
   getReplacementStatus(req, r) {
     const status = getReplacementStatus(req, Object.values(r || {}))
     return { ...status, notice: replacementNotices[status.reason] || '' }
-  }
-
-  copyFromAddress(address) {
-    link.send('tray:clipboardData', address)
-    this.setState({ copied: true })
-    clearTimeout(this.copyTimer)
-    this.copyTimer = setTimeout(() => this.setState({ copied: false }), 1000)
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.copyTimer)
   }
 
   render() {
@@ -131,11 +108,6 @@ export class TxMain extends React.Component {
     const approvalReview = (req.recognizedActions || []).some((action) => action.id === 'erc20:approve')
 
     const originName = getOriginDisplayName(this.store('main.origins', req.origin, 'name'))
-    const fromSource = req.data.from || requestAccount
-    const fromAddress = fromSource ? getAddress(fromSource) : ''
-    const fromIdentity = fromAddress
-      ? resolveLocalAddressIdentity(this.store('main.addressBook'), this.store('main.accounts'), fromAddress)
-      : undefined
     return (
       <div
         className={`_txMain transactionReviewMain${approvalReview ? ' transactionReviewMainApproval' : ''}`}
@@ -167,35 +139,7 @@ export class TxMain extends React.Component {
               tokenFor={tokenFor}
             />
           </RequestItem>
-          <div className='transactionReviewMeta'>
-            <div className='transactionReviewSectionTitle'>Transaction details</div>
-            {fromAddress ? (
-              <button
-                type='button'
-                aria-label='Copy transaction sender address'
-                className='transactionReviewAddress'
-                onClick={() => this.copyFromAddress(fromAddress)}
-              >
-                <span className='transactionReviewMetaLabel'>From</span>
-                <span className='transactionReviewAddressValue clusterAddress'>
-                  <AddressIdentity
-                    address={fromAddress}
-                    label={fromIdentity?.label}
-                    revealOnHover={false}
-                    source={fromIdentity?.source}
-                  />
-                </span>
-                <span
-                  aria-hidden='true'
-                  className={`transactionReviewCopyFeedback${this.state.copied ? ' transactionReviewCopyFeedbackVisible' : ''}`}
-                >
-                  Address copied
-                </span>
-              </button>
-            ) : null}
-            <DeploymentReviewEvidence deployment={req.deployment} />
-            <ClusterStatus>{this.state.copied ? 'Transaction sender address copied' : ''}</ClusterStatus>
-          </div>
+          <DeploymentReviewEvidence deployment={req.deployment} />
         </div>
       </div>
     )

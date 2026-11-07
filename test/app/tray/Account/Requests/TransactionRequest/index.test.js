@@ -69,6 +69,58 @@ const TxRecipient = Restore.connect(TxRecipientComponent, store)
 
 const account = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
 
+describe('trace-backed fallback preview', () => {
+  const token = '0x2222222222222222222222222222222222222222'
+  const simulation = {
+    status: 'succeeded',
+    source: 'eth_call',
+    effectsEvidence: { source: 'debug_traceCall', blockHash: `0x${'ab'.repeat(32)}`, blockNumber: '0x123' },
+    effects: [
+      { type: 'transfer', standard: 'erc20', token, from: account.toLowerCase(), to: token, amount: '7' },
+      {
+        type: 'approval',
+        standard: 'erc20',
+        token,
+        owner: account.toLowerCase(),
+        spender: token,
+        amount: ((1n << 256n) - 1n).toString()
+      }
+    ]
+  }
+
+  it('shows reported transfers and broad approvals in the existing summary', () => {
+    expect(getExpectedAssetChanges(simulation, account)).toEqual([simulation.effects[0]])
+    expect(getSimulationEffectsPresentation(simulation, account)).toEqual({
+      broadApproval: true,
+      truncated: false
+    })
+    render(
+      <BalanceChanges
+        account={account}
+        req={{ classification: 'CONTRACT_CALL', data: { value: '0x0' } }}
+        simulation={simulation}
+        symbol='ETH'
+        tokenFor={() => ({ decimals: 0, symbol: 'TEST' })}
+      />
+    )
+    expect(screen.getByText('You send')).toBeTruthy()
+  })
+
+  it('identifies the RPC trace and block in technical details', () => {
+    render(<SimulationEffects account={account} simulation={simulation} />)
+    expect(screen.getByText(/RPC trace · Block 291/)).toBeTruthy()
+    expect(screen.getByText(/Unlimited/)).toBeTruthy()
+  })
+
+  it('does not present unsourced eth_call events as usable evidence', () => {
+    const unsourced = { ...simulation, effectsEvidence: undefined }
+    expect(getExpectedAssetChanges(unsourced, account)).toEqual([])
+    expect(getSimulationEffectsPresentation(unsourced, account)).toBeNull()
+    const { container } = render(<SimulationEffects account={account} simulation={unsourced} />)
+    expect(container.textContent).toBe('')
+  })
+})
+
 function addRequest(req, activeRequestId) {
   const currentRequestId = arguments.length > 1 ? activeRequestId : req.handlerId
   store.updateAccount({
@@ -116,18 +168,6 @@ describe('confirm', () => {
     expect(await screen.findByText('Address copied')).toBeTruthy()
   })
 
-  it('copies the displayed sender identity from the main review', () => {
-    const txMain = new TxMain({})
-    txMain.setState = jest.fn()
-    link.send.mockClear()
-
-    txMain.copyFromAddress(account)
-
-    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', account)
-    expect(txMain.setState).toHaveBeenCalledWith({ copied: true })
-    txMain.componentWillUnmount()
-  })
-
   it('shows the recipient for a zero-value EOA transaction', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
 
@@ -144,7 +184,7 @@ describe('confirm', () => {
     expect(screen.getByText('Recipient Account')).toBeTruthy()
   })
 
-  it('does not present an in-flight contract method lookup as a decode failure', () => {
+  it('does not show a decode failure in ordinary review during an in-flight lookup', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
 
     render(
@@ -158,7 +198,7 @@ describe('confirm', () => {
       />
     )
 
-    expect(screen.getByText('Identifying contract method…')).toBeTruthy()
+    expect(screen.queryByText('Identifying contract method…')).toBeNull()
     expect(screen.queryByText('Contract method not decoded')).toBeNull()
   })
 
@@ -360,8 +400,8 @@ describe('confirm', () => {
     )
 
     expect(screen.getByText('Calling Yearn Contract')).toBeTruthy()
-    expect(screen.getByText('Yearn vault deposit')).toBeTruthy()
-    expect(screen.getByText('Allowlisted vault: USDC Horizon yVault')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy transaction recipient address' })).toBeTruthy()
+    expect(screen.queryByText('Allowlisted vault: USDC Horizon yVault')).toBeNull()
     expect(screen.queryByText(/unknown action/i)).toBeNull()
   })
 
@@ -971,7 +1011,8 @@ describe('simulation review', () => {
       data: {
         title: 'Broad Token Approval',
         message: 'This request asks for broad access. Check the spender and limit.',
-        confirmLabel: 'Approve Anyway'
+        confirmLabel: 'Approve Anyway',
+        consentFingerprint: 'a'.repeat(64)
       }
     }
 
@@ -984,7 +1025,7 @@ describe('simulation review', () => {
       'confirmRequestApproval',
       req,
       approval.type,
-      {},
+      { consentFingerprint: approval.data.consentFingerprint },
       expect.any(Function)
     )
   })
@@ -1019,18 +1060,18 @@ describe('simulation review', () => {
       type: 'approveUnlimitedTokenPermit',
       approved: false,
       data: {
-        title: 'Unlimited Token Permit',
+        title: 'Unlimited token allowance',
         message:
           'This EIP-2612 signature authorizes the displayed spender to use the maximum uint256 token amount.',
-        confirmLabel: 'Sign Permit Anyway'
+        confirmLabel: 'Accept unlimited allowance'
       }
     }
 
     const { user } = render(<TxApproval req={req} approval={approval} />)
 
-    expect(screen.getByText('Unlimited Token Permit')).toBeTruthy()
+    expect(screen.getByText('Unlimited token allowance')).toBeTruthy()
     expect(screen.getByText(approval.data.message)).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Sign Permit Anyway' }))
+    await user.click(screen.getByRole('button', { name: 'Accept unlimited allowance' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
       req,

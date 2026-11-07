@@ -304,6 +304,8 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
               <EvidenceRow label='Native balance changes' value={simulation.nativeBalanceChanges} />
               <EvidenceRow label='Proxy changes' value={simulation.proxyImplementation} />
               <EvidenceRow label='Call trace' value={simulation.callTrace} />
+              <EvidenceRow label='Execution block' value={simulation.executionBlock} />
+              <EvidenceRow label='Token event source' value={simulation.effectsEvidence} />
               <EvidenceRow label='Advanced checks' value={simulation.advancedStatus} />
             </dl>
           </details>

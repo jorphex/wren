@@ -10,6 +10,7 @@ import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
 import { safeNetworkMetadata } from '../../../../../../resources/domain/networkMetadata'
 import { ClusterBox } from '../../../../../../resources/Components/Cluster'
 import AdjustFee from '../AdjustFee'
+import link from '../../../../../../resources/link'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -123,6 +124,30 @@ export class TxFee extends React.Component {
       currencyRate: nativeCurrency.usd,
       isTestnet
     })
+
+    if (this.props.summary) {
+      return (
+        <div className='signingDecisionFee'>
+          <span className='signingReviewLabel'>Network fee</span>
+          <span className='signingDecisionFeeValue'>
+            {!maxFee.bn || maxFee.bn.isNaN() ? (
+              `? ${nativeCurrency.symbol}`
+            ) : (
+              <DisplayCoinBalance amount={maxFee} symbol={nativeCurrency.symbol} />
+            )}
+          </span>
+          {!adjustmentLocked ? (
+            <button
+              type='button'
+              className='signingDecisionFeeAdjust wrenControlCompact'
+              onClick={() => link.send('nav:update', 'panel', { data: { step: 'adjustFee' } })}
+            >
+              Adjust
+            </button>
+          ) : null}
+        </div>
+      )
+    }
 
     return (
       <ClusterBox className='transactionReviewFee' title='fee' animationSlot={this.props.i}>

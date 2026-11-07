@@ -35,10 +35,9 @@ it('shows complete EIP-712 signing context and declarations', () => {
 
   expect(screen.getByText('Review structured message')).toBeTruthy()
   expect(screen.queryByText('Typed-data structure recognized')).toBeNull()
-  expect(screen.getByText('request Network')).toBeTruthy()
+  expect(screen.queryByText('Signing Context')).toBeNull()
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Ethereum (1)')).toBeTruthy()
-  expect(screen.getByText(/EIP-712.*V4/)).toBeTruthy()
+  expect(screen.getByText('Ethereum')).toBeTruthy()
   expect(screen.getAllByText('Message').length).toBeGreaterThan(0)
   expect(screen.getByText('Domain')).toBeTruthy()
   expect(screen.getByText('Message: Message')).toBeTruthy()
@@ -136,19 +135,16 @@ it('shows normalized Permit2 authority before the raw typed data', () => {
     />
   )
 
-  expect(screen.getByText('Permission')).toBeTruthy()
-  expect(screen.getByText('Permit2 authority')).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Permission' })).toBeTruthy()
   expect(screen.getByText('Standing allowance')).toBeTruthy()
-  expect(screen.getByText(permit2.spender)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy Permit2 spender address' }).textContent).toContain(
+    permit2.spender
+  )
   expect(screen.getByRole('button', { name: 'Copy Permit2 spender address' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy Permit2 contract address' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy permission 1 token address' })).toBeTruthy()
   expect(screen.getByText(permit2.permissions[0].token)).toBeTruthy()
-  const warning = screen.getByText(/creates standing token allowances/)
-  expect(warning).toBeTruthy()
-  expect(
-    screen.getByText('Permission').compareDocumentPosition(warning) & Node.DOCUMENT_POSITION_FOLLOWING
-  ).toBeTruthy()
+  expect(screen.queryByText(/creates standing token allowances/)).toBeNull()
   expect(screen.queryByText(/Recognition describes structure, not safety/)).toBeNull()
   expect(screen.getByText('Type definitions').closest('details').open).toBe(false)
 })
@@ -181,11 +177,10 @@ it('shows normalized ERC-3009 transfer authority', () => {
     />
   )
 
-  expect(screen.getByText('ERC-3009 Authorization')).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'ERC-3009 Authorization' })).toBeTruthy()
   expect(screen.getByText('Recipient-submitted transfer')).toBeTruthy()
-  expect(screen.getByText(eip3009.to)).toBeTruthy()
-  expect(screen.getByText(/directly authorizes/)).toBeTruthy()
-  expect(screen.getByText(/recipient must submit/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy recipient address' }).textContent).toContain(eip3009.to)
+  expect(screen.queryByText(/directly authorizes/)).toBeNull()
 })
 
 it('uses the same complete view for specialized permit requests', () => {
@@ -204,7 +199,7 @@ it('warns when the selected device displays only typed-data hashes', () => {
   render(<SimpleTypedData deviceWarning={deviceWarning} req={request()} />)
 
   const warning = screen.getByLabelText('Device signing warning')
-  const signingContext = screen.getByText('Signing Context')
+  const signingContext = screen.getByText('Domain')
 
   expect(warning).toBeTruthy()
   expect(warning.compareDocumentPosition(signingContext) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

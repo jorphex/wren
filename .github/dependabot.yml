@@ -16,6 +16,9 @@ updates:
       - dependency-name: '@babel/core'
         update-types:
           - version-update:semver-major
+      - dependency-name: '@babel/plugin-transform-dynamic-import'
+        update-types:
+          - version-update:semver-major
       - dependency-name: '@babel/preset-env'
         update-types:
           - version-update:semver-major

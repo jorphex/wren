@@ -20,6 +20,7 @@ import Activity, { ACTIVITY_PREVIEW_LIMIT } from './Activity'
 import Gas from '../../../resources/Components/Monitor'
 import Inventory from './Inventory'
 import Permissions from './Permissions'
+import Approvals from './Approvals'
 import Requests, { byRequestQueueOrder, isReviewQueueRequest } from './Requests'
 import Settings from './Settings'
 import Signer from './Signer'
@@ -58,6 +59,7 @@ const modules = {
   chains: Chains,
   inventory: Inventory,
   permissions: Permissions,
+  approvals: Approvals,
   balances: Balances,
   activity: Activity,
   signer: Signer,
@@ -479,6 +481,19 @@ class _AccountMain extends React.Component {
           onScroll={() => this.scheduleScrollAffordanceUpdate()}
         >
           {this.renderPortfolioSummary()}
+          <button
+            type='button'
+            className='accountContinuationRow accountApprovalsLink'
+            onClick={() =>
+              link.send('nav:forward', 'panel', {
+                view: 'expandedModule',
+                data: { id: 'approvals', account: this.props.id, title: 'Approvals' }
+              })
+            }
+          >
+            <span>Approvals</span>
+            <Icon name='chevron-right' size={16} />
+          </button>
           <div className='accountMainSlide' style={{ height: slideHeight + 'px' }}>
             {modules}
           </div>
@@ -655,6 +670,10 @@ class _AccountBody extends React.Component {
         signer={activeSigner}
         accountName={accountName}
         queueContext={queueContext}
+        readOnly={
+          req.mode !== 'monitor' &&
+          this.store('main.accounts', req.account, 'activeRequestId') !== req.handlerId
+        }
         requestData={data}
         hideBalances={this.store('selected.hideBalances')}
       />
@@ -733,9 +752,7 @@ class _AccountBody extends React.Component {
             link.send('nav:back', 'panel')
           }}
           {...this.props}
-          compactTop={
-            crumb.data.id === 'requests' || crumb.data.id === 'activity' || crumb.data.id === 'balances'
-          }
+          compactTop={['requests', 'activity', 'balances', 'approvals'].includes(crumb.data.id)}
           accountViewTitle={
             crumb.data.id === 'balances'
               ? 'Balances'

@@ -22,6 +22,7 @@ import { ShortcutSchema } from './shortcuts'
 import { WalletCallBatchesSchema } from './walletCallBatch'
 import { YearnStateSchema } from './yearn'
 import { SIGNER_ID_PATTERN } from '../../../../resources/domain/signerId'
+import { pruneObservedTokenApprovals } from '../../../../resources/domain/tokenApprovals'
 
 const ShortcutsSchema = z.object({
   summon: ShortcutSchema
@@ -116,6 +117,7 @@ export const MainSchema = z.object({
   contractVerificationJobs: ContractVerificationJobsSchema.default([]).catch([]),
   outboundAddressMemory: OutboundAddressMemorySchema,
   recentRecipientUses: RecentRecipientUsesSchema,
+  observedTokenApprovals: z.unknown().transform((value) => pruneObservedTokenApprovals(value)),
   addressBook: AddressBookSchema,
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),

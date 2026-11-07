@@ -1,5 +1,3 @@
-import { SignTypedDataVersion } from '@metamask/eth-sig-util'
-
 import type { MessageTypeProperty } from '@metamask/eth-sig-util'
 import type { Permit2Authority, Permit2Permission, TypedMessage } from '../../resources/domain/typedData'
 
@@ -125,7 +123,7 @@ const matchesWitnessType = (
 }
 
 export function getPermit2Authority(typedMessage: TypedMessage): Permit2Authority | undefined {
-  if (typedMessage.version !== SignTypedDataVersion.V4 || Array.isArray(typedMessage.data)) return
+  if (typedMessage.version !== 'V4' || Array.isArray(typedMessage.data)) return
 
   const { domain, message, primaryType: rawPrimaryType, types } = typedMessage.data
   if (typeof rawPrimaryType !== 'string') return

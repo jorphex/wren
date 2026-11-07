@@ -253,7 +253,7 @@ it('uses native disabled decisions until the transaction signing delay completes
   const req = transaction()
   const view = renderMountedCommand(req, 'signOrDecline', commandStore())
 
-  expect(screen.getByText('Ready for review')).toBeTruthy()
+  expect(screen.queryByText('Ready for review')).toBeNull()
   expect(screen.queryByText('Verify on your signer before approving.')).toBeNull()
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)

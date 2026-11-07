@@ -1,20 +1,21 @@
 import link from '../../../../../../resources/link'
 import EnsOverview from '../../Ens'
 
-import Icon from '../../../../../../resources/Components/Icon'
 import AssetMark from '../../../../../../resources/Components/AssetMark'
-import { isNonZeroHex } from '../../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/Components/Cluster'
 import { DisplayValue } from '../../../../../../resources/Components/DisplayValue'
-import RequestHeader from '../../../../../../resources/Components/RequestHeader'
+import { ReviewContext } from '../../../../../../resources/Components/SigningReview'
 import BigNumber from 'bignumber.js'
-import { isBroadTokenAuthorityEffect } from '../../../../../../resources/domain/transaction/effects'
+import {
+  hasSimulationEffects,
+  isBroadTokenAuthorityEffect
+} from '../../../../../../resources/domain/transaction/effects'
 import { summarizeAccessList } from '../../../../../../resources/domain/transaction/accessList'
 import { transactionAccountCodeEvidence } from '../ViewData/effects'
 
 const SimpleContractCallOverview = ({ method }) => {
-  const body = method ? `Call contract method: ${method}` : 'Call contract'
+  const body = method ? `Call ${method}` : 'Call contract'
 
   return <div className='_txDescriptionSummaryLine'>{body}</div>
 }
@@ -22,7 +23,7 @@ const SimpleContractCallOverview = ({ method }) => {
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 export const getExpectedAssetChanges = (simulation, account) => {
-  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return []
+  if (!hasSimulationEffects(simulation)) return []
   const selected = account?.toLowerCase()
   if (!selected) return []
   return (simulation.effects || []).filter(
@@ -346,7 +347,7 @@ function renderRecognizedActions(req, assetContext) {
   const { recognizedActions: actions = [] } = req
 
   return !actions.length ? (
-    <div className='_txDescriptionSummaryLine'>Call contract</div>
+    <SimpleContractCallOverview method={req.decodedData?.method} />
   ) : (
     actions.map((action, index) => renderActionOverview(action, index, req, assetContext))
   )
@@ -387,7 +388,7 @@ export function getAdvancedChecksPresentation(simulation) {
 }
 
 export function getSimulationEffectsPresentation(simulation, account) {
-  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return null
+  if (!hasSimulationEffects(simulation)) return null
 
   const effects = simulation.effects || []
   if (!effects.length && !simulation.effectsTruncated) return null
@@ -561,19 +562,15 @@ const BaseOverviews = {
 }
 
 export const TransactionDataRow = ({ method }) => (
-  <ClusterRow className='transactionReviewDataRow'>
-    <ClusterValue
-      ariaLabel='View transaction data'
-      onClick={() => {
-        link.send('nav:update', 'panel', { data: { step: 'viewData' } })
-      }}
-    >
-      <div className='_txMainTag _txMainTagWarning transactionDataDisclosure'>
-        <span>Contract data</span>
-        <span>{method || 'Review'} ›</span>
-      </div>
-    </ClusterValue>
-  </ClusterRow>
+  <button
+    type='button'
+    className='signingReviewDataLink transactionReviewDataRow'
+    aria-label='View transaction data'
+    onClick={() => link.send('nav:update', 'panel', { data: { step: 'viewData' } })}
+  >
+    <span>Contract data</span>
+    <span>{method || 'Review'} ›</span>
+  </button>
 )
 
 const TxOverview = ({
@@ -590,7 +587,6 @@ const TxOverview = ({
   tokenFor
 }) => {
   const { data: tx = {}, classification } = req
-  const { data: calldata } = tx
   const simulation = getSimulationPresentation(req.simulation)
   const visibleSimulation = req.simulation?.status === 'succeeded' ? null : simulation
   const advancedChecks = getAdvancedChecksPresentation(req.simulation)
@@ -625,6 +621,10 @@ const TxOverview = ({
   const Description = BaseOverviews[classification]
   const chainId = typeof tx.chainId === 'string' ? Number.parseInt(tx.chainId, 16) : Number(tx.chainId)
   const assetContext = { chainId, primaryColor: chainColor }
+  const approval =
+    req.recognizedActions?.length === 1 && req.recognizedActions[0].id === 'erc20:approve'
+      ? req.recognizedActions[0]
+      : undefined
 
   if (simple) {
     return (
@@ -640,29 +640,32 @@ const TxOverview = ({
         <ClusterRow>
           <ClusterValue style={{ background: valueColor }}>
             <div className='_txDescription'>
-              <RequestHeader chain={chainName} chainColor={chainColor}>
-                <div className='requestItemTitleSub'>
-                  <div className='requestItemTitleSubIcon'>
-                    <Icon name='apps' size={10} />
-                  </div>
-                  <div className='requestItemTitleSubText'>{originName}</div>
-                </div>
+              <div className='_txDescriptionSummary'>
+                <ReviewContext origin={originName} network={chainName} />
                 <div className='_txDescriptionSummaryMain'>
-                  <Description
-                    req={req}
-                    decimals={18}
-                    symbol={symbol}
-                    currencyRate={currencyRate}
-                    isTestnet={isTestnet}
-                    asset={
-                      classification === 'NATIVE_TRANSFER'
-                        ? { ...assetContext, native: true, symbol }
-                        : undefined
-                    }
-                    assetContext={assetContext}
-                  />
+                  {approval ? (
+                    <div>
+                      {BigNumber(approval.data.amount).isZero()
+                        ? 'Revoke token spending'
+                        : 'Allow token spending'}
+                    </div>
+                  ) : (
+                    <Description
+                      req={req}
+                      decimals={18}
+                      symbol={symbol}
+                      currencyRate={currencyRate}
+                      isTestnet={isTestnet}
+                      asset={
+                        classification === 'NATIVE_TRANSFER'
+                          ? { ...assetContext, native: true, symbol }
+                          : undefined
+                      }
+                      assetContext={assetContext}
+                    />
+                  )}
                 </div>
-              </RequestHeader>
+              </div>
             </div>
           </ClusterValue>
         </ClusterRow>
@@ -685,7 +688,6 @@ const TxOverview = ({
           symbol={symbol}
           tokenFor={tokenFor}
         />
-        {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )
   }
