@@ -767,43 +767,11 @@ describe('#signMessage', () => {
 })
 
 describe('#signTypedData', () => {
-  beforeEach(() => {
-    lattice.connection = {
-      sign: jest.fn(async (opts) => {
-        if (
-          opts.currency === 'ETH_MSG' &&
-          opts.data.protocol === 'eip712' &&
-          opts.data.payload &&
-          opts.data.signerPath[4] === 2
-        ) {
-          return {
-            sig: {
-              r: '0x3ea8cd',
-              s: '0xabcd04',
-              v: 27n
-            }
-          }
-        }
-
-        throw new Error('invalid message!')
-      })
-    }
-  })
-
-  it('signs a valid typed data message', (done) => {
-    lattice.signTypedData(2, { version: SignTypedDataVersion.V4, data: 'typed data' }, (err, res) => {
-      try {
-        expect(err).toBe(null)
-        expect(res).toBe('0x3ea8cdabcd041b')
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
-  })
-
   it('returns an error on failure', (done) => {
-    // wrong index, mock function expects 2, not 3
+    lattice.connection = {
+      sign: jest.fn().mockRejectedValue(new Error('invalid message!'))
+    }
+
     lattice.signTypedData(3, { version: SignTypedDataVersion.V4, data: 'typed data' }, (err, res) => {
       try {
         expect(err.message).toBe('invalid message!')
@@ -831,8 +799,8 @@ describe('#signTransaction', () => {
 
   beforeEach(() => {
     lattice.appVersion = { major: 1, minor: 1, patch: 0 }
-    // Exercise the older transaction-object path; modern firmware uses the
-    // generic request below and is also covered against the real SDK in E2E.
+    // Exercise the older transaction-object path; modern firmware is covered
+    // against the real SDK in E2E.
     lattice.connection = { sign: jest.fn(), getFwVersion: () => ({ major: 0, minor: 14, fix: 0 }) }
   })
 
@@ -940,24 +908,6 @@ describe('#signTransaction', () => {
         done(e)
       }
     })
-  })
-
-  it('uses a general signing request for modern firmware', async () => {
-    lattice.connection.getFwVersion = () => ({ major: 0, minor: 15, fix: 0 })
-    lattice.connection.sign.mockResolvedValue({ sig: { ...expectedSignature.sig, v: 27n } })
-
-    const result = await new Promise((resolve, reject) => {
-      lattice.signTransaction(4, { ...tx, type: '0x0' }, (error, signed) => {
-        if (error) reject(error)
-        else resolve(signed)
-      })
-    })
-
-    const [options] = lattice.connection.sign.mock.calls[0]
-    expect(options.currency).toBeUndefined()
-    expect(options.data.payload).toBeTruthy()
-    expect(options.data.signerPath[4]).toBe(4)
-    expect(result).toBe('0xcf8080808080801b833ea8cd8396f7a0')
   })
 })
 

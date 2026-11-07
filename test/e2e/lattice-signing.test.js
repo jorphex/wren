@@ -4,10 +4,16 @@ import { TransactionFactory } from '@ethereumjs/tx'
 import { ecsign, privateToAddress } from '@ethereumjs/util'
 import { Interface, keccak256 } from 'ethers'
 import log from 'electron-log'
-import { SignTypedDataVersion, recoverTypedSignature, signTypedData } from '@metamask/eth-sig-util'
+import {
+  SignTypedDataVersion,
+  TypedDataUtils,
+  recoverTypedSignature,
+  signTypedData
+} from '@metamask/eth-sig-util'
 
 import Lattice from '../../main/signers/lattice/Lattice'
-import { parseTypedMessage } from '../../resources/domain/typedData'
+import { getTypedDataContext, parseTypedMessage } from '../../resources/domain/typedData'
+import { parseInspectorInput } from '../../resources/domain/inspector'
 import { hyperliquidFixture, saveIssueEvidence } from './support/issue105'
 
 const key = Buffer.alloc(32, 1)
@@ -90,7 +96,7 @@ afterEach(() => {
 async function signFixture(raw) {
   expected = TransactionFactory.fromTxData(raw, { common })
   const signed = await new Promise((resolve, reject) => {
-    lattice.signTransaction(0, raw, (error, result) => (error ? reject(error) : resolve(result)))
+    lattice.signTransaction(4, raw, (error, result) => (error ? reject(error) : resolve(result)))
   })
   const decoded = TransactionFactory.fromSerializedData(Buffer.from(signed.slice(2), 'hex'), { common })
   expect(decoded.getSenderAddress().toString()).toBe(account)
@@ -98,12 +104,15 @@ async function signFixture(raw) {
   expect(requests).toEqual([relay])
   expect(submitted[0].currency).toBeUndefined()
   expect(submitted[0].data.encodingType).toBe(Constants.SIGNING.ENCODINGS.EVM)
+  expect(submitted[0].data.signerPath[4]).toBe(4)
   evidence.push({
     type: raw.type,
     data: raw.data,
     to: raw.to,
     transaction: decoded.toJSON(),
     recoveredSigner: account,
+    signerIndex: 4,
+    firmware: client.getFwVersion(),
     requests,
     hasLocalDecoder: !!submitted[0].data.decoder
   })
@@ -127,6 +136,10 @@ it.each([
 })
 
 it.each(['0x0', '0x1', '0x2'])('signs a %s approval with only a bundled decoder', async (type) => {
+  if (type === '0x0') {
+    client.fwVersion = Buffer.from([0, 15, 0])
+    lattice.appVersion = { major: 0, minor: 15, patch: 0 }
+  }
   const raw = {
     ...base,
     type,
@@ -170,10 +183,23 @@ it('preserves device rejection without producing a signed transaction', async ()
 
 it('prepares Hyperliquid typed data with the real SDK and preserves the signed hash', async () => {
   const data = hyperliquidFixture()
+  const original = JSON.stringify(data)
   const version = SignTypedDataVersion.V4
+  const parsed = parseTypedMessage(data, version)
+  const inspected = parseInspectorInput({ kind: 'typed-data', input: original, version: 'V4' })
+  expect(parsed.data).toEqual(data)
+  expect(inspected.typedData).toEqual(data)
+  const digest = TypedDataUtils.eip712Hash(data, version).toString('hex')
+  expect(TypedDataUtils.eip712Hash(inspected.typedData, version).toString('hex')).toBe(digest)
+  expect(getTypedDataContext(parsed, 1)).toEqual({
+    requestChainId: 1,
+    domainChainId: '421614',
+    risks: ['domain-chain-mismatch']
+  })
   const expectedSignature = signTypedData({ privateKey: key, data, version })
   client.sign.mockImplementation(async (options) => {
     expect(options.data.payload).toEqual(data)
+    expect(options.data.signerPath[4]).toBe(2)
     await expect(Client.prototype.sign.call(client, options)).rejects.toThrow('fixture-device-boundary')
     return {
       sig: {
@@ -184,12 +210,20 @@ it('prepares Hyperliquid typed data with the real SDK and preserves the signed h
     }
   })
   const signature = await new Promise((resolve, reject) => {
-    lattice.signTypedData(0, parseTypedMessage(data, version), (error, result) =>
-      error ? reject(error) : resolve(result)
-    )
+    lattice.signTypedData(2, parsed, (error, result) => (error ? reject(error) : resolve(result)))
   })
   expect(signature).toBe(expectedSignature)
   expect(recoverTypedSignature({ data, signature, version })).toBe(account)
+  expect(JSON.stringify(data)).toBe(original)
   expect(requests).toEqual([relay])
   evidence.push({ type: 'typed-data', primaryType: data.primaryType, recoveredSigner: account, requests })
+  saveIssueEvidence('hyperliquid-typed-data', {
+    primaryType: data.primaryType,
+    digest,
+    signature,
+    recovered: account,
+    inspected: true,
+    realSdkPrepared: true,
+    signerIndex: 2
+  })
 })

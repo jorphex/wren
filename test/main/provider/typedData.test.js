@@ -140,13 +140,6 @@ describe('#parseTypedMessage', () => {
     ['missing EIP712Domain', { ...typedData, types: { Mail: typedData.types.Mail } }],
     ['an unknown primary type', { ...typedData, primaryType: 'Unknown' }],
     [
-      'duplicate field names',
-      {
-        ...typedData,
-        types: { ...typedData.types, Mail: [...typedData.types.Mail, typedData.types.Mail[0]] }
-      }
-    ],
-    [
       'an invalid field declaration',
       { ...typedData, types: { ...typedData.types, Mail: [{ name: 'value', type: '' }] } }
     ],
@@ -367,14 +360,6 @@ describe('#getTypedDataContext', () => {
       requestChainId: 1,
       domainChainId: normalized,
       risks: []
-    })
-  })
-
-  it('reports a request and domain chain mismatch', () => {
-    expect(getTypedDataContext(message(typedData), 5)).toEqual({
-      requestChainId: 5,
-      domainChainId: '1',
-      risks: ['domain-chain-mismatch']
     })
   })
 

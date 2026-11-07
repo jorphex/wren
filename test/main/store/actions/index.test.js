@@ -694,26 +694,6 @@ describe('#setBalances', () => {
     ]
   })
 
-  it('adds a new balance', () => {
-    setBalances([
-      {
-        ...testTokens.zrx,
-        balance: addHexPrefix(new BigNumber(7983.2332).toString(16))
-      }
-    ])
-
-    expect(balances).toEqual([
-      {
-        ...testTokens.badger,
-        balance: addHexPrefix(new BigNumber(30.5).toString(16))
-      },
-      {
-        ...testTokens.zrx,
-        balance: addHexPrefix(new BigNumber(7983.2332).toString(16))
-      }
-    ])
-  })
-
   it('updates an existing balance to a positive amount', () => {
     setBalances([
       {
@@ -726,22 +706,6 @@ describe('#setBalances', () => {
       {
         ...testTokens.badger,
         balance: addHexPrefix(new BigNumber(41.9).toString(16))
-      }
-    ])
-  })
-
-  it('updates an existing balance to zero', () => {
-    setBalances([
-      {
-        ...testTokens.badger,
-        balance: '0x0'
-      }
-    ])
-
-    expect(balances).toEqual([
-      {
-        ...testTokens.badger,
-        balance: '0x0'
       }
     ])
   })

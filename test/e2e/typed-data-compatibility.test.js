@@ -1,34 +1,10 @@
-import {
-  SignTypedDataVersion,
-  TypedDataUtils,
-  recoverTypedSignature,
-  signTypedData
-} from '@metamask/eth-sig-util'
-import { privateToAddress } from '@ethereumjs/util'
+import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
-import { getTypedDataContext, parseTypedMessage } from '../../resources/domain/typedData'
+import { parseTypedMessage } from '../../resources/domain/typedData'
 import { parseInspectorInput } from '../../resources/domain/inspector'
-import { hyperliquidFixture as fixture, saveIssueEvidence } from './support/issue105'
+import { hyperliquidFixture as fixture } from './support/issue105'
 
 const primaryType = 'HyperliquidTransaction:ApproveAgent'
-
-it('keeps the exact Hyperliquid payload through parsing, inspection, hashing and signing', () => {
-  const data = fixture()
-  const original = JSON.stringify(data)
-  const parsed = parseTypedMessage(data, SignTypedDataVersion.V4)
-  const inspected = parseInspectorInput({ kind: 'typed-data', input: original, version: 'V4' })
-  expect(parsed.data).toEqual(data)
-  expect(inspected.typedData).toEqual(data)
-  expect(JSON.stringify(data)).toBe(original)
-  const digest = TypedDataUtils.eip712Hash(data, SignTypedDataVersion.V4).toString('hex')
-  expect(TypedDataUtils.eip712Hash(inspected.typedData, SignTypedDataVersion.V4).toString('hex')).toBe(digest)
-  const key = Buffer.alloc(32, 1)
-  const signature = signTypedData({ privateKey: key, data: parsed.data, version: SignTypedDataVersion.V4 })
-  const recovered = recoverTypedSignature({ data, signature, version: SignTypedDataVersion.V4 })
-  expect(recovered).toBe(`0x${privateToAddress(key).toString('hex')}`)
-  expect(getTypedDataContext(parsed, 1).risks).toContain('domain-chain-mismatch')
-  saveIssueEvidence('hyperliquid-typed-data', { primaryType, digest, signature, recovered, inspected: true })
-})
 
 it('supports namespaced struct references and arrays without changing their names', () => {
   const data = fixture()
@@ -63,7 +39,9 @@ it.each(['undefined reference', 'inherited reference', 'duplicate field', 'inval
     if (kind === 'inherited reference') data.types[primaryType][0].type = 'constructor'
     if (kind === 'duplicate field') data.types[primaryType].push({ name: 'nonce', type: 'uint64' })
     if (kind === 'invalid field name') data.types[primaryType][0].name = 'bad:field'
-    expect(() => parseTypedMessage(data, SignTypedDataVersion.V4)).toThrow()
+    expect(() => parseTypedMessage(data, SignTypedDataVersion.V4)).toThrow(
+      expect.objectContaining({ code: -32602, message: expect.stringMatching(/^Invalid params:/) })
+    )
     expect(() => parseInspectorInput({ kind: 'typed-data', input: JSON.stringify(data) })).toThrow()
   }
 )
