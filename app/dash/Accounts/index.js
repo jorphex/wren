@@ -154,8 +154,8 @@ export class AddAccounts extends React.Component {
               <Icon name='watch' size={20} /> Watch address
             </button>
           </div>
-          <details className='accountTypeAdvanced'>
-            <summary>Advanced</summary>
+          <section className='accountTypeAdvanced' aria-labelledby='account-type-advanced'>
+            <h2 id='account-type-advanced'>Advanced</h2>
             <button
               type='button'
               className='accountTypeSelect'
@@ -163,7 +163,7 @@ export class AddAccounts extends React.Component {
             >
               Create private key
             </button>
-          </details>
+          </section>
         </div>
       )
     const title =
