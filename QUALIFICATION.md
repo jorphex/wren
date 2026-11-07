@@ -1,7 +1,7 @@
 # Desktop and Companion release qualification checklist
 
-Use this checklist to qualify a paired Wren desktop and Companion candidate.
-These manual checks supplement automated tests. They are not a security audit.
+Use this checklist for a paired Wren desktop and Companion release candidate.
+Complete the manual checks as well as the automated tests.
 
 Use disposable accounts and Ethereum
 Sepolia (`0xaa36a7`) or Base Sepolia (`0x14a34`) unless testing Earn, which uses
@@ -16,7 +16,34 @@ protection has an additional
 unnotarized macOS releases have a separate
 [architecture-specific checklist](MACOS_UNNOTARIZED_QUALIFICATION.md).
 
-## 0.1.11 candidate record
+## 0.1.12 preparation record
+
+Development baseline: `c17f8495` (package version 0.1.11).
+[Quality and native package checks](https://github.com/jorphex/wren/actions/runs/42351576753)
+and [CodeQL](https://github.com/jorphex/wren/actions/runs/42351576750) passed.
+The run passed 5,478 unit tests, 111 isolated E2E cases and 10 Ledger adapter checks.
+The audit reported no high or critical findings; 12 low and 34 moderate findings remain.
+
+The local follow-up passed 123 isolated E2E cases and 414 provider checks.
+It rejects nested namespaced structs in signing and Inspector.
+Flat Hyperliquid V3/V4 requests and ordinary nested messages retain their signed
+fields. Software signatures and Ledger request hashes pass independent encoder
+checks. Ledger testing used APDU replay, without a physical device.
+
+Before preparing the final candidate:
+
+1. Confirm [Trezor SDK redistribution rights](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
+2. Set the 0.1.12 version and lockfile. Review its notes and prepare fresh artifacts.
+   The existing September 30 draft targets old startup-fix code and needs replacement.
+3. Run the [release procedure](RELEASE.md) on the final commit. Record package
+   checksums, reproducibility and the applicable manual checks below.
+
+Physical Lattice signing and display checks remain pending. The cause of the
+reported 21-hour balance-worker heartbeat failure is still unproven.
+SDK metadata cancellation and firmware-format work remain in the
+[Trezor investigation](TREZOR_CLEAR_SIGNING.md).
+
+## Historical 0.1.11 candidate record
 
 Candidate source: `18561d2379db38a08a430f3a126681d4be5561fc`.
 [Quality and native checks](https://github.com/jorphex/wren/actions/runs/36840386513)
@@ -55,6 +82,8 @@ and origin/account status scoping without using live Wren ports or public networ
 It also covers single-call simulation fallbacks, snapshot-bound trace events,
 provider errors, and partial evidence. Retain the Jest result and
 `compiled/simulation-fallback-e2e.json` before the next compile clears that folder.
+Set `WREN_E2E_EVIDENCE_DIR` to retain typed-data, Lattice and balance-flow reports,
+as shown in the release procedure.
 The native smoke matrix builds real unsigned Linux arm64 and Windows x64 packages
 plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares
 packaged runtime evidence
@@ -89,6 +118,9 @@ For the current UI, also verify the following in the disposable profile:
   from the same chain and contract; missing decimals keep exact base units.
 - Contract spender names retain their source and full address. Unavailable
   metadata does not delay signing or change its checks.
+- Open Approvals below the account balance card. Refresh a known allowance,
+  then use Revoke to review `approve(spender, 0)`. Test rejection and confirmation.
+  Forgetting the local list must not change the on-chain allowance.
 - Exact funding values replace rounded rows, and privacy mode hides both forms.
 - Earn positions and guardrail identity remain visible. Active cooldown actions
   are reachable before opening Deposit; the opened form still supports Max.

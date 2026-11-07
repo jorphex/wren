@@ -15,9 +15,10 @@
   <a href="RPC_COMPATIBILITY.md">Developer reference</a>
 </p>
 
-Browser dapps and native apps use Wren to request account access and signatures.
-You review their requests in the wallet. Each app has its own account permission
-and network route.
+Review app requests in Wren. Each app has its own account permission and network route.
+
+The latest release is **0.1.11**. This branch includes changes planned for
+[**0.1.12**](release-notes/v0.1.12.md).
 
 ## Highlights
 
@@ -44,15 +45,15 @@ for saved addresses on enabled, connected networks. Calls made outside Wren show
 Monitoring starts at the current chain position. Wren saves progress and catches up
 after reconnecting. Alerts appear while Wren is hidden; use **Wallet activity
 notifications** in Settings to turn them off. Alerts omit amounts and addresses.
-Internal-call traces and historical activity from before monitoring began are outside
-this first version.
+Monitoring does not include internal-call traces or activity from before it began.
 
-## Token approvals
+## Token approvals (planned for 0.1.12)
 
-Open **Approvals** from the account screen. The list includes approvals sent through
-Wren and successful direct approvals observed by Activity outside Wren. **Refresh**
-checks current allowances through your configured RPC. **Revoke** opens a
-zero-allowance transaction for normal review and signing.
+On the wallet's account screen, open **Approvals** below the balance card and
+**Receive / Send** buttons. The list includes approvals sent through Wren and
+successful direct approvals found by Activity. **Refresh** checks allowances
+through your configured RPC. **Revoke** opens a zero-allowance transaction for
+review and signing.
 
 The list covers locally observed ERC-20 approval calls. Earlier approvals, NFT
 approvals, and signed permits are not included. Records stay on this device for
@@ -61,9 +62,10 @@ up to a year, with a limit of 500. They are excluded from profile backups.
 
 ## Support
 
-Wren 0.1.11 works with Wren Companion 0.1.3 over pairing protocol 3.
-Companion 0.1.2 remains compatible; 0.1.3 adds connection retry fixes. Linux x64 is qualified; Windows and macOS remain
-unqualified previews, and Linux arm64 is a CI smoke target only. Read
+Wren 0.1.11 works with Companion 0.1.3 over pairing protocol 3.
+Companion 0.1.2 also works; 0.1.3 adds connection retry fixes.
+Linux x64 is the main release target. Windows and macOS are unqualified previews.
+Linux arm64 has automated package checks only. Read
 [Signer and platform support](HARDWARE_SUPPORT.md) for tested platforms, signers, and limits.
 
 ## Install
@@ -150,29 +152,26 @@ For packaging and qualification, follow the
 
 ## Privacy
 
-Wren has no first-party hosted backend. Network requests go to explicit,
-replaceable services:
+Wren has no hosted wallet backend. Common network requests use these services:
 
-| Purpose       | Default                  | Shared data                                               |
-| ------------- | ------------------------ | --------------------------------------------------------- |
-| EVM RPC       | PublicNode               | IP address, queries, calldata, and submitted transactions |
-| USD prices    | DefiLlama; GeckoTerminal | IP address, network and token IDs; no wallet address      |
-| Send content  | IPFS.io                  | IP address and the reviewed, CID-verified content request |
-| Earn catalog  | Yearn Kong               | A fixed catalog request; no account data                  |
-| Token artwork | Reviewed CoinGecko host  | Recognized artwork requests only                          |
+| Purpose                 | Default                  | Shared data                                                                 |
+| ----------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| EVM RPC                 | PublicNode               | IP address, queries, calldata, and submitted transactions                   |
+| USD prices              | DefiLlama; GeckoTerminal | IP address, network and token IDs; no wallet address                        |
+| App content             | IPFS.io                  | IP address and the requested content ID and path                            |
+| Earn catalog            | Yearn Kong               | A fixed catalog request; no account data                                    |
+| Token artwork           | Reviewed CoinGecko host  | Recognized artwork requests only                                            |
+| Contract names and ABIs | Sourcify; Etherscan      | IP address, network and contract address                                    |
+| Trezor definitions      | Trezor SDK service       | IP address, network, target/token address and sometimes a function selector |
 
-GeckoTerminal supplies Robinhood Chain token prices and missing token prices on
-Ethereum, Optimism, Gnosis, Polygon, Base, Arbitrum, and Katana. Wren checks up to 200 pools
-and selects one with the most USD liquidity, at least $10,000 in liquidity, and trading
-activity in the last 24 hours. Quotes are cached for five minutes; pool
-selection lasts up to 30 minutes. Requests go directly from the desktop.
-Prices appear as lookups finish. Queued lookups resume after provider rate limits.
-If a later pool page fails, Wren keeps the best eligible quote found and retries
-the search after five minutes. Missing quotes keep the last known value, if one exists. GeckoTerminal
-quotes do not include a 24-hour change.
+GeckoTerminal supplies Robinhood Chain prices and fills missing quotes on supported
+networks. Lookups run from the desktop and resume after rate limits. Previous
+quotes can remain during retries. Wren does not show a 24-hour change for these quotes.
+See [pricing and network details](THREAT_MODEL.md#remote-services-and-content)
+for supported networks, pool rules and cache limits.
 
 Wren does not contact Pylon or use an NFT indexer. Read the
-[threat model](THREAT_MODEL.md) for data access and trust limits. Custom RPC
+[threat model](THREAT_MODEL.md) for other requests and data access. Custom RPC
 and IPFS endpoints are supported through settings and environment configuration.
 
 ## Security and license
@@ -180,6 +179,6 @@ and IPFS endpoints are supported through settings and environment configuration.
 Please report vulnerabilities privately through the
 [security policy](SECURITY.md). Only the latest published Wren release receives security fixes.
 
-Wren is a community-maintained continuation of the GPL-licensed
-[Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is
-distributed under the [GNU GPL v3.0](LICENSE).
+Wren is a community-maintained continuation of the
+[Frame wallet](https://github.com/floating/frame). Wren's source uses the
+[GNU GPL v3.0](LICENSE). Dependencies have their own licenses.

@@ -6,26 +6,20 @@ For release details and platform limits, see
 
 ## Unreleased
 
-- Fixed Lattice native and contract signing on modern firmware. Used local calldata decoders and preserved transaction fields.
-- Accepted Hyperliquid type names unchanged in signing and inspection.
-- Reduced batch sizes and limited concurrent token reads. Preserved successful batches, token edits and custom metadata. Allowed more time for RPC timeout replies over IPC.
-- Showed spender contract names and readable token amounts in approval and permit reviews when metadata is available.
-- Aligned account setup fields and titles. Kept private-key creation visible under Advanced.
-- Refined dashboard spacing, token rows and Earn actions. Centered recent-recipient confirmations and transaction progress icons.
-- Removed unused onboarding screens, artwork, fonts and review styles. Brand generation now uses the project’s Electron.
-- Added an account Approvals list with current RPC allowances and reviewed revocation.
-- Included successful direct approvals found by Activity outside Wren.
-- Stopped queued allowance checks after history or account removal. Refreshed affected allowances together after confirmation.
-- Bound broad-approval consent to the reviewed request. Detected unlimited and NFT operator approvals in call batches even without simulation.
-- Grouped raw signed fields under Signed data when the Permit2 or ERC-3009 summary is complete.
-- Grouped signing reviews around the action, value and permissions. Kept account, fee and actions together; moved technical controls into details.
-- Kept Sign visible while required acknowledgements are reviewed separately.
+Planned for [0.1.12](release-notes/v0.1.12.md).
+
+- Added an Approvals list with RPC allowance checks and reviewed revocation. Included direct approvals found by Activity.
+- Bound token-access consent to the reviewed request. Detected unlimited token and NFT operator approvals in call batches.
+- Simplified signing reviews. Kept the account, fee and actions together, with separate acknowledgements and access to raw signed fields.
+- Added spender contract names and readable token amounts to approval and permit reviews when matching metadata is available.
 - Added token-event previews from compatible RPC traces.
-- Settled pending Trezor requests when the bridge closes during a metadata lookup.
-- Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
-- Updated commit checks and HTTP caching to remove vulnerable dependency paths.
-- Updated redirect handling and validation packages to their patched versions.
-- Updated Electron, Trezor, Ledger, WebSocket support, and development tools.
+- Fixed Lattice transaction request preparation and kept contract decoders local.
+- Accepted flat Hyperliquid agent-approval messages without changing signed fields. Rejected unsupported nested namespaced structs before signing.
+- Reduced balance-request batches and concurrency. Preserved successful reads, token edits and custom metadata.
+- Aligned account setup, dashboard controls, Earn actions and transaction progress. Kept private-key creation visible under Advanced.
+- Ended pending Trezor requests when Wren closes the bridge.
+- Removed unused dependencies, UI code, fonts and artwork. Kept IPFS content hashes and endpoint settings.
+- Updated Electron, Trezor, Ledger, WebSocket support and development tools. Patched redirect, validation and HTTP dependencies.
 
 ## 0.1.11 - 2026-10-01
 

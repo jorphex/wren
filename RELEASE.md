@@ -1,39 +1,31 @@
 # Linux, Windows, and macOS release procedure
 
-Use this procedure to prepare and publish Linux x64 packages and Windows
-x64 and macOS x64/arm64 previews. Windows previews are unsigned. macOS previews
-are ad-hoc signed and unnotarized. This procedure does not replace the
-[qualification checklist](QUALIFICATION.md), the
-[Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md), or the
-[macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md). See the
-[signer and platform support reference](HARDWARE_SUPPORT.md) for the exact
-qualification boundary.
+Use this procedure for Linux x64 packages and Windows x64 and macOS x64/arm64
+previews. Windows previews are unsigned. macOS previews use ad-hoc signatures
+and are not notarized. Complete the [qualification checklist](QUALIFICATION.md)
+and the applicable [Windows](WINDOWS_RELEASE_QUALIFICATION.md) or
+[macOS](MACOS_UNNOTARIZED_QUALIFICATION.md) checklist.
+See [signer support](HARDWARE_SUPPORT.md) for recorded tests and limits.
 
 ## 1. Confirm the release boundary
 
-Linux x64 AppImage and deb packages remain Wren's qualified release target.
-Windows x64 is published only as a clearly named unsigned preview. The GitHub
-workflow creates a **new draft**; it does not publish or modify an existing
-release. macOS x64 and arm64 are published only as clearly named ad-hoc-signed,
-unnotarized, unqualified previews. Linux arm64 remains an unpublished native
-smoke target. Glide is qualified on X11 only; on native Wayland use the tray or
-summon shortcut.
+Linux x64 AppImage and deb packages are the main release target.
+Windows x64 and macOS x64/arm64 remain previews with the signature states above.
+Linux arm64 has automated native package checks and is not published.
+Glide is qualified on X11; use the tray or summon shortcut on native Wayland.
+The GitHub workflow creates a **new draft**. Publication is a separate action.
 
-Keep macOS jobs credential-free. The preview has valid ad-hoc code seals but no
-Apple Developer ID, Team ID, trusted publisher, notarization ticket, or Apple
-malware review. Gatekeeper must reject it until the user explicitly chooses
-**Open Anyway**. Publish only each architecture's DMG; keep its matching ZIP and
-all macOS updater metadata outside the release. Verify each DMG through checksums
-and GitHub attestations; do not add Developer ID signing or notarization to this
-release path.
+Keep macOS jobs credential-free. Require valid ad-hoc code seals, no Apple
+Developer ID or Team ID, no notarization ticket, and Gatekeeper rejection.
+Users must choose **Open Anyway** before first launch.
+Publish each architecture's DMG with checksums and GitHub attestations.
+Keep ZIPs and macOS updater metadata outside the release.
 
-The native verifier checks source/application identity, packaged resources,
-runtime architecture, native modules, sandbox policy, and matching archive
-payloads. On Windows it also requires `NotSigned` for both `Wren.exe` and the
-installer and checks DPAPI policy selection without reading real DPAPI data. It
-does not exercise the graphical desktop, physical hardware, SmartScreen, or
-native credential persistence. Use the [Windows preview
-checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
+The native verifier checks source identity, resources, architecture, native
+modules, sandbox policy and archive contents. Windows checks require `NotSigned`
+for `Wren.exe` and the installer. They check DPAPI policy without real credentials.
+GUI, hardware, SmartScreen and credential-storage checks use the manual checklists.
+DPAPI qualification also needs the
 [signer-protection checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md).
 
 ## 2. Prepare a candidate
@@ -41,6 +33,12 @@ checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
 Confirm Wren's right to redistribute Trezor Connect before publishing a candidate
 that includes it. The installed SDK carries T-RSL; a separate grant is not yet
 recorded. See the [SDK license prerequisite](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
+
+For 0.1.12, resolve the open items in the
+[preparation record](QUALIFICATION.md#0112-preparation-record) before freezing
+the candidate. The September 30 draft contains older code and artifacts.
+Delete that unpublished draft before creating its replacement. The workflow
+refuses to overwrite an existing release.
 
 1. Use a clean, reviewed default-branch commit. Set a new SemVer-compatible
    `package.json` version and regenerate `package-lock.json` with the pinned
@@ -51,7 +49,7 @@ recorded. See the [SDK license prerequisite](TREZOR_CLEAR_SIGNING.md#sdk-license
    changes, update the Companion `compatibility.json` minimum desktop commit and
    build both from their exact paired commits. The current protocol is version 3;
    do not direct a protocol-3 client to an older store extension.
-3. Run the Linux release gate:
+3. Install `xvfb` for renderer checks, then run the Linux release gate:
 
    ```bash
    nvm install
@@ -63,17 +61,22 @@ recorded. See the [SDK license prerequisite](TREZOR_CLEAR_SIGNING.md#sdk-license
    npm run lint
    npm run compile
    npm test
-   npm run test:e2e
+   mkdir -p .cache/release-evidence
+   WREN_E2E_EVIDENCE_DIR="$PWD/.cache/release-evidence" npm run test:e2e
+   cp compiled/simulation-fallback-e2e.json .cache/release-evidence/
    npm run test:usbAdapters
-   npm run bundle
+   npm run qualify:ui
    npm run package:linux:x64
    npm run package:verify:linux
    npm run sbom:release
    npm run sbom:verify:release
    npm run checksums:linux
    npm run release:verify:linux
-   npm run repro:linux -- --output reproducibility-report.json
+   npm run repro:linux -- --output .cache/release-evidence/reproducibility-report.json
    ```
+
+   Save the test logs and `.cache/release-evidence` with the candidate record.
+   The copy keeps the RPC fallback report through later compiles.
 
 4. On native Windows x64, check out the same clean commit and run:
 
@@ -127,10 +130,9 @@ epoch, timezone, and locale, then compares compiled output, renderer bundles,
 unpacked applications, extracted AppImage/deb payloads, native modules, the SBOM,
 and package bytes. The per-candidate report is authoritative.
 
-Wren does not claim byte-for-byte AppImage reproducibility. The accepted boundary
-requires identical application and package payloads; AppImage container bytes,
-`latest-linux.yml`, and their checksum entries may vary. Any other difference
-blocks release. Retain the report with private release evidence.
+Application and package payloads must match. AppImage container bytes,
+`latest-linux.yml` and their checksum entries may differ. Any other difference
+blocks release. Keep the comparison report with the candidate record.
 
 ## 4. Create and review the draft
 
