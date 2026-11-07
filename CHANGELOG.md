@@ -6,6 +6,8 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Refreshed the bundled token catalog from SmolDapp and Uniswap snapshots. Kept existing entries and exclusions.
+
 ## 0.1.12 - 2026-11-07
 
 - Added an Approvals list with RPC allowance checks and reviewed revocation. Included direct approvals found by Activity.

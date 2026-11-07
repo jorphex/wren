@@ -2,6 +2,8 @@ import { copyFile, mkdir, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 const copies = [
+  ['main/externalData/inventory/token-list.LICENSE.txt', 'compiled/main/licenses/TokenLists.MIT.txt'],
+  ['main/externalData/inventory/token-list.SOURCE.txt', 'compiled/main/licenses/TokenLists.SOURCE.txt'],
   ['resources/fonts/Recursive/LICENSE.txt', 'compiled/main/licenses/Recursive.OFL.txt'],
   ['resources/fonts/Recursive/SOURCE.txt', 'compiled/main/licenses/Recursive.SOURCE.txt'],
   ['resources/Components/AssetMark/assets/LICENSE.txt', 'compiled/main/yearn/token-assets.LICENSE.txt'],

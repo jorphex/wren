@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 
 import createBalancesLoader from '../../main/externalData/balances/scan'
 import TokenLoader from '../../main/externalData/inventory/tokens'
+import { buildSendTransaction } from '../../main/send/transaction'
 import * as storeActions from '../../main/store/actions'
 import { createDappClient, startJsonRpcFixture } from './support/harness'
 import { balanceWorkerHarness, saveIssueEvidence, waitUntil } from './support/issue105'
@@ -12,7 +13,10 @@ const secondAccount = '0x2222222222222222222222222222222222222222'
 const multicall = new Interface([
   'function tryAggregate(bool requireSuccess,tuple(address target,bytes callData)[] calls) returns (tuple(bool success,bytes returnData)[])'
 ])
-const erc20 = new Interface(['function balanceOf(address) returns (uint256)'])
+const erc20 = new Interface([
+  'function balanceOf(address) returns (uint256)',
+  'function transfer(address,uint256) returns (bool)'
+])
 const tokens = (count) =>
   Array.from({ length: count }, (_, index) => ({
     address: `0x${(index + 100).toString(16).padStart(40, '0')}`,
@@ -41,6 +45,106 @@ afterAll(() =>
     evidence
   })
 )
+
+it('discovers a newly cataloged token through RPC with readable units and keeps exclusions out of the scan', async () => {
+  const address = '0x00000000efe302beaa2b3e6e1b18d08d69a9012a'
+  const queried = new Set()
+  server = await startJsonRpcFixture(async (payload) => {
+    const calls = multicall.decodeFunctionData('tryAggregate', payload.params[0].data)[1]
+    return {
+      result: multicall.encodeFunctionResult('tryAggregate', [
+        calls.map(({ target }) => {
+          const token = target.toLowerCase()
+          queried.add(token)
+          return token === address
+            ? [true, erc20.encodeFunctionResult('balanceOf', [2_500_000n])]
+            : [false, '0x']
+        })
+      ])
+    }
+  })
+  const rpc = createDappClient(server.url, 'https://catalog-refresh.invalid')
+  worker = balanceWorkerHarness({
+    connections: { ethereum: { 1: {} } },
+    send(payload, callback) {
+      rpc.request(payload.method, payload.params).then(
+        (result) => callback({ result }),
+        (error) => callback({ error })
+      )
+    }
+  })
+  await waitUntil(() => worker.events.some(({ name }) => name === 'ready'))
+  worker.controller.scanForTokenBalances(account, [], [1])
+  await waitUntil(() =>
+    worker.events.some(({ name, args }) => name === 'tokenBalances' && args[0] === account)
+  )
+  const loaded = worker.events
+    .filter(({ name, args }) => name === 'tokenBalances' && args[0] === account)
+    .flatMap(({ args }) => args[1])
+  expect(loaded).toEqual([
+    expect.objectContaining({ address, chainId: 1, symbol: 'AUSD', decimals: 6, displayBalance: '2.5' })
+  ])
+  const excluded = new TokenLoader().getBlacklist([1])
+  expect(excluded.length).toBeGreaterThan(0)
+  expect(excluded.every((token) => !queried.has(token.address.toLowerCase()))).toBe(true)
+  evidence.push({
+    case: 'refreshed-catalog-discovery',
+    loaded,
+    queriedTokens: queried.size,
+    excluded: excluded.length
+  })
+}, 30_000)
+
+it.each([
+  { chainId: 1, address: '0x720cd16b011b987da3518fbf38c3071d4f0d1495' },
+  { chainId: 42161, address: '0x63806c056fa458c548fb416b15e358a9d685710a' },
+  { chainId: 8453, address: '0xb008bdcf9cdff9da684a190941dc3dca8c2cdd44' }
+])('uses FLUX contract units for balances and sending on chain $chainId', async ({ chainId, address }) => {
+  const token = new TokenLoader().getTokens([chainId]).find((entry) => entry.address === address)
+  expect(token).toBeDefined()
+  server = await startJsonRpcFixture(async (payload) => {
+    const rawBalance = erc20.encodeFunctionResult('balanceOf', [10_000_000_000n])
+    if (payload.params[0].to.toLowerCase() === address) return { result: rawBalance }
+    const calls = multicall.decodeFunctionData('tryAggregate', payload.params[0].data)[1]
+    expect(calls).toHaveLength(1)
+    expect(calls[0].target.toLowerCase()).toBe(address)
+    return { result: multicall.encodeFunctionResult('tryAggregate', [[[true, rawBalance]]]) }
+  })
+  const rpc = createDappClient(server.url, 'https://catalog-refresh.invalid')
+  worker = balanceWorkerHarness({
+    connections: { ethereum: { [chainId]: {} } },
+    send(payload, callback) {
+      rpc.request(payload.method, payload.params).then(
+        (result) => callback({ result }),
+        (error) => callback({ error })
+      )
+    }
+  })
+  await waitUntil(() => worker.events.some(({ name }) => name === 'ready'))
+  worker.controller.updateKnownTokenBalances(account, [token])
+  await waitUntil(() =>
+    worker.events.some(({ name, args }) => name === 'tokenBalances' && args[0] === account)
+  )
+  const [balance] = worker.events
+    .filter(({ name, args }) => name === 'tokenBalances' && args[0] === account)
+    .flatMap(({ args }) => args[1])
+  expect(balance).toEqual(expect.objectContaining({ address, chainId, displayBalance: '100' }))
+  const { amount, transaction } = buildSendTransaction(
+    { account, amount: '1', assetAddress: address, chainId, recipient: secondAccount },
+    { account, assets: [balance], networkAvailable: true, watchOnly: false }
+  )
+  const [recipient, transferAmount] = erc20.decodeFunctionData('transfer', transaction.data)
+  expect(recipient.toLowerCase()).toBe(secondAccount)
+  expect(amount).toBe(100_000_000n)
+  expect(transferAmount).toBe(100_000_000n)
+  evidence.push({
+    case: 'flux-contract-units',
+    chainId,
+    address,
+    displayBalance: balance.displayBalance,
+    transferAmount: transferAmount.toString()
+  })
+})
 
 it('bounds batch size/concurrency and preserves ordered successful balances around a failed batch', async () => {
   let active = 0
