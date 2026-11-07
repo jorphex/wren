@@ -86,9 +86,12 @@ Type 3+, EIP-7702 authorization lists, and unknown fields are rejected.
 ### Signing
 
 Normalizes standard and legacy `personal_sign`, reviews UTF-8 or opaque bytes,
-recognizes SIWE, and requires explicit consent for dangerous `eth_sign`. Typed
-data is strictly validated and reviewed. Similarly named unsupported methods
-fail closed.
+and recognizes SIWE. Raw `eth_sign` requires separate consent. Typed data is
+validated and reviewed; unsupported method names are rejected.
+
+The flat Hyperliquid `ApproveAgent` message is tested with its type name unchanged.
+Namespaced types support atomic fields and V4 atomic arrays. Nested structs with
+namespaced types are rejected before review or signing. Inspector uses the same rules.
 
 ### Chains
 

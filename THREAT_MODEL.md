@@ -6,8 +6,7 @@ Wren is a desktop EVM wallet and account router. It accepts local HTTP/WebSocket
 and Wren Companion requests, obtains approval, and routes approved work to
 software or hardware signers.
 
-This document describes the implementation and its limits. It is not an audit
-and does not claim that Wren addresses every risk. The method surface is in
+This document describes the implementation and its limits. Supported methods are in
 [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
 
@@ -303,20 +302,19 @@ or replay fails closed. Preparation evidence is not signing authorization.
 
 #### Balance worker
 
-The hidden balance worker has no localhost provider authority. Its parent IPC
-broker accepts only bounded latest-block `eth_call` and `eth_getBalance` reads
-for an explicit enabled chain, with strict schemas, request limits, and timeouts.
-The main process selects and owns the configured RPC connection.
+The hidden balance worker cannot use the localhost provider. Its parent IPC
+broker accepts only latest-block `eth_call` and `eth_getBalance` reads for enabled
+chains. It checks schemas, request limits and timeouts. The main process selects
+the configured RPC connection.
 
 Token multicalls use at most 200 calls per batch. For each account on each network,
 discovery and tracked reads each run at most two batches at once. Native balance
 reads run separately.
 
-Wren combines unchanged requests during an active read. Wren keeps successful
-results when other batches fail. Token additions and metadata edits received
-during a read use a follow-up read. Wren discards tracked results with pending
-metadata edits. Late discovery results use current custom token units, names
-and artwork.
+Wren combines unchanged requests during a read and keeps successful batches.
+Token additions and metadata edits trigger a follow-up read. Tracked results with pending
+metadata edits are discarded. Late discovery results use current custom token
+units, names and artwork.
 
 The parent allows 12 seconds per RPC request. The worker waits five more seconds
 for the parent's reply over IPC. Wren discards late replies. An unresponsive RPC
@@ -431,31 +429,27 @@ recovery; Speed Up remains constrained.
 
 #### Observed token approvals
 
-Wren retains at most 500 locally observed ERC-20 approval pairs for one year.
-Each record holds the account, chain, token, spender, last observed hash, and time.
-It also retains a submission hash for execution checks across scan catch-up.
-It does not retain the approved amount or calldata. Records stay out of renderer
-bootstrap state, profile backups, and diagnostics. Removing an account or using
-**Forget observed approvals** removes its records.
+Wren keeps at most 500 observed ERC-20 approval pairs for one year. Records contain
+the account, chain, token, spender, observation time and transaction hashes.
+The hashes support execution checks after scan catch-up. Amounts and calldata
+are not stored. Records are excluded from renderer bootstrap state, profile
+backups and diagnostics. Account removal and **Forget observed approvals** delete them.
 
-Pairs come from Wren broadcast attempts and successful direct calls found by the
-Activity monitor. Wren records the signed hash before sending, so a missing RPC
-reply does not lose the pair. An attempt is not confirmation or allowance evidence.
-External calls use the monitor's existing block and receipt checks. Observations
-and scan progress are saved together. Replaying a known call keeps one record;
-clearing the list also excludes calls from an unfinished scan.
+Pairs come from Wren broadcast attempts and successful direct calls found by
+Activity. Wren saves the signed hash before sending, including attempts with a
+missing RPC reply. This records an attempt, not a confirmed allowance.
+External calls use Activity's block and receipt checks. Observations and scan
+progress are saved together. Replayed calls keep one record. Clearing the list
+also excludes calls from an unfinished scan.
 
-The account view reads allowances through the configured RPC, at most 20 pairs
-per refresh with four concurrent reads and a five-second deadline. Results stay
-in memory for one minute. Missing, malformed, or failed replies remain unavailable;
-they are not treated as zero. Wren execution evidence triggers a new check.
-An external approval change or Activity reorg clears cached allowances until
-refresh. Late replies cannot restore cleared history or overwrite a newer check.
-Queued reads stop after history or account removal. Receipt updates clear all
-affected allowances before starting fresh lookups.
-Canonical receipt approval events also match known pairs when several approvals
-are pending. Event amounts are not used as current allowances. A Wren reorg clears
-cached allowances for its account and network.
+Refresh checks at most 20 pairs through the configured RPC. It runs four reads
+at once, each with a five-second deadline. Results stay in memory for one minute.
+Missing, malformed or failed replies show unavailable, never zero.
+Execution evidence triggers a fresh check. Observed changes, receipt updates
+and reorgs clear the affected cached values. Receipt approval events match known
+pairs, but event amounts are not used as current allowances.
+Late replies cannot restore cleared history or replace a newer check.
+Queued reads stop after history or account removal.
 
 Revocation rechecks the selected account and allowance, then queues the exact
 token's `approve(spender, 0)` through normal transaction review. It does not sign,
@@ -493,8 +487,8 @@ inert history, and the release gate rejects active Pylon, Nebula-hosted IPFS,
 Frame CDN, and Frame runtime packages. DefiLlama sees native-asset and
 tracked-token IDs for supported mainnets, not the selected account, though
 timing/token sets can fingerprint; failures keep old values. Robinhood token
-quotes go directly to GeckoTerminal. Missing token quotes on other supported
-mainnets also use GeckoTerminal. It sees the user's
+quotes go directly to GeckoTerminal. It also supplies missing token quotes on
+Ethereum, Optimism, Gnosis, Polygon, Base, Arbitrum and Katana. It sees the user's
 IP address, network IDs, token contracts, and selected pool IDs. Wren does
 not send wallet addresses, balances, or keys to either price service.
 

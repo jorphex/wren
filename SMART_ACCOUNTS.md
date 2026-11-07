@@ -35,7 +35,7 @@ Implementation requires one reviewed configuration, not arbitrary dapp input:
 - whether standard `eth_sendTransaction` is converted internally for a selected
   smart account (recommended), while dapp-authored full UserOperations remain
   rejected;
-- which of `personal_sign`, dangerous `eth_sign`, and each typed-data version the
+- which of `personal_sign`, raw `eth_sign`, and each typed-data version the
   adapter supports, with the exact digest and account-signature mapping; every
   unspecified signing method remains rejected because ERC-1271 validation does
   not produce a contract signature;
