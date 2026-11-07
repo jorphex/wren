@@ -17,8 +17,8 @@
 
 Review app requests in Wren. Each app has its own account permission and network route.
 
-The latest release is **0.1.11**. This branch includes changes planned for
-[**0.1.12**](release-notes/v0.1.12.md).
+The latest release is **0.1.11**. This branch contains the
+[**0.1.12 candidate**](release-notes/v0.1.12.md).
 
 ## Highlights
 
@@ -47,7 +47,7 @@ after reconnecting. Alerts appear while Wren is hidden; use **Wallet activity
 notifications** in Settings to turn them off. Alerts omit amounts and addresses.
 Monitoring does not include internal-call traces or activity from before it began.
 
-## Token approvals (planned for 0.1.12)
+## Token approvals (0.1.12 candidate)
 
 On the wallet's account screen, open **Approvals** below the balance card and
 **Receive / Send** buttons. The list includes approvals sent through Wren and

@@ -30,11 +30,13 @@ Flat Hyperliquid V3/V4 requests and ordinary nested messages retain their signed
 fields. Software signatures and Ledger request hashes pass independent encoder
 checks. Ledger testing used APDU replay, without a physical device.
 
-Before preparing the final candidate:
+The candidate package and lockfile use version 0.1.12.
+
+Before publication:
 
 1. Confirm [Trezor SDK redistribution rights](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
-2. Set the 0.1.12 version and lockfile. Review its notes and prepare fresh artifacts.
-   The existing September 30 draft targets old startup-fix code and needs replacement.
+2. Review the 0.1.12 notes and prepare fresh artifacts from the candidate commit.
+   The September 30 draft and its startup-fix artifacts are obsolete.
 3. Run the [release procedure](RELEASE.md) on the final commit. Record package
    checksums, reproducibility and the applicable manual checks below.
 
