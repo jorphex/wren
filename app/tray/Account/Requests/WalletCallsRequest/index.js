@@ -10,12 +10,7 @@ import { resolveLocalAddressIdentity } from '../../../../../resources/domain/add
 import { ReviewContext } from '../../../../../resources/Components/SigningReview'
 import ReviewAcknowledgements from '../ReviewAcknowledgements'
 import { SimulationAllowance, SimulationEffects } from '../TransactionRequest/ViewData/effects'
-import {
-  createWalletCallsDraft,
-  formatNativeMaximum,
-  parseWalletCallsDraft,
-  walletCallMaximum
-} from './adjustment'
+import { formatNativeMaximum, parseWalletCallsDraft, walletCallMaximum } from './adjustment'
 
 const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/
 
@@ -157,12 +152,6 @@ export class WalletCallsRequest extends React.Component {
     clearTimeout(this.copyTimer)
     this.setState({ copiedCall: index })
     this.copyTimer = setTimeout(() => this.setState({ copiedCall: -1 }), 1000)
-  }
-
-  openAdjustment = () => {
-    const walletCallsDraft = createWalletCallsDraft(this.props.req)
-    if (!walletCallsDraft) return
-    link.send('nav:update', 'panel', { data: { step: 'adjustWalletCalls', walletCallsDraft } })
   }
 
   renderAdjustment() {
