@@ -313,6 +313,8 @@ account/network/read kind. Discovery and tracked-token reads coalesce repeated
 requests independently while a previous scan is active. A failed batch does not
 discard successful batches. Tracked-token additions and metadata changes received
 during a read are merged into a follow-up; stale metadata results are discarded.
+Published balances use current saved custom-token units, names and artwork even
+when an older discovery read finishes later.
 Native reads remain separate. The parent RPC deadline is 12 seconds; the worker allows a further five seconds for the parent's
 response to cross IPC before its channel watchdog expires. Late replies are
 discarded. These limits do not guarantee discovery on an unresponsive RPC.

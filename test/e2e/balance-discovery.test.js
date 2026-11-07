@@ -1,6 +1,9 @@
 import { Interface } from 'ethers'
+import Restore from 'react-restore'
 
 import createBalancesLoader from '../../main/externalData/balances/scan'
+import TokenLoader from '../../main/externalData/inventory/tokens'
+import * as storeActions from '../../main/store/actions'
 import { createDappClient, startJsonRpcFixture } from './support/harness'
 import { balanceWorkerHarness, saveIssueEvidence, waitUntil } from './support/issue105'
 
@@ -21,8 +24,11 @@ const tokens = (count) =>
 const evidence = []
 let server
 let worker
+let publisher
 
 afterEach(async () => {
+  publisher?.stop()
+  publisher = undefined
   worker?.close()
   worker = undefined
   await server?.close()
@@ -335,3 +341,110 @@ it.each(['added tokens', 'changed metadata', 'new tokens after an upstream failu
     }
   }
 )
+
+it('keeps current custom metadata in the store when an older discovery finishes after a tracked read', async () => {
+  const token = new TokenLoader().getTokens([1])[0]
+  const customToken = {
+    ...token,
+    address: `0x${token.address.slice(2).toUpperCase()}`,
+    decimals: 2,
+    name: 'Current custom token',
+    symbol: 'CURRENT',
+    logoURI: 'https://issue105.invalid/current-token.svg'
+  }
+  let rawBalance = 123n
+  let discoveryHeld = false
+  let release
+  const hold = new Promise((resolve) => {
+    release = resolve
+  })
+  server = await startJsonRpcFixture(async (payload) => {
+    const calls = multicall.decodeFunctionData('tryAggregate', payload.params[0].data)[1]
+    const includesToken = calls.some(({ target }) => target.toLowerCase() === token.address.toLowerCase())
+    if (includesToken && calls.length > 1) {
+      discoveryHeld = true
+      await hold
+    }
+    return {
+      result: multicall.encodeFunctionResult('tryAggregate', [
+        calls.map(({ target }) =>
+          target.toLowerCase() === token.address.toLowerCase()
+            ? [true, erc20.encodeFunctionResult('balanceOf', [rawBalance])]
+            : [false, '0x']
+        )
+      ])
+    }
+  })
+  const rpc = createDappClient(server.url, 'https://issue105.invalid')
+  worker = balanceWorkerHarness({
+    connections: { ethereum: { 1: {} } },
+    send(payload, callback) {
+      rpc.request(payload.method, payload.params).then(
+        (result) => callback({ result }),
+        (error) => callback({ error })
+      )
+    }
+  })
+  const unrelated = { ...token, chainId: 10, balance: '0x01', displayBalance: 'unchanged fixture' }
+  const store = Restore.create(
+    {
+      main: {
+        accounts: { [account]: {} },
+        balances: { [account]: [unrelated] },
+        tokens: { custom: [], known: { [account]: [] } }
+      }
+    },
+    storeActions
+  )
+  publisher = worker.createPublisher(store)
+  const storedToken = () => store('main.balances', account).find(({ chainId }) => chainId === 1)
+  try {
+    await waitUntil(() => worker.events.some(({ name }) => name === 'ready'))
+    worker.controller.scanForTokenBalances(account, [], [1])
+    await waitUntil(() => discoveryHeld)
+    store.addCustomTokens([customToken])
+    publisher.addTokens(account, [customToken])
+    await waitUntil(() => storedToken()?.symbol === 'CURRENT')
+    expect(storedToken()).toEqual(expect.objectContaining({ decimals: 2, displayBalance: '1.23' }))
+    release()
+    await waitUntil(() =>
+      worker.events.some(
+        ({ name, args }) => name === 'tokenBalances' && args[1].some(({ symbol }) => symbol === token.symbol)
+      )
+    )
+    const stored = storedToken()
+    evidence.push({ case: 'custom-metadata-after-discovery', original: token, customToken, stored })
+    expect(stored).toEqual(
+      expect.objectContaining({
+        decimals: 2,
+        name: 'Current custom token',
+        symbol: 'CURRENT',
+        logoURI: customToken.logoURI,
+        balance: '0x7b',
+        displayBalance: '1.23'
+      })
+    )
+    expect(store('main.balances', account).find(({ chainId }) => chainId === 10)).toEqual(unrelated)
+    expect(store('main.tokens.known', account)).toEqual([
+      expect.objectContaining({ decimals: 2, symbol: 'CURRENT' })
+    ])
+    rawBalance = 0n
+    store.addCustomTokens([{ ...customToken, logoURI: '' }])
+    publisher.addTokens(account, [token])
+    await waitUntil(() => storedToken()?.balance === '0x00')
+    expect(storedToken()).toEqual(
+      expect.objectContaining({
+        decimals: 2,
+        name: 'Current custom token',
+        symbol: 'CURRENT',
+        logoURI: '',
+        balance: '0x00',
+        displayBalance: '0'
+      })
+    )
+    expect(store('main.tokens.known', account)).toEqual([])
+    evidence.push({ case: 'custom-metadata-zero-balance', stored: storedToken() })
+  } finally {
+    release()
+  }
+})

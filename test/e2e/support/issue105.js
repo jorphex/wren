@@ -128,7 +128,23 @@ export function balanceWorkerHarness(chains, { timeScale = 1, responseDelay = 0 
     controller.on(name, (...args) => events.push({ name, args, at: Date.now() }))
   }
   load('main/externalData/balances/worker.ts')
-  return { controller, events, logs, rpcResponses, close: () => controller.close() }
+  return {
+    controller,
+    events,
+    logs,
+    rpcResponses,
+    createPublisher(store) {
+      const createPublisher = load('main/externalData/balances/index.ts', {
+        './controller': function () {
+          return controller
+        }
+      }).default
+      const publisher = createPublisher(store)
+      publisher.start()
+      return publisher
+    },
+    close: () => controller.close()
+  }
 }
 
 export const hyperliquidFixture = () => ({

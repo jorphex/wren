@@ -1,4 +1,5 @@
 import log from 'electron-log'
+import BigNumber from 'bignumber.js'
 
 import { NATIVE_CURRENCY } from '../../../resources/constants'
 import { toTokenId } from '../../../resources/domain/balance'
@@ -237,10 +238,26 @@ export default function (store: Store) {
   function handleTokenBalanceUpdate(balances: TokenBalance[], address: Address) {
     // only update balances if any have changed
     const currentTokenBalances = storeApi.getTokenBalances(address)
-    const customTokens = new Set(storeApi.getCustomTokens().map(toTokenId))
+    const customTokens = new Map(storeApi.getCustomTokens().map((token) => [toTokenId(token), token]))
     const isCustomToken = (balance: Balance) => customTokens.has(toTokenId(balance))
 
-    const changedBalances = balances.filter((newBalance) => {
+    // Independent discovery reads can finish after a custom-token edit. Keep
+    // saved metadata authoritative, including the units used for display.
+    const currentBalances = balances.map((balance) => {
+      const customToken = customTokens.get(toTokenId(balance))
+      return customToken
+        ? {
+            ...balance,
+            name: customToken.name,
+            symbol: customToken.symbol,
+            decimals: customToken.decimals,
+            logoURI: customToken.logoURI || '',
+            displayBalance: new BigNumber(balance.balance).shiftedBy(-customToken.decimals).toString()
+          }
+        : balance
+    })
+
+    const changedBalances = currentBalances.filter((newBalance) => {
       const tokenId = toTokenId(newBalance)
       const matchingBalances = currentTokenBalances.filter((balance) => toTokenId(balance) === tokenId)
       const currentBalance = matchingBalances[0]
