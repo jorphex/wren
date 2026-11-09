@@ -605,7 +605,8 @@ const runScenario = async (scenario) => {
                 (element) => element.getAttribute('aria-label') === ${JSON.stringify(scenario.expectedInitialFocus)}
               )
               target?.focus({ preventScroll: true })
-            })()`, true
+            })()`,
+            true
           )
         }
         await window.webContents.executeJavaScript(
@@ -683,10 +684,18 @@ const main = async () => {
     const module = state?.panel?.account?.modules?.chains
     if (!module || module.height === update.height) return
     module.height = update.height
-    event.sender.send('main:action', 'stateSync', JSON.stringify([{
-      name: 'qualification-gas-module-size', count: 1, deferred: false,
-      updates: [{ path: 'panel.account.modules.chains.height', value: update.height }]
-    }]))
+    event.sender.send(
+      'main:action',
+      'stateSync',
+      JSON.stringify([
+        {
+          name: 'qualification-gas-module-size',
+          count: 1,
+          deferred: false,
+          updates: [{ path: 'panel.account.modules.chains.height', value: update.height }]
+        }
+      ])
+    )
   })
 
   ipcMain.on('nav:update', (event, windowId, crumb, navigate = true) => {
@@ -722,6 +731,12 @@ const main = async () => {
     const method = parseWireValue(methodWire)
     const args = argWires.map(parseWireValue)
     const scenario = scenarioByWebContents.get(event.sender.id)
+    if (scenario?.deferRpcs?.includes(method)) return
+    const error = scenario?.rpcErrors?.[method]
+    if (error) {
+      event.sender.send('main:rpc', id, JSON.stringify(error))
+      return
+    }
     const reply = scenario ? rpcReplyFor(scenario, method) : undefined
     if (method !== 'getState' && reply === undefined) {
       event.sender.send('main:rpc', id, JSON.stringify(`Qualification harness does not provide ${method}`))

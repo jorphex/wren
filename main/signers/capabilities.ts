@@ -95,7 +95,7 @@ export function getSignerCapabilities(signer: CapabilityInput): SignerCapabiliti
     return freeze(
       {
         hardware: true,
-        transport: 'usb',
+        transport: 'network',
         transactionEnvelopes: ['legacy', 'eip1559'],
         eip1559LegacyFallback: true,
         typedDataVersions: [SignTypedDataVersion.V4],

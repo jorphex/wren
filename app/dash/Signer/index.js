@@ -35,12 +35,6 @@ export class Signer extends React.Component {
       latticePairCode: '',
       latticePairError: '',
       latticePairPending: false,
-      tPin: '',
-      tPinPending: false,
-      tPhrase: '',
-      tPhrasePending: false,
-      tPairing: '',
-      tPairingPending: false,
       promptDismissalPending: false,
       removalArmed: false,
       removalPending: false,
@@ -122,37 +116,6 @@ export class Signer extends React.Component {
     })
   }
 
-  componentDidUpdate(previousProps) {
-    if (
-      previousProps.status !== this.props.status ||
-      previousProps.authenticationRequestId !== this.props.authenticationRequestId
-    ) {
-      this.pending.pin = false
-      this.pending.phrase = false
-      this.pending.pairing = false
-      if (
-        this.state.tPin ||
-        this.state.tPhrase ||
-        this.state.tPairing ||
-        this.state.tPinPending ||
-        this.state.tPhrasePending ||
-        this.state.tPairingPending
-      ) {
-        this.setState({
-          tPin: '',
-          tPhrase: '',
-          tPairing: '',
-          tPinPending: false,
-          tPhrasePending: false,
-          tPairingPending: false
-        })
-      }
-    } else if (previousProps.pinError !== this.props.pinError && this.state.tPinPending) {
-      this.pending.pin = false
-      this.setState({ tPinPending: false })
-    }
-  }
-
   updateAddressLimit() {
     const addressLimit = getAddressLimit()
     if (addressLimit === this.state.addressLimit) return
@@ -164,220 +127,10 @@ export class Signer extends React.Component {
     this.setState((state) => ({ addressLimit, page: Math.min(state.page, maxPage) }))
   }
 
-  backspacePin(e) {
-    e.stopPropagation()
-    this.setState({ tPin: this.state.tPin ? this.state.tPin.slice(0, -1) : '' })
-  }
-
-  trezorPin(num) {
-    this.setState({ tPin: this.state.tPin + num.toString() })
-  }
-
-  submitPin() {
-    if (!this.props.authenticationRequestId || !this.state.tPin || this.pending.pin) return
-    const pin = this.state.tPin
-    this.pending.pin = true
-    this.setState({ tPin: '', tPinPending: true })
-    link.rpc('trezorPin', this.props.id, pin, this.props.authenticationRequestId, () => {})
-  }
-
-  submitPhrase() {
-    if (!this.props.authenticationRequestId || this.pending.phrase) return
-    const phrase = this.state.tPhrase || ''
-    this.pending.phrase = true
-    this.setState({ tPhrase: '', tPhrasePending: true })
-    link.rpc('trezorPhrase', this.props.id, phrase, this.props.authenticationRequestId, () => {})
-  }
-
-  submitPhraseOnDevice() {
-    if (!this.props.authenticationRequestId || this.pending.phrase) return
-    this.pending.phrase = true
-    this.setState({ tPhrase: '', tPhrasePending: true })
-    link.rpc('trezorEnterPhrase', this.props.id, this.props.authenticationRequestId, () => {})
-  }
-
-  submitPairing() {
-    if (!this.props.authenticationRequestId || !this.state.tPairing || this.pending.pairing) return
-    const pairing = this.state.tPairing
-    this.pending.pairing = true
-    this.setState({ tPairing: '', tPairingPending: true })
-    link.rpc('trezorPairing', this.props.id, { tag: pairing }, this.props.authenticationRequestId, () => {})
-  }
-
   dismissHardwarePrompt() {
     if (!this.props.promptDismissible || this.state.promptDismissalPending) return
     this.setState({ promptDismissalPending: true })
     link.send('dash:dismissHardwarePrompt', this.props.id)
-  }
-
-  renderTrezorPin(active) {
-    return (
-      <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
-        {active ? (
-          <>
-            <div className='trezorPinHeading'>
-              <h3>Enter PIN</h3>
-              <p>
-                On your Trezor, find each PIN digit in the scrambled matrix, then select its matching position
-                here.
-              </p>
-            </div>
-            {this.props.pinError ? (
-              <div role='alert' className='trezorPinError'>
-                {this.props.pinError}
-              </div>
-            ) : null}
-            <div
-              className='trezorPinEntryStatus'
-              role='status'
-              aria-label={`${this.state.tPin.length} PIN positions entered`}
-            >
-              <span>{`${this.state.tPin.length} ${this.state.tPin.length === 1 ? 'position' : 'positions'} selected`}</span>
-              <span className='trezorPinEntryDots' aria-hidden='true'>
-                {this.state.tPin.split('').map((n, i) => (
-                  <span key={i} className='signerPinDot' />
-                ))}
-              </span>
-            </div>
-            <div className='trezorPinInputWrap'>
-              <div className='trezorPinInput'>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                  <button
-                    type='button'
-                    aria-label={`PIN position ${i}`}
-                    key={i}
-                    className='trezorPinInputButton'
-                    disabled={this.state.tPinPending}
-                    onClick={this.trezorPin.bind(this, i)}
-                  >
-                    <span className='signerPinDot' />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className='signerPinActions'>
-              {this.state.tPin ? (
-                <button
-                  type='button'
-                  aria-label='Delete last PIN position'
-                  className='signerPinDelete wrenControl wrenControlSecondary wrenControlIcon'
-                  onClick={this.backspacePin.bind(this)}
-                >
-                  <Icon name='back' size={18} />
-                </button>
-              ) : null}
-              <button
-                type='button'
-                className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
-                disabled={!this.state.tPin || this.state.tPinPending}
-                onClick={() => this.submitPin()}
-              >
-                Submit PIN
-              </button>
-            </div>
-          </>
-        ) : null}
-      </div>
-    )
-  }
-
-  phraseKeyPress(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      this.submitPhrase()
-    }
-  }
-
-  renderTrezorPhrase(active) {
-    const allowsDeviceEntry = (this.props.capabilities || []).includes('Capability_PassphraseEntry')
-
-    return (
-      <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
-        {active ? (
-          <>
-            <div className='trezorPhraseInput wrenInputGroup'>
-              <input
-                className='wrenInput'
-                aria-label='Trezor passphrase'
-                type='password'
-                value={this.state.tPhrase}
-                disabled={this.state.tPhrasePending}
-                onChange={(e) => this.setState({ tPhrase: e.target.value })}
-                onKeyDown={(e) => this.phraseKeyPress(e)}
-                autoFocus
-              />
-            </div>
-            <button
-              type='button'
-              className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
-              disabled={this.state.tPhrasePending}
-              onClick={() => this.submitPhrase()}
-            >
-              Submit passphrase
-            </button>
-            {allowsDeviceEntry ? (
-              <>
-                <div className='signerPinMessageOr'>{'or'}</div>
-                <button
-                  type='button'
-                  className='signerPinMessage signerPinSubmit wrenControl wrenControlSecondary'
-                  disabled={this.state.tPhrasePending}
-                  onClick={() => this.submitPhraseOnDevice()}
-                >
-                  Enter passphrase on device
-                </button>
-              </>
-            ) : (
-              <></>
-            )}
-          </>
-        ) : null}
-      </div>
-    )
-  }
-
-  renderTrezorPairing(active) {
-    const pairing = this.props.pairing || {}
-    const isCodeEntry = pairing.selectedMethod === 'CodeEntry' || pairing.selectedMethod === 2
-    const title = isCodeEntry
-      ? 'Enter the 6-character pairing code shown on your Trezor.'
-      : 'Enter the pairing tag shown on your Trezor.'
-
-    return (
-      <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
-        {active ? (
-          <>
-            <div className='signerLatticePairTitle'>{title}</div>
-            <div className='trezorPhraseInput wrenInputGroup'>
-              <input
-                className='wrenInput'
-                aria-label='Trezor pairing code'
-                type='text'
-                autoFocus
-                maxLength={isCodeEntry ? 6 : undefined}
-                value={this.state.tPairing}
-                disabled={this.state.tPairingPending}
-                onChange={(e) => this.setState({ tPairing: (e.target.value || '').trim().toUpperCase() })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    this.submitPairing()
-                  }
-                }}
-              />
-            </div>
-            <button
-              type='button'
-              className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
-              disabled={!this.state.tPairing || this.state.tPairingPending}
-              onClick={() => this.submitPairing()}
-            >
-              Submit pairing code
-            </button>
-          </>
-        ) : null}
-      </div>
-    )
   }
 
   getStatusMeta() {
@@ -658,12 +411,6 @@ export class Signer extends React.Component {
               </div>
             ) : null}
           </>
-        ) : type === 'trezor' && signerStatus.input ? (
-          <div className='signerInterface'>
-            {this.renderTrezorPin(signerStatus.input === 'pin')}
-            {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}
-            {this.renderTrezorPairing(signerStatus.input === 'pairingCode')}
-          </div>
         ) : signerStatus.busy ? (
           <div className='signerLoading'>
             <div className='signerLoadingLoader' />
@@ -771,17 +518,9 @@ export class Signer extends React.Component {
               {this.statusText()}
             </div>
           </div>
-          {signerStatus.input ? (
-            <div className='signerInterface'>
-              {this.renderTrezorPin(signerStatus.input === 'pin')}
-              {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}
-              {this.renderTrezorPairing(signerStatus.input === 'pairingCode')}
-            </div>
-          ) : (
-            <div className='hardwareSignerPromptBusy'>
-              <div className='signerLoadingLoader' />
-            </div>
-          )}
+          <div className='hardwareSignerPromptBusy'>
+            <div className='signerLoadingLoader' />
+          </div>
           {this.props.promptDismissible ? (
             <button
               type='button'

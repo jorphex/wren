@@ -48,7 +48,7 @@ it('distinguishes hardware transports, envelopes, and typed-data versions', () =
     typedDataVersions: [SignTypedDataVersion.V3, SignTypedDataVersion.V4]
   })
   expect(trezor).toMatchObject({
-    transport: 'usb',
+    transport: 'network',
     transactionEnvelopes: ['legacy', 'eip1559'],
     typedDataVersions: [SignTypedDataVersion.V4]
   })

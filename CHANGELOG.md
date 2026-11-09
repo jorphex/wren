@@ -6,6 +6,7 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Use Trezor Suite Desktop for device connection and signing. Keep Wren account names and addresses. Review in Wren, then continue in Suite.
 - Refreshed the bundled token catalog from SmolDapp and Uniswap snapshots. Kept existing entries and exclusions.
 
 ## 0.1.12 - 2026-11-07

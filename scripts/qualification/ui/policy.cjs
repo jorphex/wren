@@ -741,20 +741,28 @@ const reviewScenarios = () => [
     requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
     requiredText: ['Advanced fee limits', 'Base fee', 'Priority fee', 'Gas limit']
   },
-  ...['transaction', 'permit'].flatMap((kind) => [
-    ['full', FULL_SHELL_HEIGHT, 1], ['short', SHORT_SHELL_HEIGHT, 1], ['short', SHORT_SHELL_HEIGHT, 1.5]
-  ].map(([height, logicalHeight, scale]) => ({
-    id: `tray-${kind}-use-balance-${height}-${scale}`,
-    renderer: 'tray',
-    state: kind === 'permit' ? 'signature-permit-amount-editor' : 'transaction-responsive',
-    ...(kind === 'transaction' ? { variant: 'approval', adjustApproval: true } : {}),
-    scale, logicalWidth: 620, logicalHeight,
-    action: { type: 'clickText', text: 'Use balance' },
-    ready: 'input[aria-label="Custom amount"]',
-    requiredControls: ['Back', 'Use balance', 'Requested', 'Unlimited', 'Custom'],
-    requiredText: ['Your balance', 'Custom limit'],
-    layoutExpectations: [{ kind: 'input-value', selector: 'input[aria-label="Custom amount"]', value: '123.456789' }]
-  }))),
+  ...['transaction', 'permit'].flatMap((kind) =>
+    [
+      ['full', FULL_SHELL_HEIGHT, 1],
+      ['short', SHORT_SHELL_HEIGHT, 1],
+      ['short', SHORT_SHELL_HEIGHT, 1.5]
+    ].map(([height, logicalHeight, scale]) => ({
+      id: `tray-${kind}-use-balance-${height}-${scale}`,
+      renderer: 'tray',
+      state: kind === 'permit' ? 'signature-permit-amount-editor' : 'transaction-responsive',
+      ...(kind === 'transaction' ? { variant: 'approval', adjustApproval: true } : {}),
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: { type: 'clickText', text: 'Use balance' },
+      ready: 'input[aria-label="Custom amount"]',
+      requiredControls: ['Back', 'Use balance', 'Requested', 'Unlimited', 'Custom'],
+      requiredText: ['Your balance', 'Custom limit'],
+      layoutExpectations: [
+        { kind: 'input-value', selector: 'input[aria-label="Custom amount"]', value: '123.456789' }
+      ]
+    }))
+  ),
   {
     id: 'tray-permit-amount-editor-full-1',
     renderer: 'tray',
@@ -1941,7 +1949,7 @@ const reviewScenarios = () => [
     ]
   },
   ...[
-    ['trezor-waiting', 'Waiting for Trezor', 'Review and approve the transaction on your Trezor.'],
+    ['trezor-waiting', 'Waiting for Trezor', 'Continue in Trezor Suite, then approve on your device.'],
     ['trezor-slow', 'Still waiting for Trezor', 'Check your Trezor and approve the transaction.'],
     [
       'trezor-delayed',
@@ -2046,7 +2054,13 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address', 'Create private key'],
+    requiredControls: [
+      'Create wallet',
+      'Import wallet',
+      'Connect hardware wallet',
+      'Watch address',
+      'Create private key'
+    ],
     requiredText: ['Add account', 'Advanced']
   },
   {
@@ -2065,10 +2079,7 @@ const reviewScenarios = () => [
     },
     ready: '.addAccountItemOptionPasswordConsent',
     requiredControls: ['Continue'],
-    requiredText: [
-      'Repeats like "aaa" are easy to guess',
-      'I understand this password may be weak.'
-    ],
+    requiredText: ['Repeats like "aaa" are easy to guess', 'I understand this password may be weak.'],
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.addAccountItemOptionSetupFrame[aria-hidden="false"]' }
     ]
@@ -2185,7 +2196,37 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountItemDeviceArtwork',
-    requiredText: ['Trezor', 'Looking for your Trezor', 'Connect and unlock your device.']
+    layoutExpectations: [{ kind: 'stacked', selector: '.addAccountItemDevice, .addAccountItemSuiteActions' }],
+    requiredControls: ['Connect with Suite'],
+    requiredText: ['Trezor', 'Connect with Trezor Suite', 'Open Suite Desktop and connect your Trezor.']
+  },
+  {
+    id: 'dash-trezor-suite-pending-full-1',
+    renderer: 'dash',
+    state: 'account-add-trezor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    deferRpcs: ['connectTrezor'],
+    action: { type: 'clickText', text: 'Connect with Suite' },
+    ready: '.addAccountItemSuiteActions button:disabled',
+    layoutExpectations: [{ kind: 'stacked', selector: '.addAccountItemDevice, .addAccountItemSuiteActions' }],
+    requiredControls: ['Cancel'],
+    requiredText: ['Continue in Trezor Suite…']
+  },
+  {
+    id: 'dash-trezor-suite-retry-full-1',
+    renderer: 'dash',
+    state: 'account-add-trezor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    rpcErrors: { connectTrezor: 'Open Trezor Suite, then connect again.' },
+    action: { type: 'clickText', text: 'Connect with Suite' },
+    ready: '.addAccountItemSuiteActions [role="alert"]',
+    layoutExpectations: [{ kind: 'stacked', selector: '.addAccountItemDevice, .addAccountItemSuiteActions' }],
+    requiredControls: ['Connect with Suite'],
+    requiredText: ['Open Trezor Suite, then connect again.']
   },
   {
     id: 'dash-accounts-icons-full-1',
@@ -2209,17 +2250,6 @@ const reviewScenarios = () => [
     requiredControls: ['Create wallet', 'Watch', 'Import'],
     requiredText: ['Accounts', 'Ledger vault', 'device disconnected', 'Watch account', 'ADD ACCOUNT'],
     layoutExpectations: [{ kind: 'stacked', selector: '.dashAccountsPerch .dashHomeCard' }]
-  },
-  {
-    id: 'dash-trezor-pin-full-1',
-    renderer: 'dash',
-    state: 'trezor-pin',
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.hardwareSignerPromptSurface .trezorPinInput',
-    requiredControls: ['PIN position 1', 'PIN position 9', 'Not now'],
-    requiredText: ['Trezor Signer', 'Enter PIN', 'scrambled matrix', '0 positions selected']
   },
   {
     id: 'dash-seed-locked-full-1',
@@ -3046,10 +3076,7 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.requestApproveRecoverable',
     requiredControls: ['Close request', 'Recheck'],
-    requiredText: [
-      'Safety check unavailable',
-      'Nothing signed or sent.'
-    ]
+    requiredText: ['Safety check unavailable', 'Nothing signed or sent.']
   },
   {
     id: 'tray-transaction-funding-unavailable-short-1',
@@ -4389,28 +4416,57 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     }
   }
   if (includeReview) {
-    for (const id of ['dash-network-add-full-1', 'dash-network-editor-full-1', 'dash-network-details-full-1', 'dash-send-sweep-review-full-1']) {
+    for (const id of [
+      'dash-network-add-full-1',
+      'dash-network-editor-full-1',
+      'dash-network-details-full-1',
+      'dash-send-sweep-review-full-1'
+    ]) {
       const base = selected.find((scenario) => scenario.id === id)
-      if (base && !selected.some((scenario) => scenario.id === id.replace('-full-', '-short-'))) selected.push({ ...base, id: id.replace('-full-', '-short-'), logicalHeight: SHORT_SHELL_HEIGHT })
+      if (base && !selected.some((scenario) => scenario.id === id.replace('-full-', '-short-')))
+        selected.push({ ...base, id: id.replace('-full-', '-short-'), logicalHeight: SHORT_SHELL_HEIGHT })
     }
     const receive = selected.find((scenario) => scenario.id === 'tray-receive-short-1')
     for (const scale of [1.25, 1.5]) selected.push({ ...receive, id: 'tray-receive-short-' + scale, scale })
     selected.push({
-      id: 'tray-account-guardrail-remove-confirm-short-1', renderer: 'tray', state: 'account-permissions', scale: 1,
-      logicalWidth: 620, logicalHeight: SHORT_SHELL_HEIGHT,
-      action: { type: 'sequence', steps: [{ type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' }, { type: 'clickText', text: 'Remove guardrail' }] },
-      ready: '.dappGuardrailConfirm', requiredText: ['Remove this guardrail?'], requiredControls: ['Cancel', 'Confirm remove']
+      id: 'tray-account-guardrail-remove-confirm-short-1',
+      renderer: 'tray',
+      state: 'account-permissions',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: {
+        type: 'sequence',
+        steps: [
+          { type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' },
+          { type: 'clickText', text: 'Remove guardrail' }
+        ]
+      },
+      ready: '.dappGuardrailConfirm',
+      requiredText: ['Remove this guardrail?'],
+      requiredControls: ['Cancel', 'Confirm remove']
     })
     for (const state of ['account-add-seed', 'account-add-watch']) {
       const base = selected.find((scenario) => scenario.state === state)
-      for (const scale of [1, 1.25, 1.5]) selected.push({ ...base, id: 'dash-' + state + '-short-' + scale, logicalHeight: SHORT_SHELL_HEIGHT, scale })
+      for (const scale of [1, 1.25, 1.5])
+        selected.push({
+          ...base,
+          id: 'dash-' + state + '-short-' + scale,
+          logicalHeight: SHORT_SHELL_HEIGHT,
+          scale
+        })
     }
     const funding = selected.find((scenario) => scenario.id === 'tray-wallet-calls-funding-full-1')
     const permit = selected.find((scenario) => scenario.id === 'tray-signature-permit-review-full-1')
     selected.push(
       { ...permit, id: 'tray-signature-permit-review-short-1', logicalHeight: SHORT_SHELL_HEIGHT },
-      { ...funding, id: 'tray-wallet-calls-funding-exact-short-1', logicalHeight: SHORT_SHELL_HEIGHT,
-        action: { type: 'clickText', text: 'Exact amounts' }, ready: '.fundingExactAmounts[aria-pressed="true"]' }
+      {
+        ...funding,
+        id: 'tray-wallet-calls-funding-exact-short-1',
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        action: { type: 'clickText', text: 'Exact amounts' },
+        ready: '.fundingExactAmounts[aria-pressed="true"]'
+      }
     )
     for (const variant of ['loading', 'unavailable', 'partial', 'empty', 'privacy'])
       selected.push({
@@ -4449,16 +4505,25 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               : product === 'direct'
                 ? ['USDC vault', 'TVL']
                 : ['Cooldown active'],
-          requiredControls: product === 'activity' ? ['View transaction'] : product === 'cooldown' ? ['Deposit', 'Cancel cooldown'] : ['Deposit', 'Max'],
-          layoutExpectations: product === 'activity' ? [] : [{ kind: 'viewport-bottom', selector: '.earnDetailActionShelf' }]
+          requiredControls:
+            product === 'activity'
+              ? ['View transaction']
+              : product === 'cooldown'
+                ? ['Deposit', 'Cancel cooldown']
+                : ['Deposit', 'Max'],
+          layoutExpectations:
+            product === 'activity' ? [] : [{ kind: 'viewport-bottom', selector: '.earnDetailActionShelf' }]
         })
     }
   }
   if (includeReview) {
     const cooldown = selected.find(({ id }) => id === 'dash-earn-cooldown-short-1')
-    selected.push({ ...cooldown, id: 'dash-earn-cooldown-deposit-short-1',
+    selected.push({
+      ...cooldown,
+      id: 'dash-earn-cooldown-deposit-short-1',
       action: { type: 'clickText', text: 'Deposit' },
-      requiredControls: ['Deposit', 'Cancel cooldown', 'Max'] })
+      requiredControls: ['Deposit', 'Cancel cooldown', 'Max']
+    })
     const contact = selected.find(({ id }) => id === 'dash-address-book-editor-short-1')
     selected.push({
       ...contact,
@@ -4489,7 +4554,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Advanced details', 'Network fee', 'Gas limit', 'Signing with'],
         layoutExpectations: [
           { kind: 'viewport-bottom', selector: '.signingDecisionShelf' },
-          { kind: 'contained', selector: '.txAdjustFeeInline input[aria-label="Base Fee Cap (GWEI)"]', container: '.approveTransaction' }
+          {
+            kind: 'contained',
+            selector: '.txAdjustFeeInline input[aria-label="Base Fee Cap (GWEI)"]',
+            container: '.approveTransaction'
+          }
         ]
       })
     }
@@ -4590,17 +4659,34 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     })
   }
   if (includeReview) {
-    for (const [geometry, scale, logicalHeight] of [['full', 1, FULL_SHELL_HEIGHT], ['short', 1.5, SHORT_SHELL_HEIGHT]]) {
+    for (const [geometry, scale, logicalHeight] of [
+      ['full', 1, FULL_SHELL_HEIGHT],
+      ['short', 1.5, SHORT_SHELL_HEIGHT]
+    ]) {
       const base = selected.find((scenario) => scenario.id === 'tray-transaction-approval-full-1')
-      selected.push({ ...base, id: `tray-transaction-approval-named-${geometry}-${scale}`, scale, logicalHeight, namedSpender: true,
-        requiredText: [...base.requiredText, 'SwapRouter', 'sourcify'] })
+      selected.push({
+        ...base,
+        id: `tray-transaction-approval-named-${geometry}-${scale}`,
+        scale,
+        logicalHeight,
+        namedSpender: true,
+        requiredText: [...base.requiredText, 'SwapRouter', 'sourcify']
+      })
     }
     for (const authority of ['permit2', 'erc3009']) {
       for (const geometry of ['full', 'short']) {
         for (const scale of [1, 1.5]) {
-          const base = selected.find((scenario) => scenario.id === `tray-${authority}-authority-${geometry}-${scale}`)
-          selected.push({ ...base, id: `tray-${authority}-rpc-metadata-${geometry}-${scale}`, rpcMetadata: true,
-            requiredText: authority === 'permit2' ? ['USDC', '1.000001', 'USDT', '0.000042', 'SwapRouter', 'sourcify'] : ['1.000001 USDC'],
+          const base = selected.find(
+            (scenario) => scenario.id === `tray-${authority}-authority-${geometry}-${scale}`
+          )
+          selected.push({
+            ...base,
+            id: `tray-${authority}-rpc-metadata-${geometry}-${scale}`,
+            rpcMetadata: true,
+            requiredText:
+              authority === 'permit2'
+                ? ['USDC', '1.000001', 'USDT', '0.000042', 'SwapRouter', 'sourcify']
+                : ['1.000001 USDC'],
             requiredControls: [...(base.requiredControls || [])]
           })
         }
@@ -4667,32 +4753,73 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   return [...selected, ...disclosures].map((scenario) => {
     const layout = [...(scenario.layoutExpectations || [])]
     if (scenario.state?.startsWith('account-add-') || scenario.state?.startsWith('account-create-')) {
-      layout.push({ kind: 'centered-horizontal', selector: '.addAccountItemTopTitle', container: '.dash', tolerance: 1 })
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.addAccountItemTopTitle',
+        container: '.dash',
+        tolerance: 1
+      })
     }
     if (scenario.id.includes('account-verify-phrase')) {
-      layout.push({ kind: 'centered-horizontal', selector: '.generatedWalletVerifyField .wrenInputGroup', container: '.generatedWalletVerifyField', tolerance: 1 })
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.generatedWalletVerifyField .wrenInputGroup',
+        container: '.generatedWalletVerifyField',
+        tolerance: 1
+      })
     }
     if (scenario.id.includes('account-create-private-key')) {
-      layout.push({ kind: 'computed-style', selector: '.generatedWalletFrameBody', property: 'scrollbarWidth', value: 'auto' })
+      layout.push({
+        kind: 'computed-style',
+        selector: '.generatedWalletFrameBody',
+        property: 'scrollbarWidth',
+        value: 'auto'
+      })
     }
     if (scenario.id.includes('settings-recent-clear')) {
-      layout.push({ kind: 'centered-horizontal', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay', tolerance: 1 })
-      layout.push({ kind: 'contained', selector: '.recentRecipientsDialog', container: '.recentRecipientsOverlay' })
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.recentRecipientsDialog',
+        container: '.recentRecipientsOverlay',
+        tolerance: 1
+      })
+      layout.push({
+        kind: 'contained',
+        selector: '.recentRecipientsDialog',
+        container: '.recentRecipientsOverlay'
+      })
     }
-    if (['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)) {
-      layout.push({ kind: 'centered-horizontal', selector: '.txLifecycleStepMarker svg', container: '.txLifecycleStepMarker', tolerance: 0.5 })
+    if (
+      ['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)
+    ) {
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.txLifecycleStepMarker svg',
+        container: '.txLifecycleStepMarker',
+        tolerance: 0.5
+      })
     }
     if (scenario.state === 'account-home') {
-      layout.push({ kind: 'contained', selector: '.accountPortfolioActions button', container: '.accountPortfolioCard' })
+      layout.push({
+        kind: 'contained',
+        selector: '.accountPortfolioActions button',
+        container: '.accountPortfolioCard'
+      })
     }
     if (scenario.id.includes('dash-token-expanded') || scenario.id.includes('dash-token-removal')) {
-      layout.push({ kind: 'computed-style', selector: '.customTokensListItemExpanded', property: 'backgroundColor', value: 'rgba(0, 0, 0, 0)' })
+      layout.push({
+        kind: 'computed-style',
+        selector: '.customTokensListItemExpanded',
+        property: 'backgroundColor',
+        value: 'rgba(0, 0, 0, 0)'
+      })
     }
 
     if (['account-add-seed', 'account-add-watch'].includes(scenario.state)) {
       layout.push({
         kind: 'centered-horizontal',
-        selector: '.addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionInput, .addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionTitle',
+        selector:
+          '.addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionInput, .addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionTitle',
         container: '.dash',
         tolerance: 1
       })
@@ -4710,24 +4837,37 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     if (scenario.id.includes('transaction-safety-unavailable')) {
       layout.push({ kind: 'contained', selector: '.requestActionButtons', container: '.footerModule' })
     }
-    const shelfSelector = scenario.state === 'transaction-safety-unavailable' || scenario.state === 'transaction-funding-unavailable'
-      ? '.requestApproveRecoveryStatus'
-      : scenario.state === 'wallet-calls-adjustment'
-        ? '.walletCallsAdjustActions'
-        : ['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)
-          ? '.requestNoticeTransactionStatus'
-          : null
+    const shelfSelector =
+      scenario.state === 'transaction-safety-unavailable' ||
+      scenario.state === 'transaction-funding-unavailable'
+        ? '.requestApproveRecoveryStatus'
+        : scenario.state === 'wallet-calls-adjustment'
+          ? '.walletCallsAdjustActions'
+          : ['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(
+                scenario.state
+              )
+            ? '.requestNoticeTransactionStatus'
+            : null
     if (shelfSelector) {
       layout.push({ kind: 'size', selector: shelfSelector, width: scenario.logicalWidth, height: 114 })
       layout.push({ kind: 'viewport-bottom', selector: shelfSelector })
     }
     if (scenario.state === 'address-book-editor') {
-      layout.push({ kind: 'computed-style', selector: '.dashMainScroll', property: 'overflowY', value: 'hidden' })
+      layout.push({
+        kind: 'computed-style',
+        selector: '.dashMainScroll',
+        property: 'overflowY',
+        value: 'hidden'
+      })
       layout.push({ kind: 'viewport-bottom', selector: '.addressBookActionShelf' })
       layout.push({ kind: 'stacked', selector: '.addressBookEditorScroll, .addressBookActionShelf' })
     }
     if (scenario.product === 'cooldown') {
-      layout.push({ kind: 'contained', selector: '.earnCooldownActions', container: '.earnDetailActionShelf' })
+      layout.push({
+        kind: 'contained',
+        selector: '.earnCooldownActions',
+        container: '.earnDetailActionShelf'
+      })
     }
     if (scenario.id.includes('notify-remove-network')) {
       layout.push({

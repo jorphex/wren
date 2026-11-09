@@ -250,12 +250,17 @@ request and depends on firmware, vendor libraries, and USB drivers. Blind or
 incomplete displays are risky. Claims require physical-device evidence in
 [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md).
 
-During Ethereum transaction signing, Trezor Connect can fetch signed definitions
-from `data.trezor.io`. Lookups can disclose IP address, chain ID, target/token
-address, and function selector. They omit amounts, full calldata, and private keys.
-Metadata and contract display coverage depend on firmware and the vendor registry.
-See the
-[clear-signing investigation](TREZOR_CLEAR_SIGNING.md).
+Trezor requests pass to Suite Desktop over its local WebSocket service. Suite
+receives the selected device, address paths, messages and proposed transactions.
+It owns device access, authentication and permission prompts. Wren checks
+returned signatures against the selected account and submits transactions through
+the configured RPC. No remote Suite page runs in Wren.
+
+Suite controls vendor requests, including firmware and clear-signing metadata.
+Those requests can disclose IP address, chain ID, target/token address and function
+selector. Display coverage depends on Suite, firmware and the vendor registry.
+See [Trezor connection details](TREZOR_SUITE.md) and the
+[earlier clear-signing investigation](TREZOR_CLEAR_SIGNING.md).
 
 ### Renderer and IPC
 

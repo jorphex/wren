@@ -1,443 +1,298 @@
-import log from 'electron-log'
 import { EventEmitter } from 'events'
-import type { ThpPairingMethod } from '@trezor/protocol'
-import TrezorConnect, {
-  CommonParams,
+import { z } from 'zod'
+import { CoreInSuiteDesktop } from '@trezor/connect-web/lib/impl/core-in-suite-desktop.js'
+import type {
+  CallMethodPayload,
+  ConnectImplSettings,
   Device,
-  DeviceEvent,
-  UiEventMessage,
-  PopupEventMessage,
-  UiRequestMessage,
-  Response,
-  DEVICE,
-  DEVICE_EVENT,
-  UI_EVENTS,
-  UI_REQUEST,
-  UI_REQUESTS,
-  UI_RESPONSE,
-  UI_EVENT
-} from '@trezor/connect'
-import { closeFrameNodeUsbTransports, FrameNodeUsbTransport } from './nodeUsbTransport'
-import { trezorSignerId } from './deviceId'
+  DeviceIdentity,
+  TrezorConnectPublicAPI
+} from '@trezor/connect-common'
 import { WREN_REPOSITORY_URL } from '../../../resources/constants'
 
 export class DeviceError extends Error {
-  readonly code: string | undefined
-
-  constructor(msg: string, code?: string) {
-    super(msg)
-
-    this.code = code
+  constructor(
+    message: string,
+    readonly code?: string
+  ) {
+    super(message)
   }
 }
 
-type TrezorPairingResponse =
-  { tag: string } | { selectedMethod: ThpPairingMethod | keyof typeof ThpPairingMethod }
-type DeviceReference = {
-  path: Device['path']
-  state?: Device['state'] | undefined
+export type SuiteDevice = {
+  path: NonNullable<DeviceIdentity['path']>
+  state?: z.output<typeof identitySchema>['state']
+  features?: Device['features']
 }
-
-const manifest = {
-  email: 'jorphex@users.noreply.github.com',
-  appName: 'Wren',
-  appUrl: WREN_REPOSITORY_URL
-}
-
-const config = {
-  manifest,
-  popup: false,
-  debug: false,
-  lazyLoad: false
-}
-
-type TrezorTypedData = Parameters<typeof TrezorConnect.ethereumSignTypedData>[0]['data']
-type TrezorTransaction = Parameters<typeof TrezorConnect.ethereumSignTransaction>[0]['transaction']
-
-function deviceSelector(device: DeviceReference): NonNullable<CommonParams['device']> {
-  return {
-    path: device.path,
-    ...(device.state !== undefined && { state: device.state })
-  }
-}
-
-async function handleResponse<T>(p: Response<T>) {
-  const response = await p
-
-  if (response.success) return response.payload
-  const responseError = new Error(response.error.message) as NodeJS.ErrnoException
-  responseError.code = response.error.code
-  throw responseError
-}
+type TypedData = Parameters<TrezorConnectPublicAPI<ConnectImplSettings>['ethereumSignTypedData']>[0]['data']
+const featuresSchema = z
+  .object({
+    model: z.string().min(1),
+    major_version: z.number().int().nonnegative(),
+    minor_version: z.number().int().nonnegative(),
+    patch_version: z.number().int().nonnegative()
+  })
+  .passthrough()
+const addressSchema = z.object({ address: z.string().regex(/^0x[\da-f]{40}$/i) })
+const publicKeySchema = z.object({
+  publicKey: z.string().regex(/^(?:[\da-f]{66}|[\da-f]{130})$/i),
+  chainCode: z.string().regex(/^[\da-f]{64}$/i)
+})
+const signatureSchema = z.object({ signature: z.string().regex(/^(?:0x)?[\da-f]{130}$/i) })
+const txSignatureSchema = z.object({
+  v: z.string().regex(/^(?:0x)?[\da-f]+$/i),
+  r: z.string().regex(/^(?:0x)?[\da-f]{1,64}$/i),
+  s: z.string().regex(/^(?:0x)?[\da-f]{1,64}$/i)
+})
+const identitySchema = z.object({
+  path: z.string().min(1).max(1024),
+  state: z
+    .object({
+      sessionId: z.string().optional(),
+      staticSessionId: z.string().optional(),
+      deriveCardano: z.boolean().optional()
+    })
+    .optional()
+})
 
 class TrezorBridge extends EventEmitter {
-  private pendingPrompts = new Map<string, { requestId: string; type: string; generation: number }>()
-  private lifecycleGeneration = 0
+  private closed = true
+  private generation = 0
+  private client?: CoreInSuiteDesktop
+  private initialized = false
   private requestQueue: Promise<void> = Promise.resolve()
-  private pendingRequests = new Set<(error: Error) => void>()
-  private retryDelays = new Set<{
-    timer: ReturnType<typeof setTimeout>
-    reject: (error: Error) => void
-  }>()
+  private pending = new Set<(error: Error) => void>()
 
-  async open() {
-    const generation = ++this.lifecycleGeneration
-
-    TrezorConnect.on(DEVICE_EVENT, this.handleDeviceEvent.bind(this))
-    TrezorConnect.on(UI_EVENT, this.handleUiEvent.bind(this))
-    TrezorConnect.on(UI_REQUEST, this.handleUiRequest.bind(this))
-
-    try {
-      await TrezorConnect.init({
-        ...config,
-        // Connect 10 vendors a second private AbstractTransport identity in its declarations.
-        // The packaged runtime probe verifies this real guarded transport instance.
-        // @ts-expect-error Upstream vendored private class differs from @trezor/transport-common.
-        transports: [new FrameNodeUsbTransport({ id: 'Wren' })]
-      })
-
-      if (generation !== this.lifecycleGeneration) return
-
-      log.info('Trezor Connect initialized')
-
-      this.emit('connect')
-    } catch (e) {
-      if (generation === this.lifecycleGeneration) log.error('could not open TrezorConnect!', e)
-    }
+  open() {
+    this.closed = false
   }
 
-  async close() {
-    ++this.lifecycleGeneration
-    const error = new Error('Trezor bridge closed')
-    this.pendingRequests.forEach((reject) => reject(error))
-    this.pendingRequests.clear()
-    this.cancelRetryDelays()
-    this.pendingPrompts.clear()
-    this.requestQueue = Promise.resolve()
+  close() {
+    this.closed = true
+    this.reset(new DeviceError('Trezor bridge closed', 'Method_Interrupted'))
     this.removeAllListeners()
+  }
 
-    TrezorConnect.removeAllListeners()
-
-    try {
-      await closeFrameNodeUsbTransports()
-    } finally {
-      await TrezorConnect.dispose()
+  async connectDevice(): Promise<SuiteDevice> {
+    const response = await this.request('getFeatures', {}, featuresSchema)
+    const identity = identitySchema.safeParse(response.device)
+    if (!identity.success) throw new DeviceError('Trezor Suite did not return a device', 'Device_NotFound')
+    return {
+      ...identity.data,
+      path: identity.data.path as SuiteDevice['path'],
+      features: response.payload as Device['features']
     }
   }
 
-  // methods to send requests from the application to a Trezor device
-  async getFeatures(device: DeviceReference) {
-    return this.makeRequest(() => TrezorConnect.getFeatures({ device: deviceSelector(device) }))
+  async getFeatures(device: SuiteDevice) {
+    return (await this.request('getFeatures', {}, featuresSchema, device)).payload
   }
 
-  async getAccountInfo(device: DeviceReference, path: string) {
-    return this.makeRequest(() =>
-      TrezorConnect.getAccountInfo({ device: deviceSelector(device), path, coin: 'eth' })
-    )
+  async getPublicKey(device: SuiteDevice, path: string) {
+    return (await this.request('ethereumGetPublicKey', { path }, publicKeySchema, device)).payload
   }
 
-  async getPublicKey(device: DeviceReference, path: string) {
-    return this.makeRequest(() =>
-      TrezorConnect.ethereumGetPublicKey({ device: deviceSelector(device), path })
+  async getAddress(device: SuiteDevice, path: string, display = false, onDispatch?: () => void) {
+    const response = await this.request(
+      'ethereumGetAddress',
+      { path, showOnTrezor: display },
+      addressSchema,
+      device,
+      onDispatch
     )
+    return response.payload.address.toLowerCase()
   }
 
-  async getAddress(device: DeviceReference, path: string, display = false) {
-    const result = await this.makeRequest(() =>
-      TrezorConnect.ethereumGetAddress({
-        device: deviceSelector(device),
-        path,
-        showOnTrezor: display
-      })
-    )
-
-    return (result.address || '').toLowerCase()
+  async signMessage(device: SuiteDevice, path: string, message: string) {
+    return (await this.request('ethereumSignMessage', { path, message, hex: true }, signatureSchema, device))
+      .payload.signature
   }
 
-  async signMessage(device: DeviceReference, path: string, message: string) {
-    const result = await this.makeRequest(() =>
-      TrezorConnect.ethereumSignMessage({
-        device: deviceSelector(device),
-        path,
-        message,
-        hex: true
-      })
-    )
-
-    return result.signature
-  }
-
-  async signTypedData(device: DeviceReference, path: string, data: unknown) {
-    const result = await this.makeRequest(() =>
-      TrezorConnect.ethereumSignTypedData({
-        device: deviceSelector(device),
-        path,
-        data: data as TrezorTypedData,
-        metamask_v4_compat: true
-      })
-    )
-
-    return result.signature
+  async signTypedData(device: SuiteDevice, path: string, data: unknown) {
+    return (
+      await this.request(
+        'ethereumSignTypedData',
+        { path, data: data as TypedData, metamask_v4_compat: true },
+        signatureSchema,
+        device
+      )
+    ).payload.signature
   }
 
   async signTypedHash(
-    device: DeviceReference,
+    device: SuiteDevice,
     path: string,
     data: unknown,
     domainSeparatorHash: string,
     messageHash: string
   ) {
-    const result = await this.makeRequest(() =>
-      TrezorConnect.ethereumSignTypedData({
-        device: deviceSelector(device),
-        path,
-        data: data as TrezorTypedData,
-        domain_separator_hash: domainSeparatorHash,
-        message_hash: messageHash,
-        metamask_v4_compat: true
-      })
-    )
-
-    return result.signature
+    return (
+      await this.request(
+        'ethereumSignTypedData',
+        {
+          path,
+          data: data as TypedData,
+          domain_separator_hash: domainSeparatorHash,
+          message_hash: messageHash,
+          metamask_v4_compat: true
+        },
+        signatureSchema,
+        device
+      )
+    ).payload.signature
   }
 
-  async signTransaction(device: DeviceReference, path: string, tx: unknown, onDispatch?: () => void) {
-    const result = await this.makeRequest(() => {
-      onDispatch?.()
-      return TrezorConnect.ethereumSignTransaction({
-        device: deviceSelector(device),
-        path,
-        transaction: tx as TrezorTransaction
-      })
-    })
-
-    const { v, r, s } = result
-    return { v, r, s }
-  }
-
-  pinEntered(deviceId: string, pin: string, authenticationRequestId: string) {
-    log.debug('pin entered for device', deviceId)
-
-    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PIN)
-    if (!requestId) return
-    TrezorConnect.uiResponse({ type: UI_RESPONSE.RECEIVE_PIN, payload: pin, requestId })
-
-    this.emit('trezor:entered:pin', deviceId)
-  }
-
-  passphraseEntered(deviceId: string, phrase: string, authenticationRequestId: string) {
-    log.debug('passphrase entered for device', deviceId)
-
-    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PASSPHRASE)
-    if (!requestId) return
-    TrezorConnect.uiResponse({
-      type: UI_RESPONSE.RECEIVE_PASSPHRASE,
-      payload: { save: true, value: phrase },
-      requestId
-    })
-
-    this.emit('trezor:entered:passphrase', deviceId)
-  }
-
-  enterPassphraseOnDevice(deviceId: string, authenticationRequestId: string) {
-    log.debug('requested to enter passphrase on device', deviceId)
-
-    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PASSPHRASE)
-    if (!requestId) return
-    TrezorConnect.uiResponse({
-      requestId,
-      type: UI_RESPONSE.RECEIVE_PASSPHRASE,
-      payload: { value: '', passphraseOnDevice: true, save: true }
-    })
-
-    this.emit('trezor:enteringPhrase', deviceId)
-  }
-
-  pairingEntered(deviceId: string, payload: TrezorPairingResponse, authenticationRequestId: string) {
-    log.debug('pairing response entered for device', deviceId)
-
-    const requestId = this.consumePrompt(
-      deviceId,
-      authenticationRequestId,
-      UI_REQUESTS.REQUEST_THP_PAIRING_TAG
-    )
-    if (!requestId) return
-    TrezorConnect.uiResponse({ type: UI_RESPONSE.RECEIVE_THP_PAIRING_TAG, payload, requestId })
-
-    this.emit('trezor:entered:pairing', deviceId)
+  async signTransaction(device: SuiteDevice, path: string, transaction: unknown, onDispatch?: () => void) {
+    return (
+      await this.request(
+        'ethereumSignTransaction',
+        { path, transaction },
+        txSignatureSchema,
+        device,
+        onDispatch
+      )
+    ).payload
   }
 
   cancelCurrentRequest() {
-    this.pendingPrompts.clear()
-    this.emit('trezor:authenticationCancelled')
-    TrezorConnect.cancel('Transaction signing cancelled in Wren')
+    // Suite cancels calls belonging to a closed socket. A fresh client also
+    // prevents a late signature from satisfying a later Wren request.
+    this.reset(new DeviceError('Request cancelled in Wren', 'Method_Interrupted'))
   }
 
-  cancelAuthentication() {
-    this.pendingPrompts.clear()
-    this.emit('trezor:authenticationCancelled')
-    TrezorConnect.cancel('Authentication dismissed in Wren')
+  private reset(error: Error) {
+    ++this.generation
+    const client = this.client
+    delete this.client
+    this.initialized = false
+    void client?.dispose()
+    this.pending.forEach((reject) => reject(error))
+    this.pending.clear()
+    this.requestQueue = Promise.resolve()
   }
 
-  private makeRequest<T>(fn: () => Response<T>, retries = 20) {
-    const generation = this.lifecycleGeneration
-    const request = this.requestQueue
-      .catch(() => undefined)
-      .then(() => this.runRequest(fn, retries, generation))
-      .finally(() => {
-        if (generation === this.lifecycleGeneration) this.pendingPrompts.clear()
+  private request<S extends z.ZodType>(
+    method: string,
+    params: Record<string, unknown>,
+    schema: S,
+    device?: SuiteDevice,
+    onDispatch?: () => void
+  ): Promise<{ payload: z.output<S>; device?: DeviceIdentity }> {
+    const generation = this.generation
+    const ensureCurrent = () => {
+      if (this.closed || generation !== this.generation)
+        throw new DeviceError('Trezor operation cancelled', 'Method_Interrupted')
+    }
+    const job = this.requestQueue
+      .catch(() => {})
+      .then(async () => {
+        ensureCurrent()
+        // Explicitly use the published desktop implementation: the automatic
+        // client falls back to a browser popup, which does not support Electron.
+        const client = (this.client ||= new CoreInSuiteDesktop())
+        try {
+          if (!this.initialized) {
+            await this.withDeadline(
+              client.init({
+                manifest: {
+                  appName: 'Wren',
+                  email: 'jorphex@users.noreply.github.com',
+                  appUrl: WREN_REPOSITORY_URL
+                },
+                version: '10.0.1'
+              }),
+              4_000,
+              new DeviceError('Open Trezor Suite, then connect again.', 'Desktop_ConnectionMissing')
+            )
+            ensureCurrent()
+            this.initialized = true
+          }
+          onDispatch?.()
+          const response = await this.withDeadline(
+            client.call({
+              ...params,
+              method,
+              keepSession: true,
+              ...(device && { device: { path: device.path, ...(device.state && { state: device.state }) } })
+            } as CallMethodPayload),
+            300_000,
+            new DeviceError('Trezor Suite request timed out. Connect again to retry.', 'Method_Timeout')
+          )
+          ensureCurrent()
+          if (!response || response.success !== true) {
+            const error = response?.error
+            throw new DeviceError(
+              error?.message || 'Trezor Suite could not complete the request',
+              error?.code
+            )
+          }
+          const payload = schema.safeParse(response.payload)
+          if (!payload.success)
+            throw new DeviceError('Trezor Suite returned an invalid response', 'Method_InvalidResponse')
+          if (device) {
+            const identity = identitySchema.safeParse(response.device)
+            if (
+              !identity.success ||
+              identity.data.path !== device.path ||
+              (device.state?.staticSessionId &&
+                identity.data.state?.staticSessionId !== device.state.staticSessionId)
+            )
+              throw new DeviceError(
+                'Trezor Suite selected a different device. Connect again.',
+                'Device_InvalidState'
+              )
+            if (identity.data.state) device.state = identity.data.state
+          }
+          return { payload: payload.data, ...(response.device && { device: response.device }) }
+        } catch (error) {
+          if (generation === this.generation) {
+            const failure =
+              error instanceof DeviceError && error.code !== 'Desktop_ConnectionMissing'
+                ? error
+                : new DeviceError('Open Trezor Suite, then connect again.', 'Desktop_ConnectionMissing')
+            if (
+              ['Desktop_ConnectionMissing', 'Method_Timeout', 'Device_InvalidState'].includes(
+                failure.code || ''
+              )
+            ) {
+              this.reset(failure)
+              this.emit('trezor:unavailable')
+            }
+            throw failure
+          }
+          throw error
+        }
       })
-
-    this.requestQueue = request.then(
-      () => undefined,
-      () => undefined
+    this.requestQueue = job.then(
+      () => {},
+      () => {}
     )
-
-    // Settle callers on close even if Connect is still awaiting metadata. Keep
-    // the internal chain intact so a caller cancellation cannot overlap calls.
-    return new Promise<T>((resolve, reject) => {
-      this.pendingRequests.add(reject)
-      request.then(
+    return new Promise((resolve, reject) => {
+      this.pending.add(reject)
+      job.then(
         (result) => {
-          this.pendingRequests.delete(reject)
+          this.pending.delete(reject)
           resolve(result)
         },
         (error) => {
-          this.pendingRequests.delete(reject)
+          this.pending.delete(reject)
           reject(error)
         }
       )
     })
   }
-
-  private async runRequest<T>(fn: () => Response<T>, retries: number, generation: number): Promise<T> {
-    this.ensureCurrent(generation)
-
-    try {
-      const result = await handleResponse(fn())
-      this.ensureCurrent(generation)
-      return result
-    } catch (e: unknown) {
-      this.ensureCurrent(generation)
-
-      if (retries === 0) {
-        throw new Error('Trezor unreachable, please try again')
-      }
-
-      const err = e as DeviceError
-
-      if (err.code === 'Device_CallInProgress') {
-        await this.retryDelay(generation)
-        log.warn('request conflict, trying again in 400ms', err)
-        return this.runRequest(fn, retries - 1, generation)
-      } else {
-        throw err
-      }
-    }
-  }
-
-  private retryDelay(generation: number) {
-    return new Promise<void>((resolve, reject) => {
-      const pending = {
-        timer: setTimeout(() => {
-          this.retryDelays.delete(pending)
-
-          try {
-            this.ensureCurrent(generation)
-            resolve()
-          } catch (error) {
-            reject(error)
-          }
-        }, 400),
-        reject
-      }
-
-      this.retryDelays.add(pending)
+  private withDeadline<T>(operation: Promise<T>, timeout: number, error: DeviceError) {
+    let timer: ReturnType<typeof setTimeout>
+    let cancel: (error: Error) => void
+    const deadline = new Promise<never>((_resolve, reject) => {
+      cancel = reject
+      this.pending.add(cancel)
+      timer = setTimeout(() => reject(error), timeout)
     })
-  }
-
-  private cancelRetryDelays() {
-    const error = new Error('Trezor bridge closed')
-
-    this.retryDelays.forEach((pending) => {
-      clearTimeout(pending.timer)
-      pending.reject(error)
+    return Promise.race([operation, deadline]).finally(() => {
+      clearTimeout(timer!)
+      this.pending.delete(cancel!)
     })
-    this.retryDelays.clear()
-  }
-
-  private ensureCurrent(generation: number) {
-    if (generation !== this.lifecycleGeneration) throw new Error('Trezor bridge closed')
-  }
-
-  // listeners for events coming from a Trezor device
-  private handleDeviceEvent(e: DeviceEvent) {
-    log.debug('received Trezor device event', { e })
-
-    if (
-      (e.type === DEVICE.CHANGED || e.type === DEVICE.CONNECT_UNACQUIRED) &&
-      e.payload.type === 'unacquired'
-    ) {
-      // device is detected but not connected, either because
-      // another session is already active or that the connection
-      // has just not been made yet
-      this.emit('trezor:detected', e.payload.path)
-    } else if (e.type === DEVICE.CONNECT && e.payload.type === 'acquired') {
-      this.emit('trezor:connect', e.payload)
-    } else if (e.type === DEVICE.DISCONNECT) {
-      this.pendingPrompts.delete(trezorSignerId(e.payload.path))
-      this.emit('trezor:disconnect', e.payload)
-    } else if (e.type === DEVICE.CHANGED) {
-      // update the device to remember things like passphrases and other session info
-      this.emit('trezor:update', e.payload)
-    }
-  }
-
-  private consumePrompt(deviceId: string, authenticationRequestId: string, type: string) {
-    const prompt = this.pendingPrompts.get(deviceId)
-    if (
-      !authenticationRequestId ||
-      !prompt ||
-      prompt.requestId !== authenticationRequestId ||
-      prompt.type !== type ||
-      prompt.generation !== this.lifecycleGeneration
-    )
-      return
-    this.pendingPrompts.delete(deviceId)
-    return prompt.requestId
-  }
-
-  private handleUiRequest(e: UiRequestMessage) {
-    if (
-      e.type === UI_REQUESTS.REQUEST_PIN ||
-      e.type === UI_REQUESTS.REQUEST_PASSPHRASE ||
-      e.type === UI_REQUESTS.REQUEST_THP_PAIRING_TAG
-    ) {
-      this.pendingPrompts.set(trezorSignerId(e.payload.device.path), {
-        requestId: e.requestId,
-        type: e.type,
-        generation: this.lifecycleGeneration
-      })
-      if (e.type === UI_REQUESTS.REQUEST_PIN) this.emit('trezor:needPin', e.payload.device, e.requestId)
-      else if (e.type === UI_REQUESTS.REQUEST_PASSPHRASE)
-        this.emit('trezor:needPhrase', e.payload.device, e.requestId)
-      else this.emit('trezor:needPairing', { ...e.payload, requestId: e.requestId })
-    } else {
-      // Wren does not provide firmware/recovery or host confirmation UI.
-      // Never silently approve a newly introduced SDK confirmation.
-      this.pendingPrompts.clear()
-      this.emit('trezor:authenticationCancelled')
-      TrezorConnect.cancel('Unsupported Trezor authentication request in Wren')
-    }
-  }
-
-  private handleUiEvent(e: UiEventMessage | PopupEventMessage) {
-    if (e.type === UI_EVENTS.PIN_INVALID) {
-      this.emit('trezor:invalidPin', e.payload.device)
-    } else if (e.type === UI_EVENTS.PIN_INVALID_ATTEMPTS_DEPLETED) {
-      this.pendingPrompts.delete(trezorSignerId(e.payload.device.path))
-      this.emit('trezor:pinAttemptsDepleted', e.payload.device)
-    }
   }
 }
 

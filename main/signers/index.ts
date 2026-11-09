@@ -329,6 +329,17 @@ export class Signers extends EventEmitter {
     }
   }
 
+  async connectTrezor() {
+    const adapter = this.adapters['trezor']?.adapter
+    if (!(adapter instanceof TrezorAdapter)) throw new Error('Trezor signer is unavailable')
+    return { id: await adapter.connect() }
+  }
+
+  cancelTrezorConnect() {
+    const adapter = this.adapters['trezor']?.adapter
+    if (adapter instanceof TrezorAdapter) adapter.cancelConnect()
+  }
+
   async rescanHotSigners() {
     const adapter = this.adapters['hot']?.adapter
     if (adapter instanceof HotSignerAdapter) await adapter.scan()
@@ -362,7 +373,7 @@ export class Signers extends EventEmitter {
     const signer = this.signers[id]
     if (!signer || signer.type !== 'trezor') return false
 
-    return this.adapters['trezor']?.adapter.dismissAuthentication(signer) || false
+    return false
   }
 
   get(id: string) {

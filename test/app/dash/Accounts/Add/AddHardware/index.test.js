@@ -26,11 +26,11 @@ class AddHardwareHarness extends AddHardware {
   }
 }
 
-test('shows accessible discovery guidance while no device is detected', () => {
+test('shows the Suite handoff and keeps Ledger discovery', () => {
   const { rerender } = render(<AddHardwareHarness type='trezor' />)
 
-  expect(screen.getByRole('status').textContent).toBe('Looking for your Trezor')
-  expect(screen.getByText('Connect and unlock your device.')).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toBe('Connect with Trezor Suite')
+  expect(screen.getByText('Open Suite Desktop and connect your Trezor.')).toBeTruthy()
   expect(screen.getByAltText('').getAttribute('aria-hidden')).toBe('true')
 
   rerender(<AddHardwareHarness type='ledger' />)

@@ -81,12 +81,13 @@
     "repro:linux": "node scripts/characterize-linux-reproducibility.mjs",
     "test:unit:resources": "npm run test:exec -- --env=node --roots=test/resources --testPathIgnorePatterns=\\(/Components/ /Hooks/\\)",
     "test:unit:components": "npm run test:exec -- --env=jsdom --roots test/app test/resources/Hooks test/resources/Components --testTimeout=1500",
-    "test:e2e": "node scripts/run-isolated-e2e.mjs",
+    "test:e2e": "node scripts/run-isolated-e2e.mjs && npm run test:trezor-suite",
     "qualify:ui": "npm run bundle && node scripts/qualify-ui.mjs",
     "test:usbAdapters": "cross-env ELECTRON_RUN_AS_NODE=true electron --experimental-vm-modules ./node_modules/jest/bin/jest.js --runTestsByPath ./test/main/signers/ledger/adapter.test.js --testPathIgnorePatterns='^$'",
     "test:unixfs": "npm run compile && node scripts/test-unixfs.mjs && node scripts/test-ipfs.mjs",
     "verify:privacy": "node scripts/verify-no-upstream-telemetry.mjs && node scripts/verify-log-hygiene.mjs && node scripts/verify-independent-runtime.mjs",
-    "audit:release": "npm audit --audit-level=high"
+    "audit:release": "npm audit --audit-level=high",
+    "test:trezor-suite": "node scripts/qualify-trezor-suite.mjs"
   },
   "author": {
     "name": "Jorphex and Wren contributors",
@@ -105,7 +106,8 @@
     "@metamask/eth-sig-util": "8.2.0",
     "@primer/octicons-react": "19.42.0",
     "@scure/bip32": "1.7.0",
-    "@trezor/connect": "10.0.1",
+    "@trezor/connect-common": "10.0.1",
+    "@trezor/connect-web": "10.0.1",
     "auto-launch": "5.0.6",
     "bip39": "3.1.2",
     "call-bind-apply-helpers": "1.0.2",
@@ -269,17 +271,8 @@
     "@scure/bip39@1.1.1": {
       "@noble/hashes": "1.2.0"
     },
-    "@xrplf/isomorphic@1.0.2": {
-      "@noble/hashes": "2.2.0"
-    },
     "ethereum-cryptography@1.2.0": {
       "@noble/hashes": "1.2.0"
-    },
-    "@trezor/transport": {
-      "usb": "2.18.0"
-    },
-    "usb@2.18.0": {
-      "node-addon-api": "8.5.0"
     },
     "elliptic@<=6.6.0": "6.6.1",
     "toml@<4.2.0": "4.2.0",
@@ -305,13 +298,6 @@
     "allowScripts": {
       "@lavamoat/preinstall-always-fail": false,
       "@parcel/core>msgpackr>msgpackr-extract": false,
-      "@trezor/connect>@trezor/blockchain-link-utils>@trezor/protobuf>protobufjs": false,
-      "@trezor/connect>@trezor/blockchain-link>@stellar/stellar-sdk": false,
-      "@trezor/connect>@trezor/device-authenticity>@trezor/protobuf>protobufjs": false,
-      "@trezor/connect>@trezor/protobuf>protobufjs": false,
-      "@trezor/connect>@trezor/transport>usb": false,
-      "@trezor/connect>@trezor/utxo-lib>blake-hash": false,
-      "@trezor/connect>@trezor/utxo-lib>tiny-secp256k1": false,
       "@ledgerhq/hw-app-eth>@ledgerhq/domain-service>eip55>keccak#3.0.4": false,
       "electron-builder>app-builder-lib>electron-builder-squirrel-windows>electron-winstaller": false,
       "gridplus-sdk>secp256k1": false,

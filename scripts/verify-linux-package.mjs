@@ -33,10 +33,7 @@ const findArtifact = async (suffix) => {
 
 const artifacts = await Promise.all([findArtifact('.AppImage'), findArtifact('_amd64.deb')])
 const unpackedModules = path.join(dist, 'linux-unpacked', 'resources', 'app.asar.unpacked', 'node_modules')
-const nativeModules = [
-  path.join(unpackedModules, 'node-hid', 'build', 'Release', 'HID_hidraw.node'),
-  path.join(unpackedModules, 'usb', 'prebuilds', 'linux-x64', 'node.napi.glibc.node')
-]
+const nativeModules = [path.join(unpackedModules, 'node-hid', 'build', 'Release', 'HID_hidraw.node')]
 
 await Promise.all(nativeModules.map((modulePath) => access(modulePath)))
 
@@ -58,7 +55,7 @@ const packagedModuleProbe = `
 const { createRequire } = require('node:module')
 const fs = require('node:fs')
 const path = require('node:path')
-const modules = ['node-hid', 'usb']
+const modules = ['node-hid']
 const ledgerPackages = [
   '@ledgerhq/hw-app-eth',
   '@ledgerhq/hw-transport',
@@ -67,8 +64,8 @@ const ledgerPackages = [
 const appRoot = path.join(process.resourcesPath, 'app.asar')
 const appModules = path.join(appRoot, 'node_modules')
 for (const module of modules) require(path.join(appModules, module))
-const trezorTransportRequire = createRequire(path.join(appModules, '@trezor/transport/package.json'))
-trezorTransportRequire('usb')
+const { CoreInSuiteDesktop } = require(path.join(appModules, '@trezor/connect-web/lib/impl/core-in-suite-desktop.js'))
+const trezorEngineAbsent = ['@trezor/connect', '@trezor/connect-core', '@trezor/transport', '@trezor/crypto-utils'].every(name => !fs.existsSync(path.join(appModules, name)))
 const ledgerModules = ledgerPackages.map((module) => require(path.join(appModules, module)))
 const ledgerVersions = Object.fromEntries(
   ledgerPackages.map((module) => [module, require(path.join(appModules, module, 'package.json')).version])
@@ -204,7 +201,8 @@ Promise.all([
       override: workerEnvironment.FRAME_PACKAGE_WORKER_PROBE,
       runAsNode: workerEnvironment.ELECTRON_RUN_AS_NODE
     },
-    modules: [...modules, 'usb via @trezor/transport'],
+    modules,
+    trezorSuite: { client: typeof CoreInSuiteDesktop, version: require(path.join(appModules, '@trezor/connect-web/package.json')).version, engineAbsent: trezorEngineAbsent },
     ledgerApis: ledgerModules.map((module) => typeof module.default),
     ledgerVersions,
     siweDomain: siwe.domain,
@@ -335,7 +333,12 @@ assert.match(debDesktopEntry, /^Exec=\/opt\/Wren\/wren %U$/m)
 assert.match(debDesktopEntry, /^StartupWMClass=wren$/m)
 assert.match(debDesktopEntry, /^Categories=Office;Finance;$/m)
 assert.doesNotMatch(debDesktopEntry, /^Categories=Utility;$/m)
-assert.deepEqual(probeResult.modules, ['node-hid', 'usb', 'usb via @trezor/transport'])
+assert.deepEqual(probeResult.modules, ['node-hid'])
+assert.deepEqual(probeResult.trezorSuite, {
+  client: 'function',
+  version: packageJson.dependencies['@trezor/connect-web'],
+  engineAbsent: true
+})
 assert.ok(probeResult.ledgerApis.every((api) => api === 'function'))
 assert.deepEqual(probeResult.ledgerVersions, {
   '@ledgerhq/hw-app-eth': packageJson.dependencies['@ledgerhq/hw-app-eth'],

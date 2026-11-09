@@ -13,25 +13,29 @@ it does not record physical testing.
 
 ## Current support matrix
 
-| Signer or platform              | Transport/package             | Evidence and release boundary                                                                                                                                                                                                  |
-| ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Trezor Safe 7                   | USB, Trezor Connect 10        | User-tested transaction signing, cancellation, and reconnect on Linux x64; automated bridge coverage. Earlier address and message tests are in the [qualification record](QUALIFICATION.md#historical-080-linux-x64-evidence). |
-| Trezor Model One                | USB, Trezor Connect 10        | User-tested with Connect 10; automated bridge coverage. Earlier firmware 1.13.1 tests are in the [qualification record](QUALIFICATION.md#historical-080-linux-x64-evidence).                                                   |
-| Other Trezor models             | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                                                                                               |
-| Trezor Safe 7 Bluetooth         | Bluetooth                     | No Wren transport; unsupported.                                                                                                                                                                                                |
-| Ledger                          | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                                                                                                 |
-| GridPlus Lattice1               | Vendor SDK/network            | User-tested ETH sends, ERC-20 approvals and Hyperliquid agent approval in 0.1.12; automated adapter/device coverage. See the [release record](QUALIFICATION.md#0112-preparation-record).                                       |
-| Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                                                                                                |
-| Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified.                                                                               |
-| Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                                                                                          |
-| Windows x64                     | Electron/NSIS package         | Unsigned preview. The release workflow checks runtime and unsigned state; Windows is not platform-qualified.                                                                                                                   |
-| macOS x64/arm64                 | Electron DMG                  | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.                                                                                       |
-| Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                                                                                                  |
+| Signer or platform              | Transport/package                  | Evidence and release boundary                                                                                                                                                            |
+| ------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trezor Safe 7                   | Suite Desktop / Connect web 10.0.1 | Automated Suite-client checks. Physical qualification of this path is pending; earlier direct USB tests are recorded below.                                                              |
+| Trezor Model One                | Suite Desktop / Connect web 10.0.1 | Automated Suite-client checks. Previously user-tested with bundled Connect 10; the Suite path needs physical qualification.                                                              |
+| Other Trezor models             | Suite Desktop / Connect web        | Shared client implementation; not physically qualified.                                                                                                                                  |
+| Trezor Safe 7 Bluetooth         | Suite-managed                      | Not qualified. Wren has no direct Bluetooth transport.                                                                                                                                   |
+| Ledger                          | USB HID                            | Automated adapter/device coverage; not physically requalified.                                                                                                                           |
+| GridPlus Lattice1               | Vendor SDK/network                 | User-tested ETH sends, ERC-20 approvals and Hyperliquid agent approval in 0.1.12; automated adapter/device coverage. See the [release record](QUALIFICATION.md#0112-preparation-record). |
+| Seed, private key, keystore     | Local encrypted signer worker      | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                                                          |
+| Windows DPAPI signer protection | Electron `safeStorage`             | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified.                                         |
+| Linux x64 AppImage/deb          | Electron package                   | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                                                    |
+| Windows x64                     | Electron/NSIS package              | Unsigned preview. The release workflow checks runtime and unsigned state; Windows is not platform-qualified.                                                                             |
+| macOS x64/arm64                 | Electron DMG                       | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.                                                 |
+| Linux arm64 AppImage/tar.gz     | Electron package                   | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                                                            |
 
-Trezor Suite is not required for the Safe 7 USB flow. Another app
-using the USB connection can block Wren’s access.
+Trezor access now requires Suite Desktop. Wren delegates device access and
+authentication to Suite. See [connection and verification details](TREZOR_SUITE.md).
 
 ## Trezor limitations
+
+The following physical results cover the earlier direct USB integration. They
+do not qualify the new Suite client. Model One and Safe 7 signing were tested
+on those earlier Wren builds.
 
 Wren 0.1.11 user testing covered Safe 7 mainnet signing, cancellation and USB
 reconnect with Connect 10. Model One was also user-tested with Connect 10.
@@ -46,17 +50,15 @@ feature. Wren-specific display qualification remains separate from the signing
 tests above. See the [investigation and proposed checks](TREZOR_CLEAR_SIGNING.md)
 and [vendor coverage](https://trezor.io/guides/sending-receiving-staking-funds/interacting-with-smart-contracts/clear-signing-on-trezor).
 
-Connect 10.0.1 sends v1 external metadata; Model One firmware 1.14.2 or later
-requires v2. Built-in metadata can bypass this path. Compatibility work for
-external metadata remains pending; see the investigation above.
-
-The following physical results apply to earlier builds.
+The earlier bundled Connect 10.0.1 sent v1 external metadata; Model One
+firmware 1.14.2 requires v2. Suite now selects and fetches metadata. Wren does
+not patch its loader. See the historical investigation above.
 
 The pre-separation `0.8.0` qualification covered fresh Safe 7 pairing, full
 address display, rejection, personal signing, and EIP-712 review. After
 transaction-state and balance-rendering fixes, Wren repeated physical address
 verification, Base Sepolia signing/broadcast, and USB reconnect without a
-reload loop. Bridge tests cover pairing events and responses.
+reload loop. Suite now handles pairing; Wren no longer renders the pairing prompt.
 
 On Model One, EIP-712 displays domain and message hashes rather than
 structured fields. Wren warns before typed-data or permit approval; verify
@@ -72,7 +74,7 @@ Trezor Suite only if you understand the mismatched-coin-key risk.
 Wren validates, simulates, displays, and preserves complete ordered EIP-2930
 access lists. Software, Ledger, and Lattice preserve them in typed
 transactions. Trezor accepts them in EIP-1559 type-2 signing, which has
-deterministic adapter coverage. The installed Trezor Connect API has no type-1
+deterministic adapter coverage. The Trezor Connect API has no type-1
 request, so Wren rejects type-1 Trezor transactions rather than changing their
 bytes. These paths have not received new physical-device qualification.
 
@@ -95,8 +97,8 @@ were not reported.
 Use a test account and network with no valuable assets. For a Safe 7 test:
 
 1. Use a packaged Linux x64 artifact.
-2. Record firmware, Connect version, OS, kernel, and artifact checksum.
-3. Pair and reconnect once.
+2. Record firmware, Suite version, Connect version, OS, kernel, and artifact checksum.
+3. Open Suite Desktop, allow Wren, then pair and reconnect once.
 4. Verify the full address on the device.
 5. Sign independently verified personal-message and supported EIP-712 fixtures.
 6. Review and sign a zero-value testnet transfer to the same account.

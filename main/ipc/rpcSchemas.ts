@@ -12,7 +12,6 @@ const MAX_SECRET = 4096
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/)
 const HandlerIdSchema = z.string().uuid()
 const IdSchema = z.string().min(1).max(256)
-const AuthenticationRequestIdSchema = z.string().min(1).max(256)
 const ErrorSchema = z.string().min(1).max(1024)
 const OptionalErrorSchema = z.union([ErrorSchema, z.null(), z.undefined()])
 const NullishSchema = z.union([z.null(), z.undefined()])
@@ -400,23 +399,8 @@ const rpcSchemas = {
     request: z.tuple([AddressSchema, HandlerIdSchema]),
     response: result(CompatibilitySchema)
   },
-  trezorEnterPhrase: { request: z.tuple([IdSchema, AuthenticationRequestIdSchema]), response: actionResult },
-  trezorPairing: {
-    request: z.tuple([
-      IdSchema,
-      z.object({ tag: z.string().max(256) }).strict(),
-      AuthenticationRequestIdSchema
-    ]),
-    response: actionResult
-  },
-  trezorPhrase: {
-    request: z.tuple([IdSchema, z.string().max(256), AuthenticationRequestIdSchema]),
-    response: actionResult
-  },
-  trezorPin: {
-    request: z.tuple([IdSchema, z.string().max(64), AuthenticationRequestIdSchema]),
-    response: actionResult
-  },
+  connectTrezor: { request: noArgs, response: result(SignerIdSchema) },
+  cancelTrezorConnect: { request: noArgs, response: actionResult },
   unlockSigner: { request: z.tuple([IdSchema, PasswordSchema]), response: actionResult },
   getApprovalBalance: {
     request: z.tuple([AddressSchema, HandlerIdSchema]),

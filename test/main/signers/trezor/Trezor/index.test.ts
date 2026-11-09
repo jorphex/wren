@@ -1,4 +1,5 @@
-import type { Device as TrezorDevice } from '@trezor/connect'
+import { TransactionFactory } from '@ethereumjs/tx'
+import type { SuiteDevice as TrezorDevice } from '../../../../../main/signers/trezor/bridge'
 
 import { Derivation } from '../../../../../main/signers/Signer/derive'
 import { USER_REJECTED_REQUEST } from '../../../../../main/signers/errors'
@@ -22,7 +23,7 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject }
 }
 
-const device = { path: 'trezor-test-path', features: {} } as TrezorDevice
+const device = { path: 'trezor-test-path', features: undefined } as TrezorDevice
 const rawTransaction = {
   nonce: '0x1',
   gasPrice: '0x1',
@@ -33,7 +34,12 @@ const rawTransaction = {
   chainId: '0x1',
   type: '0x0'
 }
-const transactionSignature = { v: '1b', r: '1'.repeat(64), s: '2'.repeat(64) }
+const signedFixture = TransactionFactory.fromTxData(rawTransaction).sign(Buffer.alloc(32, 1))
+const transactionSignature = {
+  v: signedFixture.v!.toString(16),
+  r: signedFixture.r!.toString(16),
+  s: signedFixture.s!.toString(16)
+}
 
 function createSigner() {
   const signer = new Trezor(device.path)
@@ -197,7 +203,7 @@ describe('Trezor lifecycle', () => {
     signer.close()
   })
 
-  it('restores the status after passphrase entry on the device completes', async () => {
+  it('restores the status after a foreground request completes', async () => {
     const signature = deferred<string>()
     jest.spyOn(TrezorBridge, 'signMessage').mockReturnValue(signature.promise)
     const signer = createSigner()
@@ -206,7 +212,7 @@ describe('Trezor lifecycle', () => {
     const signing = signer.signMessage(0, '0x12', callback)
     await Promise.resolve()
     expect(signer.hasActiveSigningOperation()).toBe(true)
-    signer.status = Status.ENTERING_PASSPHRASE
+    signer.status = Status.LOADING
 
     signature.resolve('abcd')
     await signing
@@ -269,6 +275,7 @@ describe('Trezor lifecycle', () => {
         return transactionSignature
       })
     const signer = createSigner()
+    signer.addresses = [signedFixture.getSenderAddress().toString()]
     const callback = jest.fn()
     const onPhase = jest.fn()
 

@@ -460,7 +460,13 @@ const permitReviewRequest = () => ({
     }
   },
   permit: {
-    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract', contractName: 'SwapRouter', contractSource: 'sourcify' },
+    spender: {
+      address: QUALIFICATION_DELEGATE,
+      ens: '',
+      type: 'contract',
+      contractName: 'SwapRouter',
+      contractSource: 'sourcify'
+    },
     verifyingContract: {
       address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
       ens: '',
@@ -1580,26 +1586,6 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'trezor-pin') {
-    const signerId = 'qualification-trezor-pin'
-    state.windows.dash = {
-      ...state.windows.dash,
-      showing: true,
-      nav: [{ view: 'expandedSigner', data: { signer: signerId } }],
-      hardwarePrompt: { signerId, dismissible: true, restoreHidden: false }
-    }
-    state.main.signers = {
-      [signerId]: {
-        id: signerId,
-        name: 'Trezor Signer',
-        type: 'trezor',
-        model: 'Trezor',
-        status: 'need pin',
-        addresses: []
-      }
-    }
-  }
-
   if (scenario.state === 'signer-seed-locked' || scenario.state === 'signer-ring-locked') {
     const type = scenario.state === 'signer-seed-locked' ? 'seed' : 'ring'
     const signerId = `qualification-${type}-locked`
@@ -2235,12 +2221,22 @@ const fixtureFor = (scenario) => {
     state.main.activity =
       scenario.state === 'account-activity-lifecycle' ? lifecycleActivity() : qualificationActivity()
     if (scenario.externalActivity) {
-      state.main.activity = qualificationActivity().slice(0, 3).map((entry, index) => ({
-        ...entry, type: 'transaction', origin: 'wren:external', outcome: 'confirmed',
-        observed: {hash: QUALIFICATION_TX_HASH, from: QUALIFICATION_RECIPIENT,
-          blockHash: `0x${'ef'.repeat(32)}`, blockNumber: 100,
-          source: 'external', action: ['received', 'approve', 'deposit'][index]}
-      }))
+      state.main.activity = qualificationActivity()
+        .slice(0, 3)
+        .map((entry, index) => ({
+          ...entry,
+          type: 'transaction',
+          origin: 'wren:external',
+          outcome: 'confirmed',
+          observed: {
+            hash: QUALIFICATION_TX_HASH,
+            from: QUALIFICATION_RECIPIENT,
+            blockHash: `0x${'ef'.repeat(32)}`,
+            blockNumber: 100,
+            source: 'external',
+            action: ['received', 'approve', 'deposit'][index]
+          }
+        }))
     }
     if (scenario.state === 'account-activity-detail') {
       state.main.operationLifecycles = qualificationOperationLifecycles()
@@ -2398,11 +2394,24 @@ const fixtureFor = (scenario) => {
         request.typedMessage.data.message.details[0].amount = amount
       }
       request.signingMetadata = {
-        tokens: (request.context.permit2?.permissions.map(({ token }) => token) || [token]).map((address, index) => ({ address, chainId: 1, symbol: index ? 'USDT' : 'USDC', name: index ? 'Tether USD' : 'USD Coin', decimals: 6 })),
-        ...(request.context.permit2 ? { spender: {
-          address: request.context.permit2.spender.toLowerCase(),
-          contractName: 'SwapRouter', contractSource: 'sourcify'
-        }} : {})
+        tokens: (request.context.permit2?.permissions.map(({ token }) => token) || [token]).map(
+          (address, index) => ({
+            address,
+            chainId: 1,
+            symbol: index ? 'USDT' : 'USDC',
+            name: index ? 'Tether USD' : 'USD Coin',
+            decimals: 6
+          })
+        ),
+        ...(request.context.permit2
+          ? {
+              spender: {
+                address: request.context.permit2.spender.toLowerCase(),
+                contractName: 'SwapRouter',
+                contractSource: 'sourcify'
+              }
+            }
+          : {})
       }
     }
     prepareSelectedAccount(state, request)
@@ -2714,7 +2723,8 @@ const fixtureFor = (scenario) => {
     const request = responsiveTransactionRequest(scenario.variant)
     if (scenario.namedSpender) {
       Object.assign(request.recognizedActions[0].data.spender, {
-        contractName: 'SwapRouter', contractSource: 'sourcify'
+        contractName: 'SwapRouter',
+        contractSource: 'sourcify'
       })
     }
     prepareSelectedAccount(state, request)

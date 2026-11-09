@@ -1,7 +1,8 @@
 import log from 'electron-log'
 import { padToEven, stripHexPrefix, addHexPrefix } from '@ethereumjs/util'
-import { SignTypedDataVersion, TypedDataUtils } from '@metamask/eth-sig-util'
-import type { Device as TrezorDevice } from '@trezor/connect'
+import { verifyMessage } from 'ethers'
+import { recoverTypedSignature, SignTypedDataVersion, TypedDataUtils } from '@metamask/eth-sig-util'
+import type { SuiteDevice as TrezorDevice } from '../bridge'
 
 import { trezorSignerId } from '../deviceId'
 
@@ -26,18 +27,8 @@ export const Status = {
   LOCKED: 'locked',
   DISCONNECTED: 'disconnected',
   NEEDS_RECONNECTION: 'reconnect-required',
-  NEEDS_PIN: 'pin-required',
-  NEEDS_PASSPHRASE: 'passphrase-required',
-  NEEDS_PAIRING: 'pairing-code-required',
-  ENTERING_PASSPHRASE: 'passphrase-on-device',
   DERIVATION_FAILED: 'derivation-failed',
   SAFETY_CHECKS: 'derivation-path-unsupported'
-}
-
-export type TrezorPairing = {
-  availableMethods: Array<string | number>
-  selectedMethod: string | number
-  nfcData?: string
 }
 
 function createError(message: string, code: string, cause: string = '') {
@@ -50,7 +41,14 @@ function createError(message: string, code: string, cause: string = '') {
 function isUserRejection(error: DeviceError) {
   return Boolean(
     error.code &&
-    ['Failure_ActionCancelled', 'Failure_PinCancelled', 'Failure_PassphraseCancelled'].includes(error.code)
+    [
+      'Failure_ActionCancelled',
+      'Failure_PinCancelled',
+      'Failure_PassphraseCancelled',
+      'Method_Interrupted',
+      'Method_PermissionsNotGranted',
+      'Method_Cancel'
+    ].includes(error.code)
   )
 }
 
@@ -80,9 +78,6 @@ export default class Trezor extends Signer {
 
   device: TrezorDevice | undefined
   derivation: Derivation | undefined
-  pairing: TrezorPairing | undefined
-  pinError: string | undefined
-  authenticationRequestId: string | undefined
 
   private closed = false
   private lifecycleGeneration = 0
@@ -90,6 +85,7 @@ export default class Trezor extends Signer {
   private transactionSigning?: { cancelled: boolean; dispatched: boolean }
   private derivationGeneration = 0
   private verificationGeneration = 0
+  private activeVerifications = new Set<number>()
   private requestQueue: Promise<void> = Promise.resolve()
   private timers = new Set<ReturnType<typeof setTimeout>>()
   private pendingCallbacks = new Set<(error: Error) => void>()
@@ -112,13 +108,12 @@ export default class Trezor extends Signer {
 
     const generation = ++this.lifecycleGeneration
     this.device = device
-    this.pinError = undefined
     this.status = Status.INITIAL
     this.emit('update')
 
     try {
       const features = await this.runDeviceRequest(
-        () => TrezorBridge.getFeatures(device),
+        () => (device.features ? Promise.resolve(device.features) : TrezorBridge.getFeatures(device)),
         generation,
         Status.INITIAL
       )
@@ -137,28 +132,6 @@ export default class Trezor extends Signer {
 
       throw e
     }
-
-    try {
-      // Use a simple device-only Ethereum call to establish the session.
-      // `getAccountInfo` routes through backend/discovery and is a poor fit as a login probe.
-      await this.runDeviceRequest(
-        () => TrezorBridge.getAddress(device, this.getPath(0), false),
-        generation,
-        Status.INITIAL
-      )
-    } catch (e) {
-      if (!this.isCurrent(generation, device)) return
-      log.error('could not establish Trezor session', e)
-
-      const deviceError = createError(
-        Status.NEEDS_RECONNECTION,
-        'ACCOUNT_ACCESS_FAILURE',
-        (e as DeviceError).message
-      )
-      this.handleError(deviceError)
-
-      throw e
-    }
   }
 
   override close() {
@@ -168,6 +141,7 @@ export default class Trezor extends Signer {
     ++this.lifecycleGeneration
     ++this.derivationGeneration
     ++this.verificationGeneration
+    this.activeVerifications.clear()
     if (this.transactionSigning) {
       this.transactionSigning.cancelled = true
       if (this.transactionSigning.dispatched) TrezorBridge.cancelCurrentRequest()
@@ -180,7 +154,6 @@ export default class Trezor extends Signer {
     this.pendingCallbacks.clear()
     pendingCallbacks.forEach((cancel) => cancel(cancellation))
     this.device = undefined
-    this.authenticationRequestId = undefined
 
     this.emit('close')
     this.removeAllListeners()
@@ -193,10 +166,7 @@ export default class Trezor extends Signer {
 
     return {
       ...summary,
-      capabilities: this.device?.features?.capabilities || [],
-      pairing: this.pairing,
-      pinError: this.pinError,
-      authenticationRequestId: this.authenticationRequestId
+      capabilities: this.device?.features?.capabilities || []
     }
   }
 
@@ -243,12 +213,15 @@ export default class Trezor extends Signer {
     const done = this.trackCallback(cb)
     const lifecycleGeneration = this.lifecycleGeneration
     const verificationGeneration = ++this.verificationGeneration
+    this.activeVerifications.add(verificationGeneration)
     const device = this.device
+    let dispatched = false
 
     const waitForInput = this.setTimer(() => {
       if (!this.isVerificationCurrent(lifecycleGeneration, verificationGeneration, device)) return
 
-      ++this.verificationGeneration
+      this.activeVerifications.delete(verificationGeneration)
+      if (dispatched) TrezorBridge.cancelCurrentRequest()
       log.error('Trezor address verification timed out')
       done(new Error('Address verification timed out'))
     }, 60_000)
@@ -259,7 +232,13 @@ export default class Trezor extends Signer {
       }
 
       const reportedAddress = await this.runDeviceRequest(
-        () => TrezorBridge.getAddress(device, this.getPath(index), display),
+        () =>
+          TrezorBridge.getAddress(device, this.getPath(index), display, () => {
+            if (!this.isVerificationCurrent(lifecycleGeneration, verificationGeneration, device)) {
+              throw new DeviceError('Address verification cancelled', 'Method_Interrupted')
+            }
+            dispatched = true
+          }),
         lifecycleGeneration,
         this.status,
         () => this.isVerificationCurrent(lifecycleGeneration, verificationGeneration, device)
@@ -304,6 +283,9 @@ export default class Trezor extends Signer {
       }
 
       done(toSignerError(err))
+    } finally {
+      this.clearTimer(waitForInput)
+      this.activeVerifications.delete(verificationGeneration)
     }
   }
 
@@ -378,6 +360,7 @@ export default class Trezor extends Signer {
         this.status
       )
 
+      this.assertSigner(index, verifyMessage(Buffer.from(message, 'hex'), addHexPrefix(signature)))
       done(null, addHexPrefix(signature))
     } catch (e: unknown) {
       const err = e as DeviceError
@@ -440,6 +423,14 @@ export default class Trezor extends Signer {
         )
       }
 
+      this.assertSigner(
+        index,
+        recoverTypedSignature({
+          data: typedMessage.data,
+          signature: addHexPrefix(signature),
+          version: SignTypedDataVersion.V4
+        })
+      )
       done(null, addHexPrefix(signature))
     } catch (e: unknown) {
       const err = e as DeviceError
@@ -495,6 +486,7 @@ export default class Trezor extends Signer {
         }
       })
 
+      this.assertSigner(index, signedTx.getSenderAddress().toString())
       done(null, addHexPrefix(signedTx.serialize().toString('hex')))
     } catch (e: unknown) {
       const err = e as DeviceError
@@ -509,14 +501,24 @@ export default class Trezor extends Signer {
     const signing = this.transactionSigning
     if (!signing) return false
     signing.cancelled = true
-    this.authenticationRequestId = undefined
     this.emitUpdate()
     if (signing.dispatched) TrezorBridge.cancelCurrentRequest()
     return true
   }
 
   hasActiveSigningOperation() {
-    return this.activeSigningOperations.size > 0
+    return this.activeSigningOperations.size > 0 || this.pendingCallbacks.size > 0
+  }
+
+  private assertSigner(index: number, address: string) {
+    if (this.addresses[index]?.toLowerCase() !== address.toLowerCase()) {
+      const error = new DeviceError(
+        'Signature does not match this account. Connect again in Trezor Suite.',
+        'ADDRESS_NO_MATCH_DEVICE'
+      )
+      this.handleError(error)
+      throw error
+    }
   }
 
   private async deriveAccounts(publicKey: string, chainCode: string) {
@@ -570,7 +572,7 @@ export default class Trezor extends Signer {
           }
           return result
         } finally {
-          if (this.isCurrent(lifecycleGeneration) && this.status === Status.ENTERING_PASSPHRASE) {
+          if (this.isCurrent(lifecycleGeneration) && this.status === Status.LOADING) {
             this.status = statusToRestore
             this.emitUpdate()
           }
@@ -597,7 +599,7 @@ export default class Trezor extends Signer {
       if (!this.isCurrent(lifecycleGeneration)) throw new Error('Trezor operation cancelled')
       return result
     } finally {
-      if (this.isCurrent(lifecycleGeneration) && this.status === Status.ENTERING_PASSPHRASE) {
+      if (this.isCurrent(lifecycleGeneration) && this.status === Status.LOADING) {
         this.status = statusToRestore
         this.emitUpdate()
       }
@@ -624,9 +626,7 @@ export default class Trezor extends Signer {
     verificationGeneration: number,
     device: TrezorDevice | undefined
   ) {
-    return (
-      this.isCurrent(lifecycleGeneration, device) && verificationGeneration === this.verificationGeneration
-    )
+    return this.isCurrent(lifecycleGeneration, device) && this.activeVerifications.has(verificationGeneration)
   }
 
   private emitUpdate() {

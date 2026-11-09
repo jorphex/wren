@@ -1,4 +1,3 @@
-const { createRequire } = require('node:module')
 const fs = require('node:fs')
 const path = require('node:path')
 
@@ -8,23 +7,14 @@ const fromApp = (module) => require(path.join(appModules, module))
 const packageVersion = (module) => require(path.join(appModules, module, 'package.json')).version
 
 const nodeHid = fromApp('node-hid')
-const usb = fromApp('usb')
-const trezorRequire = createRequire(path.join(appModules, '@trezor/transport/package.json'))
-const trezorUsb = trezorRequire('usb')
-const trezorConnect = fromApp('@trezor/connect')
+const { CoreInSuiteDesktop } = fromApp('@trezor/connect-web/lib/impl/core-in-suite-desktop.js')
 const trezorBridge = require(path.join(appRoot, 'compiled/main/signers/trezor/bridge.js'))
-const { FrameNodeUsbTransport } = require(
-  path.join(appRoot, 'compiled/main/signers/trezor/nodeUsbTransport.js')
-)
-const { isTransportInstance } = fromApp('@trezor/transport-common')
-// Construct only: never initialize, enumerate, or open a physical USB device.
-const guardedTrezorTransport = new FrameNodeUsbTransport({ id: 'Wren package probe' })
-const trezorTransportContract =
-  isTransportInstance(guardedTrezorTransport) &&
-  typeof guardedTrezorTransport.api.resetDevice === 'function' &&
-  typeof guardedTrezorTransport.api.closeDevice === 'function' &&
-  guardedTrezorTransport.api.devices.length === 0
-guardedTrezorTransport.stop()
+const trezorEngineAbsent = [
+  '@trezor/connect',
+  '@trezor/connect-core',
+  '@trezor/transport',
+  '@trezor/crypto-utils'
+].every((name) => !fs.existsSync(path.join(appModules, name)))
 const ledgerPackages = [
   '@ledgerhq/hw-app-eth',
   '@ledgerhq/hw-transport',
@@ -135,20 +125,17 @@ Promise.all([
         noSandboxRejected,
         nativeModules: {
           nodeHid: typeof nodeHid.devices,
-          usb: typeof usb.getDeviceList,
-          trezorUsb: typeof trezorUsb,
           ledger: ledger.map((module) => typeof module.default)
         },
         versions: {
           nodeHid: packageVersion('node-hid'),
-          usb: packageVersion('usb'),
           ledger: Object.fromEntries(ledgerPackages.map((module) => [module, packageVersion(module)]))
         },
         runtime: {
-          trezorConnectVersion: packageVersion('@trezor/connect'),
-          trezorEvmPublicKey: typeof trezorConnect.default.ethereumGetPublicKey,
+          trezorConnectVersion: packageVersion('@trezor/connect-web'),
+          trezorSuiteClient: typeof CoreInSuiteDesktop,
           trezorBridge: typeof trezorBridge.default.open,
-          trezorTransportContract,
+          trezorEngineAbsent,
           ethers: ethers.version,
           ethersBrowserProvider: typeof ethers.BrowserProvider,
           siweDomain: siwe.domain,

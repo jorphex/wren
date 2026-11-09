@@ -26,7 +26,13 @@ const ReloadSignerButton = ({ id, status, type }) => {
       disabled={pending}
       onClick={reload}
     >
-      {pending ? 'Reloading signer…' : 'Reload signer'}
+      {type === 'trezor'
+        ? pending
+          ? 'Connecting…'
+          : 'Connect with Suite'
+        : pending
+          ? 'Reloading signer…'
+          : 'Reload signer'}
     </button>
   )
 }

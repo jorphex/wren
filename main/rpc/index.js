@@ -25,7 +25,6 @@ const nebulaApi = require('../nebula').default
 
 const { arraysEqual, randomLetters } = require('../../resources/utils')
 const { isSignatureRequest } = require('../signatures')
-const { default: TrezorBridge } = require('../../main/signers/trezor/bridge')
 const { onRendererRpc } = require('../ipc/renderer')
 const { encodeRendererRpcValues, parseRendererRpcResponse } = require('../ipc/rpcSchemas')
 const { completeGeneratedWalletAccount } = require('./generatedWallet')
@@ -194,21 +193,15 @@ const rpc = {
       provider.accountsChanged(currentAddresses)
     }
   },
-  trezorPin: (id, pin, requestId, cb) => {
-    cb()
-    TrezorBridge.pinEntered(id, pin, requestId)
+  connectTrezor: (cb) => {
+    signers.connectTrezor().then(
+      (result) => cb(null, result),
+      (error) => cb(error)
+    )
   },
-  trezorPhrase: (id, phrase, requestId, cb) => {
+  cancelTrezorConnect: (cb) => {
+    signers.cancelTrezorConnect()
     cb()
-    TrezorBridge.passphraseEntered(id, phrase, requestId)
-  },
-  trezorPairing: (id, payload, requestId, cb) => {
-    cb()
-    TrezorBridge.pairingEntered(id, payload, requestId)
-  },
-  trezorEnterPhrase: (id, requestId, cb) => {
-    cb()
-    TrezorBridge.enterPassphraseOnDevice(id, requestId)
   },
   createLattice: (deviceId, deviceName, cb) => {
     if (!deviceId) {

@@ -245,7 +245,6 @@ export async function verifyNativePackage(targetName, options = {}) {
   assertNativeHost(target, options.host)
 
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))
-  const packageLock = JSON.parse(await readFile(path.join(root, 'package-lock.json'), 'utf8'))
   const sourceIdentity = options.sourceIdentity ?? readSourceIdentity()
   const entries = await readdir(dist)
   const artifacts = selectPackageArtifacts(entries, target, packageJson.version)
@@ -277,13 +276,10 @@ export async function verifyNativePackage(targetName, options = {}) {
   assert.equal(result.noSandboxRejected, true)
   assert.deepEqual(result.nativeModules, {
     nodeHid: 'function',
-    usb: 'function',
-    trezorUsb: 'object',
     ledger: Array(3).fill('function')
   })
   assert.deepEqual(result.versions, {
     nodeHid: packageJson.dependencies['node-hid'],
-    usb: packageLock.packages['node_modules/usb'].version,
     ledger: {
       '@ledgerhq/hw-app-eth': packageJson.dependencies['@ledgerhq/hw-app-eth'],
       '@ledgerhq/hw-transport': packageJson.dependencies['@ledgerhq/hw-transport'],
@@ -303,10 +299,10 @@ export async function verifyNativePackage(targetName, options = {}) {
   if (target.platform === 'linux') assert.ok(result.osSignerProtection.linuxBackendQueries > 0)
   else assert.equal(result.osSignerProtection.linuxBackendQueries, 0)
   assert.deepEqual(result.runtime, {
-    trezorConnectVersion: packageJson.dependencies['@trezor/connect'],
-    trezorEvmPublicKey: 'function',
+    trezorConnectVersion: packageJson.dependencies['@trezor/connect-web'],
+    trezorSuiteClient: 'function',
     trezorBridge: 'function',
-    trezorTransportContract: true,
+    trezorEngineAbsent: true,
     ethers: packageJson.dependencies.ethers,
     ethersBrowserProvider: 'function',
     siweDomain: 'example.com',

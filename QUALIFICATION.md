@@ -18,6 +18,14 @@ unnotarized macOS releases have a separate
 
 <a name="0112-preparation-record"></a>
 
+## Trezor Suite client candidate
+
+The new client requires Suite Desktop on the same computer. Run
+`npm run test:trezor-suite` for repeatable simulated-host checks and a JSON
+record. Physical qualification remains pending. Follow the checks in
+[Trezor Suite verification](TREZOR_SUITE.md#verification); record the Suite,
+firmware and device versions. Earlier direct USB results remain below.
+
 ## 0.1.12 release record
 
 Published 7 November 2026 from `cb772162ae0bb84090cf41bd7612e464072b28b7`.
@@ -220,10 +228,10 @@ archive and active-desktop checks below.
    Safe 7 USB, Trezor Model One USB, disposable private key, and disposable seed.
    On devices record firmware and compare full address, chain, recipient, value,
    calldata, and fees. Safe 7 pairing must reconnect without a reload loop.
-   With Connect 10, cancel and replace PIN, passphrase, and pairing prompts.
-   Late replies must not satisfy a replacement prompt or a different device.
-   Model One must explicitly report unsupported display types rather than blind
-   sign. For software signers test wrong password, unlock, relock, restart, and
+   For Trezor, open Suite Desktop and allow Wren. Complete PIN, passphrase and
+   pairing there. Cancel a Wren request, close Suite during a request, and reconnect.
+   Late replies must not complete a later request. On Model One, compare the
+   displayed EIP-712 hashes with the fixture. For software signers test wrong password, unlock, relock, restart, and
    removal. Generate one 12-word wallet and one private-key wallet. Confirm each
    secret is shown only for backup, its backup check is required, and it is not
    shown again. Confirm the eight-character minimum and that an easy-to-guess

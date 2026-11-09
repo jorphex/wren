@@ -711,7 +711,7 @@ export class RequestCommand extends React.Component {
       } else if (trezor) {
         presentation = {
           title: 'Waiting for Trezor',
-          detail: 'Review and approve the transaction on your Trezor.',
+          detail: 'Continue in Trezor Suite, then approve on your device.',
           button: 'Waiting'
         }
       } else {

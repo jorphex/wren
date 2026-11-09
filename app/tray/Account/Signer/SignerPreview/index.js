@@ -92,7 +92,11 @@ export class Signer extends React.Component {
         this.setState({ notifySuccess: false, notifyText: '' })
       }, 5000)
     }
-    const crumb = signer ? signerPanelCrumb(signer) : accountPanelCrumb()
+    const crumb = signer
+      ? signerPanelCrumb(signer)
+      : activeAccount.lastSignerType === 'trezor'
+        ? { view: 'accounts', data: { showAddAccounts: true, newAccountType: 'trezor' } }
+        : accountPanelCrumb()
     link.send('tray:action', 'navDash', crumb)
     clearTimeout(this.navigationTimer)
     this.navigationTimer = setTimeout(() => {

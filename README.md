@@ -153,21 +153,25 @@ For packaging and qualification, follow the
 
 Wren has no hosted wallet backend. Common network requests use these services:
 
-| Purpose                 | Default                  | Shared data                                                                 |
-| ----------------------- | ------------------------ | --------------------------------------------------------------------------- |
-| EVM RPC                 | PublicNode               | IP address, queries, calldata, and submitted transactions                   |
-| USD prices              | DefiLlama; GeckoTerminal | IP address, network and token IDs; no wallet address                        |
-| App content             | IPFS.io                  | IP address and the requested content ID and path                            |
-| Earn catalog            | Yearn Kong               | A fixed catalog request; no account data                                    |
-| Token artwork           | Reviewed CoinGecko host  | Recognized artwork requests only                                            |
-| Contract names and ABIs | Sourcify; Etherscan      | IP address, network and contract address                                    |
-| Trezor definitions      | Trezor SDK service       | IP address, network, target/token address and sometimes a function selector |
+| Purpose                 | Default                  | Shared data                                                        |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------ |
+| EVM RPC                 | PublicNode               | IP address, queries, calldata, and submitted transactions          |
+| USD prices              | DefiLlama; GeckoTerminal | IP address, network and token IDs; no wallet address               |
+| App content             | IPFS.io                  | IP address and the requested content ID and path                   |
+| Earn catalog            | Yearn Kong               | A fixed catalog request; no account data                           |
+| Token artwork           | Reviewed CoinGecko host  | Recognized artwork requests only                                   |
+| Contract names and ABIs | Sourcify; Etherscan      | IP address, network and contract address                           |
+| Trezor requests         | Suite Desktop, local     | Selected device, address paths, messages and proposed transactions |
 
 GeckoTerminal supplies Robinhood Chain prices and fills missing quotes on supported
 networks. Lookups run from the desktop and resume after rate limits. Previous
 quotes can remain during retries. Wren does not show a 24-hour change for these quotes.
 See [pricing and network details](THREAT_MODEL.md#remote-services-and-content)
 for supported networks, pool rules and cache limits.
+
+Trezor access requires Suite Desktop on the same computer. Review requests in
+Wren, then continue in Suite. Suite handles device prompts and vendor lookups.
+See [Trezor connection details](TREZOR_SUITE.md).
 
 Wren does not contact Pylon or use an NFT indexer. Read the
 [threat model](THREAT_MODEL.md) for other requests and data access. Custom RPC

@@ -76,7 +76,10 @@ export function getSignerStatusMeta(signer: SignerStatusInput): SignerStatusMeta
   const hardware = isHardwareSigner(signer.type)
 
   if (status === 'ok' || status === 'ready') {
-    return statusMeta('ready', 'Signer ready', { ready: true, tone: 'positive' })
+    return statusMeta('ready', signer.type === 'trezor' ? 'Ready through Suite' : 'Signer ready', {
+      ready: true,
+      tone: 'positive'
+    })
   }
 
   if (status === 'locked') {
@@ -91,7 +94,9 @@ export function getSignerStatusMeta(signer: SignerStatusInput): SignerStatusMeta
   }
 
   if (['connecting', 'initial', 'loading'].includes(status)) {
-    return statusMeta('busy', 'Connecting device…', { busy: true })
+    return statusMeta('busy', signer.type === 'trezor' ? 'Continue in Trezor Suite…' : 'Connecting device…', {
+      busy: true
+    })
   }
 
   if (status === 'reloading' || status === 'reconnecting') {
@@ -142,7 +147,11 @@ export function getSignerStatusMeta(signer: SignerStatusInput): SignerStatusMeta
       'please reload this lattice1 device'
     ].includes(status)
   ) {
-    return statusMeta('disconnected', 'Device disconnected', { reloadable: hardware, tone: 'danger' })
+    return statusMeta(
+      'disconnected',
+      signer.type === 'trezor' ? 'Connect with Trezor Suite' : 'Device disconnected',
+      { reloadable: hardware, tone: 'danger' }
+    )
   }
 
   if (
