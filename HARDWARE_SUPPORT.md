@@ -20,7 +20,7 @@ it does not record physical testing.
 | Other Trezor models             | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                                                                                               |
 | Trezor Safe 7 Bluetooth         | Bluetooth                     | No Wren transport; unsupported.                                                                                                                                                                                                |
 | Ledger                          | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                                                                                                 |
-| GridPlus Lattice1               | Vendor SDK/network            | Automated adapter/device coverage; not physically requalified.                                                                                                                                                                 |
+| GridPlus Lattice1               | Vendor SDK/network            | User-tested ETH sends, ERC-20 approvals and Hyperliquid agent approval in 0.1.12; automated adapter/device coverage. See the [release record](QUALIFICATION.md#0112-preparation-record).                                       |
 | Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                                                                                                |
 | Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified.                                                                               |
 | Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                                                                                          |
@@ -78,15 +78,17 @@ bytes. These paths have not received new physical-device qualification.
 
 ## Lattice transaction review
 
-On current main, Wren uses generic EVM requests with firmware 0.15 or later. They preserve
+Wren 0.1.12 uses generic EVM requests with firmware 0.15 or later. They preserve
 transaction bytes, including fees and ordered access lists.
 
 Decoders use bundled standard ABIs without external lookups. Unknown or malformed
 calldata stays raw for device review.
 
-Signing uses the configured Lattice relay. Tests prepare requests with the real
-SDK and use simulated signatures. Physical signing and device display remain
-unverified.
+Signing uses the configured Lattice relay. Automated tests prepare requests with
+the real SDK and use simulated signatures. A [0.1.12 user report](https://github.com/jorphex/wren/issues/105#issuecomment-6710042533)
+confirms ETH sends, CowSwap ERC-20 approvals and Hyperliquid agent-approval signing
+on a physical Lattice. The firmware version and detailed device-display results
+were not reported.
 
 ## Regression guidance
 
