@@ -39,6 +39,14 @@ User testing covered startup, Trezor signing and reconnect with the published
 Linux deb. The model and firmware were not recorded. Windows and macOS remain
 previews without physical qualification.
 
+On 7 November 2026, [the issue #105 reporter](https://github.com/jorphex/wren/issues/105#issuecomment-6710042533)
+confirmed 0.1.12 on a physical GridPlus Lattice with a local Erigon node as the
+sole RPC. ETH sends and CowSwap ERC-20 approvals signed and broadcast.
+Hyperliquid agent approval signed. Balance scans no longer timed out, and
+network monitoring found no unexpected external calls. The firmware version
+and detailed device-display results were not reported. The reported 21-hour
+balance-worker heartbeat failure remains under observation.
+
 Nested namespaced structs are rejected in signing and Inspector. Flat Hyperliquid
 V3/V4 requests and ordinary nested messages retain their signed fields.
 Software signatures and Ledger request hashes passed independent encoder checks.
@@ -47,8 +55,6 @@ Ledger testing used APDU replay, without a physical device.
 The obsolete September 30 draft was archived and replaced. SDK license
 clarification, metadata cancellation and firmware-format work remain in the
 [Trezor investigation](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
-Physical Lattice signing and display checks remain pending. The cause of the
-reported 21-hour balance-worker heartbeat failure is still unproven.
 
 ## Historical 0.1.11 candidate record
 
