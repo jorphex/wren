@@ -78,7 +78,11 @@ beforeEach(() => {
   jest.spyOn(global, 'fetch').mockImplementation(async (url) => {
     requests.push(String(url))
     if (String(url) !== relay) throw new Error('Unexpected decoder or network request')
-    throw new Error('fixture-device-boundary')
+    // Let the SDK clear its fetch timer before stopping at the device boundary.
+    return new Response(JSON.stringify({ status: 503, message: 'fixture-device-boundary' }), {
+      status: 503,
+      headers: { 'content-type': 'application/json' }
+    })
   })
   jest.spyOn(console, 'error').mockImplementation(() => {})
   jest.spyOn(console, 'warn').mockImplementation(() => {})
