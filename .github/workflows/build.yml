@@ -65,7 +65,7 @@ jobs:
       - name: Install Linux build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libudev-dev
+          sudo apt-get install --yes libudev-dev libusb-1.0-0-dev
       - run: npm run setup:ci
       - run: npm run audit:release
       - run: npm run format:check
@@ -96,7 +96,7 @@ jobs:
       - name: Install Linux build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libudev-dev
+          sudo apt-get install --yes libudev-dev libusb-1.0-0-dev
       - run: npm run setup:ci
       - run: npm run compile
       - run: npm run bundle

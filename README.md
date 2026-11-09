@@ -136,7 +136,7 @@ The repository pins Node and npm. On Ubuntu or Debian:
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential libudev-dev
+sudo apt-get install build-essential libudev-dev libusb-1.0-0-dev
 git clone https://github.com/jorphex/wren.git
 cd wren
 nvm install
