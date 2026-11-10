@@ -5,6 +5,7 @@ import Icon from '../../../../resources/Components/Icon'
 import useCopiedMessage from '../../../../resources/Hooks/useCopiedMessage'
 import { formatTokenBaseUnitAmount } from '../../../../resources/domain/token/amount'
 import { MAX_TOKEN_APPROVAL_REFRESH } from '../../../../resources/domain/tokenApprovalsLimits'
+import { displayValueData } from '../../../../resources/utils/displayValue'
 import link from '../../../../resources/link'
 
 const rpc = (send) =>
@@ -55,6 +56,46 @@ const amountLabel = (entry, token) => {
   return token
     ? `${formatTokenBaseUnitAmount(entry.amount, token.decimals)} ${token.symbol}`
     : `${entry.amount} base units`
+}
+
+const Allowance = ({ entry, token, hidden }) => {
+  const exact = amountLabel(entry, token)
+  const [copied, copy] = useCopiedMessage(exact)
+  const formatted =
+    token && entry.status === 'current' && !['None', 'Unlimited'].includes(exact)
+      ? displayValueData(entry.amount, { decimals: token.decimals }).ether()
+      : undefined
+  const shortened =
+    formatted &&
+    (formatted.displayUnit ||
+      formatted.displayValue.replaceAll(',', '') !== formatTokenBaseUnitAmount(entry.amount, token.decimals))
+  const summary = shortened
+    ? `${formatted.approximationSymbol || '≈'} ${formatted.displayValue}${formatted.displayUnit?.shortName || ''} ${token.symbol}`
+    : exact
+  return (
+    <div className='tokenApprovalLimit'>
+      <span>Current allowance</span>
+      <strong className={hidden ? '' : 'tokenApprovalAmount'}>{hidden ? 'Amount hidden' : summary}</strong>
+      {!hidden && shortened ? (
+        <details className='tokenApprovalExact'>
+          <summary>Exact allowance</summary>
+          <button
+            type='button'
+            className='tokenApprovalAmountCopy wrenControl wrenControlGhost'
+            aria-label='Copy exact allowance'
+            onClick={copy}
+          >
+            <span>{exact}</span>
+            <Icon name={copied ? 'check' : 'copy'} size={14} />
+          </button>
+          <span className='tokenApprovalBaseUnits'>{entry.amount} base units</span>
+          <span role='status' aria-live='polite'>
+            {copied ? 'Copied' : ''}
+          </span>
+        </details>
+      ) : null}
+    </div>
+  )
 }
 
 export class Approvals extends React.Component {
@@ -194,7 +235,7 @@ export class Approvals extends React.Component {
             <button
               type='button'
               ref={this.refreshRef}
-              className='wrenControl wrenControlSecondary wrenControlLarge'
+              className='wrenControl wrenControlGhost wrenControlLarge'
               disabled={busy || Boolean(opening)}
               onClick={() => void this.load(true)}
             >
@@ -217,7 +258,7 @@ export class Approvals extends React.Component {
                   return (
                     <li key={entry.id} className='tokenApprovalRow'>
                       <header>
-                        <strong>{token?.symbol || 'Token'}</strong>
+                        <strong>{token?.symbol || 'ERC-20 approval'}</strong>
                         <span>{networkName}</span>
                       </header>
                       <div className='tokenApprovalField'>
@@ -229,12 +270,7 @@ export class Approvals extends React.Component {
                         <CopyAddress address={entry.spender} label='Spender' />
                       </div>
                       <div className='tokenApprovalActions'>
-                        <div className='tokenApprovalLimit'>
-                          <span>Current allowance</span>
-                          <strong className={hidden ? '' : 'tokenApprovalAmount'}>
-                            {hidden ? 'Amount hidden' : amountLabel(entry, token)}
-                          </strong>
-                        </div>
+                        <Allowance entry={entry} token={token} hidden={hidden} />
                         <button
                           type='button'
                           className='wrenControl wrenControlDanger wrenControlLarge'
@@ -286,9 +322,9 @@ export class Approvals extends React.Component {
           <details className='tokenApprovalsAbout'>
             <summary>About this list</summary>
             <p>
-              Approvals sent through Wren and direct approvals observed by Activity appear here. Refresh
-              checks current allowances through your configured RPC. Earlier approvals, NFT approvals, and
-              signed permits are not included.
+              Approvals sent through Wren and direct approvals observed by Activity appear here. Opening this
+              list checks current allowances through your RPC. Refresh checks again. Earlier approvals, NFT
+              approvals, and signed permits are not included.
             </p>
             <p>
               Records stay on this device for up to a year, with a limit of 500. Forgetting them does not

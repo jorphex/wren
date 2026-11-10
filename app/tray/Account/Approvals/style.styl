@@ -33,7 +33,7 @@
   & + &
     border-top 1px solid var(--wren-border-subtle)
   > header
-    margin-bottom 12px
+    margin-bottom var(--wren-space-4)
     strong
       font-size var(--wren-type-body)
     > span
@@ -78,7 +78,7 @@
 
 .tokenApprovalActions
   margin-top 14px
-  align-items flex-end
+  align-items flex-start
   > button
     flex 0 0 auto
 
@@ -95,6 +95,33 @@
     font-size var(--wren-type-body)
     line-height 22px
     overflow-wrap anywhere
+
+.tokenApprovalExact
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  summary
+    min-height 44px
+    align-content center
+    cursor pointer
+  .tokenApprovalAmountCopy
+    min-width 0
+    min-height 44px
+    height auto
+    padding var(--wren-space-2) 0
+    text-align left
+    line-height 20px
+    span
+      min-width 0
+      overflow-wrap anywhere
+      font-family var(--wren-font-mono)
+    svg
+      flex none
+  .tokenApprovalBaseUnits
+    display block
+    overflow-wrap anywhere
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 20px
 
 .tokenApprovalsAbout
   margin-top 20px

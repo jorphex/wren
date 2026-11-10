@@ -33,6 +33,7 @@ const rendererErrors = new Map()
 const reconnectCalls = new Map()
 const reconnectInteractions = new Map()
 const metadataInteractions = new Map()
+const approvalInteractions = new Map()
 const isolation = {
   blockedOutbound: 0,
   blockedPermissions: 0,
@@ -708,6 +709,35 @@ const performAction = async (webContents, action) => {
   throw new Error(`Unknown qualification action ${action.type}`)
 }
 
+const assertApprovalPresentation = async (window, scenario) => {
+  if (!scenario.approvalPresentationCheck) return
+  const webContents = window.webContents
+  if (scenario.approvalsPrivacy) {
+    const exposed = await webContents.executeJavaScript(
+      `Boolean(document.querySelector('.tokenApprovalExact, .tokenApprovalAmount'))`
+    )
+    if (exposed) throw new Error('Private approval amounts are exposed')
+    approvalInteractions.set(webContents.id, { privateAmountsConcealed: true })
+    return
+  }
+  const interaction = approvalInteractions.get(webContents.id)
+  if (interaction?.refreshes !== 1) throw new Error('Approvals did not refresh once on open')
+  await clickText(webContents, 'Exact allowance')
+  await clickText(webContents, 'Copy exact allowance')
+  await waitFor(webContents, `document.querySelector('.tokenApprovalExact')?.innerText.includes('Copied')`)
+  if (interaction.copied !== '1.000000000000000001 TST') {
+    throw new Error('Exact allowance copy lost precision')
+  }
+  await clickText(webContents, 'Exact allowance')
+  await clickText(webContents, 'Refresh')
+  await waitFor(
+    webContents,
+    `document.querySelector('.tokenApprovalsToolbar button')?.innerText === 'Refresh'`
+  )
+  if (interaction.refreshes !== 2) throw new Error('Manual approval refresh did not run once')
+  interaction.exactAllowanceCopied = true
+}
+
 const runScenario = async (scenario) => {
   const window = createRendererWindow(scenario)
   try {
@@ -749,6 +779,7 @@ const runScenario = async (scenario) => {
     await assertGeneratedViewport()
     await new Promise((resolve) => setTimeout(resolve, 900))
     await assertGeneratedViewport()
+    await assertApprovalPresentation(window, scenario)
     const controlLayout = await checkControlLayout(window.webContents)
 
     const audit = await window.webContents.executeJavaScript(
@@ -835,6 +866,7 @@ const runScenario = async (scenario) => {
       interaction:
         reconnectInteractions.get(window.webContents.id) ||
         metadataInteractions.get(window.webContents.id) ||
+        approvalInteractions.get(window.webContents.id) ||
         controlLayout
     }
   } catch (error) {
@@ -847,6 +879,7 @@ const runScenario = async (scenario) => {
     reconnectCalls.delete(window.webContents.id)
     reconnectInteractions.delete(window.webContents.id)
     metadataInteractions.delete(window.webContents.id)
+    approvalInteractions.delete(window.webContents.id)
     window.destroy()
   }
 }
@@ -916,6 +949,11 @@ const main = async () => {
     const method = parseWireValue(methodWire)
     const args = argWires.map(parseWireValue)
     const scenario = scenarioByWebContents.get(event.sender.id)
+    if (scenario?.approvalPresentationCheck && method === 'refreshTokenApprovals') {
+      const interaction = approvalInteractions.get(event.sender.id) || { refreshes: 0 }
+      interaction.refreshes += 1
+      approvalInteractions.set(event.sender.id, interaction)
+    }
     if (method === 'reloadSigner' && scenario?.state === 'signer-trezor-reconnect') {
       const calls = reconnectCalls.get(event.sender.id)
       const state = stateByWebContents.get(event.sender.id)
@@ -953,6 +991,16 @@ const main = async () => {
     const reply = scenario ? invokeReplyFor(scenario, 'inspector:inspect', args) : undefined
     if (reply === undefined) throw new Error('Qualification harness does not provide inspector:inspect')
     return reply
+  })
+  ipcMain.handle('tray:writeClipboard', (event, value) => {
+    const scenario = scenarioByWebContents.get(event.sender.id)
+    if (!scenario?.approvalPresentationCheck || value?.secret !== false || typeof value.value !== 'string') {
+      throw new Error('Qualification clipboard request is unavailable')
+    }
+    const interaction = approvalInteractions.get(event.sender.id)
+    if (!interaction) throw new Error('Qualification approval interaction is unavailable')
+    interaction.copied = value.value
+    return { success: true }
   })
   for (const channel of QUALIFICATION_INVOKE_CHANNELS) {
     ipcMain.handle(channel, (event, ...args) => {

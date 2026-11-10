@@ -4285,7 +4285,8 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           'Copy spender address',
           'About this list'
         ],
-        requiredText: ['Approvals', '1.000000000000000001 TST', 'Unavailable', 'Spender'],
+        approvalPresentationCheck: scale === 1 && geometry === 'full',
+        requiredText: ['Approvals', '≈ 1 TST', 'Unavailable', 'Spender'],
         layoutExpectations: [
           { kind: 'text-unclipped', selector: '.tokenApprovalLimit' },
           { kind: 'text-unclipped', selector: '.tokenApprovalAddress' }
@@ -4297,6 +4298,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       renderer: 'tray',
       state: 'account-approvals',
       approvalsPrivacy: true,
+      approvalPresentationCheck: true,
       scale: 1.5,
       logicalWidth: 620,
       logicalHeight: SHORT_SHELL_HEIGHT,
@@ -4839,6 +4841,14 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         kind: 'contained',
         selector: '.accountPortfolioActions button',
         container: '.accountPortfolioCard'
+      })
+    }
+    if (scenario.state === 'account-approvals' && !scenario.approvalsEmpty) {
+      layout.push({
+        kind: 'computed-style',
+        selector: '.tokenApprovalRow > header',
+        property: 'marginBottom',
+        value: '16px'
       })
     }
     if (['tokens', 'tokens-list'].includes(scenario.state)) {
