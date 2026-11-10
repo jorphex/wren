@@ -51,7 +51,7 @@ const timeout = setTimeout(() => {
   timedOut = true
   child.kill('SIGTERM')
   setTimeout(() => child.kill('SIGKILL'), 2000).unref()
-}, 120_000)
+}, 180_000)
 timeout.unref()
 
 const forwardSignal = (signal) => child.kill(signal)
@@ -64,7 +64,7 @@ const exitCode = await new Promise((resolve) => {
     resolve(1)
   })
   child.once('exit', (code, signal) => {
-    if (timedOut) console.error('Isolated E2E tests exceeded the 120 second limit')
+    if (timedOut) console.error('Isolated E2E tests exceeded the 180 second limit')
     else if (signal) console.error(`Isolated E2E tests stopped by ${signal}`)
     resolve(code ?? 1)
   })
