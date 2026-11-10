@@ -102,7 +102,9 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
             </div>
           ) : null}
           {changes.map(({ change, direction, incoming }, index) => {
-            const token = tokenFor?.(change.token)
+            const token = change.standard === 'erc20' ? tokenFor?.(change.token) : undefined
+            const hasDecimals =
+              Number.isInteger(token?.decimals) && token.decimals >= 0 && token.decimals <= 255
             const action =
               direction === 'Minted'
                 ? 'You mint'
@@ -125,7 +127,7 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
                 </span>
                 <span className='transactionReviewAssetChangeAmount'>
                   {amount !== undefined ? <span aria-hidden='true'>{incoming ? '+' : '−'}</span> : null}
-                  {amount !== undefined && token ? (
+                  {amount !== undefined && hasDecimals ? (
                     <DisplayValue
                       type='ether'
                       value={amount}

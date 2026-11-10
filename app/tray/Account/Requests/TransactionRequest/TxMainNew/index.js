@@ -96,13 +96,22 @@ export class TxMain extends React.Component {
     const isTestnet = this.store('main.networks.ethereum', chainId, 'isTestnet')
     const requestAccount = this.props.accountId || req.account
     const balances = this.store('main.balances', requestAccount) || []
-    const tokenFor = (address) =>
-      balances.find(
+    const tokenFor = (address) => {
+      const matches = [...(req.tokenMetadata || []), ...balances].filter(
         (balance) =>
           balance.chainId === chainId &&
           typeof balance.address === 'string' &&
           balance.address.toLowerCase() === address.toLowerCase()
       )
+      if (!matches.length) return
+      return {
+        name: matches.find((token) => token.name)?.name,
+        symbol: matches.find((token) => token.symbol)?.symbol,
+        decimals: matches.find(
+          (token) => Number.isInteger(token.decimals) && token.decimals >= 0 && token.decimals <= 255
+        )?.decimals
+      }
+    }
     const reqs = this.store('main.accounts', requestAccount, 'requests')
     const replacementStatus = this.getReplacementStatus(req, reqs)
     const approvalReview = (req.recognizedActions || []).some((action) => action.id === 'erc20:approve')

@@ -2740,7 +2740,67 @@ const fixtureFor = (scenario) => {
   }
 
   if (scenario.state === 'transaction-responsive') {
-    const request = responsiveTransactionRequest(scenario.variant)
+    const metadataReview = scenario.variant.startsWith('asset-metadata-')
+    const request = responsiveTransactionRequest(metadataReview ? 'asset-changes' : scenario.variant)
+    if (metadataReview) {
+      const yfi = '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e'
+      const incoming = '0x3333333333333333333333333333333333333333'
+      request.tokenMetadata = [
+        { address: yfi, chainId: 1, name: 'yearn finance', symbol: 'YFI', decimals: 18 }
+      ]
+      request.simulation.effects = [
+        {
+          type: 'transfer',
+          standard: 'erc20',
+          token: yfi,
+          from: QUALIFICATION_ACCOUNT.toLowerCase(),
+          to: incoming,
+          amount: '76572805682394724'
+        },
+        {
+          type: 'transfer',
+          standard: 'erc20',
+          token: incoming,
+          from: '0x0000000000000000000000000000000000000000',
+          to: QUALIFICATION_ACCOUNT.toLowerCase(),
+          amount: '2500000'
+        }
+      ]
+      delete request.simulation.nativeBalanceChanges
+      if (
+        scenario.variant === 'asset-metadata-no-decimals' ||
+        scenario.variant === 'asset-metadata-balance-ready'
+      ) {
+        request.tokenMetadata.push({ address: incoming, chainId: 1, name: 'New Token', symbol: 'NEW' })
+      } else if (scenario.variant === 'asset-metadata-wrong-chain') {
+        request.tokenMetadata.push({
+          address: incoming,
+          chainId: 4663,
+          name: 'Wrong network',
+          symbol: 'WRONG',
+          decimals: 18
+        })
+      } else if (scenario.variant === 'asset-metadata-zero-decimals') {
+        request.simulation.effects[1].amount = '42'
+        request.tokenMetadata.push({
+          address: incoming,
+          chainId: 1,
+          name: 'Whole Token',
+          symbol: 'WHOLE',
+          decimals: 0
+        })
+      } else if (scenario.variant === 'asset-metadata-nft') {
+        delete request.simulation.effects[1].amount
+        Object.assign(request.simulation.effects[1], { standard: 'erc721', tokenId: '42' })
+        request.tokenMetadata.push({
+          address: incoming,
+          chainId: 1,
+          name: 'New Token',
+          symbol: 'NEW',
+          decimals: 18
+        })
+      }
+    }
     if (scenario.namedSpender) {
       Object.assign(request.recognizedActions[0].data.spender, {
         contractName: 'SwapRouter',

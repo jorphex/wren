@@ -50,7 +50,9 @@ function displayLabel(value: unknown, max: number): string {
 export async function loadSigningMetadata(
   chainId: number,
   targets: { tokens: string[]; spender?: string },
-  dependencies: MetadataDependencies
+  dependencies: MetadataDependencies,
+  onToken?: (token: SigningMetadata['tokens'][number]) => void,
+  beforeBatch?: (addresses: readonly string[]) => boolean
 ): Promise<SigningMetadata> {
   const result: SigningMetadata = { tokens: [] }
   if (!Number.isSafeInteger(chainId) || chainId <= 0) return result
@@ -62,8 +64,9 @@ export async function loadSigningMetadata(
   ].slice(0, MAX_TOKENS)
 
   const readToken = async (address: string) => {
-    const read = (fn: string) =>
-      optionalRead(async () => {
+    const token: SigningMetadata['tokens'][number] = { address, chainId, symbol: '', name: '' }
+    const read = async (fn: 'decimals' | 'symbol' | 'name') => {
+      const value = await optionalRead(async () => {
         const raw = await rpc(chainId, 'eth_call', [
           { to: address, data: tokenInterface.encodeFunctionData(fn) },
           'latest'
@@ -71,19 +74,19 @@ export async function loadSigningMetadata(
         if (typeof raw !== 'string') return
         return tokenInterface.decodeFunctionResult(fn, raw)[0] as unknown
       })
-    const [rawDecimals, rawSymbol, rawName] = await Promise.all([
-      read('decimals'),
-      read('symbol'),
-      read('name')
-    ])
-    const decimals =
-      typeof rawDecimals === 'bigint' && rawDecimals >= 0n && rawDecimals <= 255n
-        ? Number(rawDecimals)
-        : undefined
-    const symbol = displayLabel(rawSymbol, 24)
-    const name = displayLabel(rawName, 120)
-    if (decimals === undefined && !symbol && !name) return
-    return { address, chainId, ...(decimals !== undefined ? { decimals } : {}), symbol, name }
+      if (fn === 'decimals') {
+        if (typeof value !== 'bigint' || value < 0n || value > 255n) return
+        token.decimals = Number(value)
+      } else {
+        const label = displayLabel(value, fn === 'symbol' ? 24 : 120)
+        if (!label) return
+        token[fn] = label
+      }
+      onToken?.({ ...token })
+    }
+    await Promise.all([read('decimals'), read('symbol'), read('name')])
+    if (token.decimals === undefined && !token.symbol && !token.name) return
+    return token
   }
   const readSpender = async () => {
     if (!targets.spender || !ADDRESS.test(targets.spender)) return
@@ -103,7 +106,9 @@ export async function loadSigningMetadata(
   const spender = readSpender()
   // Keep a large Permit2 batch from flooding the configured endpoint.
   for (let offset = 0; offset < tokens.length; offset += 4) {
-    const entries = await Promise.all(tokens.slice(offset, offset + 4).map(readToken))
+    const batch = tokens.slice(offset, offset + 4)
+    if (beforeBatch && !beforeBatch(batch)) break
+    const entries = await Promise.all(batch.map(readToken))
     result.tokens.push(...entries.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)))
   }
   const identity = await spender

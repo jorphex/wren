@@ -1844,6 +1844,28 @@ const reviewScenarios = () => [
       }
     ]
   },
+  ...[
+    ['pending', ['0x333333…', '2500000 base units']],
+    ['ready', ['New Token', '2.5 NEW']],
+    ['balance-ready', ['New Token', '2.5 NEW']],
+    ['no-decimals', ['New Token', '2500000 base units']],
+    ['wrong-chain', ['0x333333…', '2500000 base units']],
+    ['zero-decimals', ['Whole Token', '42 WHOLE']],
+    ['nft', ['42 base units']]
+  ].map(([variant, text]) => ({
+    id: `tray-transaction-asset-metadata-${variant}-full-1`,
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: `asset-metadata-${variant}`,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.transactionReviewAssetChanges',
+    requiredText: ['Estimated changes', 'yearn finance', 'YFI', ...text],
+    ...(['ready', 'balance-ready'].includes(variant)
+      ? { action: { type: 'enrichTransactionToken', balance: variant === 'balance-ready' } }
+      : {})
+  })),
   ...INTERFACE_SCALES.flatMap((scale) => [
     {
       id: `tray-transaction-trace-summary-full-${scale}`,

@@ -31,6 +31,7 @@ const scenarioByWebContents = new Map()
 const rendererErrors = new Map()
 const reconnectCalls = new Map()
 const reconnectInteractions = new Map()
+const metadataInteractions = new Map()
 const isolation = {
   blockedOutbound: 0,
   blockedPermissions: 0,
@@ -464,6 +465,98 @@ const exerciseSignerReconnect = async (webContents) => {
 
 const performAction = async (webContents, action) => {
   if (action.type === 'reconnectSigner') return exerciseSignerReconnect(webContents)
+  if (action.type === 'enrichTransactionToken') {
+    await waitFor(
+      webContents,
+      `document.body.innerText.includes('2500000 base units') && document.body.innerText.includes('yearn finance')`
+    )
+    const before = await webContents.executeJavaScript(
+      `document.querySelector('.transactionReviewAssetChanges').innerText`,
+      true
+    )
+    const state = stateByWebContents.get(webContents.id)
+    const account = state.selected.current
+    const request = Object.values(state.main.accounts[account].requests)[0]
+    const token = {
+      address: '0x3333333333333333333333333333333333333333',
+      chainId: 1,
+      name: 'New Token',
+      symbol: 'NEW',
+      decimals: 6
+    }
+    let update
+    if (action.balance) {
+      state.main.balances[account] = [{ ...token, balance: '2500000' }]
+      update = { path: `main.balances.${account}`, value: state.main.balances[account] }
+    } else {
+      request.tokenMetadata.push({ ...token, name: '' })
+      update = {
+        path: `main.accounts.${account}.requests.${request.handlerId}.tokenMetadata`,
+        value: request.tokenMetadata
+      }
+    }
+    webContents.send(
+      'main:action',
+      'stateSync',
+      JSON.stringify([
+        {
+          name: 'qualification-token-metadata',
+          count: 1,
+          deferred: false,
+          updates: [update]
+        }
+      ])
+    )
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('.transactionReviewAssetChange')).some(
+        (row) => row.querySelector('.displayValueMain')?.textContent === '2.5' &&
+          row.querySelector('.displayValueSymbol')?.textContent === 'NEW'
+      ) && !document.body.innerText.includes('2500000 base units')`
+    )
+    let partial
+    if (!action.balance) {
+      partial = await webContents.executeJavaScript(
+        `document.querySelector('.transactionReviewAssetChanges').innerText`,
+        true
+      )
+      const addressAccessible = await webContents.executeJavaScript(
+        `Array.from(document.querySelectorAll('.transactionReviewAssetChangeIdentity strong')).some(
+          (element) => element.getAttribute('title') === ${JSON.stringify(token.address)}
+        )`,
+        true
+      )
+      if (partial.includes('New Token') || !addressAccessible) {
+        throw new Error('Partial metadata lost the token address or invented a name')
+      }
+      request.tokenMetadata[request.tokenMetadata.length - 1] = token
+      update.value = request.tokenMetadata
+      webContents.send(
+        'main:action',
+        'stateSync',
+        JSON.stringify([
+          {
+            name: 'qualification-token-name',
+            count: 2,
+            deferred: false,
+            updates: [update]
+          }
+        ])
+      )
+      await waitFor(webContents, `document.body.innerText.includes('New Token')`)
+    }
+    const after = await webContents.executeJavaScript(
+      `document.querySelector('.transactionReviewAssetChanges').innerText`,
+      true
+    )
+    metadataInteractions.set(webContents.id, {
+      before,
+      partial,
+      after,
+      balances: state.main.balances[account] || []
+    })
+    return
+  }
   if (action.type === 'sequence') {
     for (const step of action.steps) {
       await performAction(webContents, step)
@@ -733,7 +826,13 @@ const runScenario = async (scenario) => {
       const image = await window.capturePage(undefined, { stayAwake: true })
       fs.writeFileSync(screenshot, image.toPNG(), { mode: 0o600 })
     }
-    return { ...scenario, audit, screenshot, interaction: reconnectInteractions.get(window.webContents.id) }
+    return {
+      ...scenario,
+      audit,
+      screenshot,
+      interaction:
+        reconnectInteractions.get(window.webContents.id) || metadataInteractions.get(window.webContents.id)
+    }
   } catch (error) {
     const errors = rendererErrors.get(window.webContents.id) || []
     throw new Error(`${scenario.id}: ${error.message}${errors.length ? `; ${errors.join(' | ')}` : ''}`)
@@ -743,6 +842,7 @@ const runScenario = async (scenario) => {
     rendererErrors.delete(window.webContents.id)
     reconnectCalls.delete(window.webContents.id)
     reconnectInteractions.delete(window.webContents.id)
+    metadataInteractions.delete(window.webContents.id)
     window.destroy()
   }
 }

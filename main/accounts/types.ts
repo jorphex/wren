@@ -156,6 +156,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   recognizedActions: Action<unknown>[]
   classification: TxClassification
   simulation: TransactionSimulation
+  tokenMetadata?: import('../reveal/signingMetadata').SigningMetadata['tokens']
   addressSafety?: AddressSafetyAssessment
   replacement?: {
     kind: ReplacementType

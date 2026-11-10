@@ -22,7 +22,10 @@ import { requireStoreAction } from '../../store/action'
 import { recordRequestActivity, type ActivityOutcome } from '../../activity'
 import { TransactionData } from '../../../resources/domain/transaction'
 import { MAX_UINT256, parseRpcQuantity } from '../../../resources/domain/transaction/quantity'
-import { isBroadTokenAuthorityEffect } from '../../../resources/domain/transaction/effects'
+import {
+  hasSimulationEffects,
+  isBroadTokenAuthorityEffect
+} from '../../../resources/domain/transaction/effects'
 import {
   effectReportsBroadTokenAuthorityIntent,
   parseBroadTokenAuthorityIntent
@@ -43,6 +46,7 @@ import { parseTokenBaseUnitAmount } from '../../../resources/domain/token/amount
 import { requiredSignatureRisks } from '../../../resources/domain/signature/risk'
 
 import reveal from '../../reveal'
+import { knownTokenMetadata } from '../../reveal/tokenMetadata'
 import { isTransactionRequest, isTypedMessageSignatureRequest } from '../../../resources/domain/request'
 import Erc20Contract from '../../contracts/erc20'
 import { suggestCallData } from '../../contracts'
@@ -99,6 +103,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const terminalRequestStatuses = new Set(['confirmed', 'declined', 'error', 'success'])
+const TOKEN_METADATA_MAX_TOKENS = 32
+const TOKEN_METADATA_MAX_ATTEMPTS = 2
+const TOKEN_METADATA_RETRY_MS = 5000
 
 interface SignerOptions {
   type?: string
@@ -124,6 +131,14 @@ type WalletCallsPreparationSnapshot = Readonly<{
 }>
 
 type AccountCodeSnapshot = Readonly<{ codeAddress?: string; fingerprint: string }>
+type TransactionMetadataReads = {
+  chainId: number
+  addresses: string[]
+  attempts: Map<string, { count: number; retryAt: number }>
+  tokens: Map<string, NonNullable<TransactionRequest['tokenMetadata']>[number]>
+  pending: Promise<void>
+  retryTimer?: ReturnType<typeof setTimeout>
+}
 type CalldataDecodeBinding = Readonly<{
   to: string
   calldata: string
@@ -236,6 +251,7 @@ class FrameAccount {
   requests: Record<string, AnyAccountRequest> = {}
   private simulationVersions: Record<string, number> = {}
   private simulationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+  private transactionMetadataReads = new WeakMap<TransactionRequest, TransactionMetadataReads>()
   private simulationCandidateChecks: Record<string, boolean> = {}
   private calldataDecodeBindings: Record<string, CalldataDecodeBinding> = {}
   private actionRecognitionBindings: Record<string, ActionRecognitionBinding> = {}
@@ -440,6 +456,10 @@ class FrameAccount {
     this.accounts.cancelTransactionTerminalTimers?.(this.id, handlerId)
     const clearedActiveReview = this.activeReviewHandlerId === handlerId
     const request = this.requests[handlerId]
+    if (request && isTransactionRequest(request)) {
+      clearTimeout(this.transactionMetadataReads.get(request)?.retryTimer)
+      this.transactionMetadataReads.delete(request)
+    }
     if (request && !this.accounts.isLifecycleActivityManaged?.(request)) {
       recordRequestActivity(request, outcome)
     }
@@ -1141,6 +1161,7 @@ class FrameAccount {
     this.syncTokenAllowanceChangeRisk(req, simulation)
     this.syncDelegatedAccountRisk(req, simulation)
     if (final) this.syncProxyImplementationChangeRisk(req, simulation)
+    this.revealTransactionTokenMetadata(req)
     this.update()
     this.decodeCalldata(req)
     const retainedThroughIncompleteEvidence =
@@ -1150,6 +1171,145 @@ class FrameAccount {
       !previousRecognition.codeFingerprint.startsWith('legacy:') &&
       previousRecognition.calldata === currentRecognition?.calldata
     if (!retainedThroughIncompleteEvidence) this.recognizeActions(req)
+  }
+
+  private revealTransactionTokenMetadata(req: TransactionRequest) {
+    if (!hasSimulationEffects(req.simulation) || req.locked || req.status !== undefined) return
+    const chainId = Number(parseRpcQuantity(req.data.chainId))
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) return
+    const addresses = [
+      ...new Set(
+        (req.simulation.effects || []).flatMap((effect) =>
+          effect.type === 'transfer' &&
+          effect.standard === 'erc20' &&
+          (effect.from.toLowerCase() === this.id || effect.to.toLowerCase() === this.id)
+            ? [effect.token.toLowerCase()]
+            : []
+        )
+      )
+    ]
+    const savedTokens = () => [
+      ...(store('main.tokens.custom') || []),
+      ...(store('main.balances', this.id) || []),
+      ...(store('main.tokens.known', this.id) || [])
+    ]
+    let reads = this.transactionMetadataReads.get(req)
+    if (!reads || reads.chainId !== chainId) {
+      clearTimeout(reads?.retryTimer)
+      reads = { chainId, addresses, attempts: new Map(), tokens: new Map(), pending: Promise.resolve() }
+      this.transactionMetadataReads.set(req, reads)
+    }
+    reads.addresses = addresses
+    req.tokenMetadata = knownTokenMetadata(chainId, addresses, [
+      ...savedTokens(),
+      ...reads.tokens.values(),
+      ...(req.tokenMetadata || [])
+    ])
+    const currentReads = reads
+    const isCurrent = () =>
+      this.requests[req.handlerId] === req &&
+      this.transactionMetadataReads.get(req) === currentReads &&
+      Number(parseRpcQuantity(req.data.chainId)) === chainId
+    const isIncomplete = (address: string) => {
+      const known = req.tokenMetadata?.find((token) => token.address === address)
+      return !known || known.decimals === undefined || !known.symbol || !known.name
+    }
+    const scheduleRetry = () => {
+      clearTimeout(currentReads.retryTimer)
+      delete currentReads.retryTimer
+      if (!isCurrent() || req.locked || req.status !== undefined || !hasSimulationEffects(req.simulation))
+        return
+      const retryAt = Math.min(
+        ...currentReads.addresses.filter(isIncomplete).map((address) => {
+          const attempt = currentReads.attempts.get(address)
+          return attempt && attempt.count < TOKEN_METADATA_MAX_ATTEMPTS ? attempt.retryAt : Infinity
+        })
+      )
+      if (!Number.isFinite(retryAt)) return
+      const timer = setTimeout(
+        () => {
+          if (currentReads.retryTimer !== timer) return
+          delete currentReads.retryTimer
+          if (isCurrent() && !req.locked && req.status === undefined) {
+            this.revealTransactionTokenMetadata(req)
+            this.update()
+          }
+        },
+        Math.max(1, Math.ceil(retryAt - performance.now()))
+      )
+      currentReads.retryTimer = timer
+    }
+    const missing: string[] = []
+    const now = performance.now()
+    for (const address of addresses.filter(isIncomplete)) {
+      const attempt = reads.attempts.get(address)
+      if (attempt && (attempt.count >= TOKEN_METADATA_MAX_ATTEMPTS || attempt.retryAt > now)) continue
+      if (!attempt && reads.attempts.size >= TOKEN_METADATA_MAX_TOKENS) continue
+      reads.attempts.set(address, { count: (attempt?.count || 0) + 1, retryAt: Infinity })
+      missing.push(address)
+    }
+    scheduleRetry()
+    if (!missing.length) return
+
+    // Serialize refreshes; the shared reader limits each batch to four tokens.
+    reads.pending = reads.pending
+      .then(async () => {
+        if (!isCurrent()) return
+        if (req.locked || req.status !== undefined) {
+          for (const address of missing) {
+            const attempt = currentReads.attempts.get(address)!
+            attempt.count--
+            attempt.retryAt = 0
+          }
+          return
+        }
+        const dispatched = new Set<string>()
+        let stopped = false
+        try {
+          await reveal.signingMetadata(
+            chainId,
+            { tokens: missing },
+            (token) => {
+              if (!isCurrent()) return
+              const [resolved] = knownTokenMetadata(
+                chainId,
+                [token.address],
+                [...savedTokens(), token, ...currentReads.tokens.values(), ...(req.tokenMetadata || [])]
+              )
+              if (!resolved) return
+              currentReads.tokens.set(token.address, resolved)
+              const merged = new Map((req.tokenMetadata || []).map((entry) => [entry.address, entry]))
+              merged.set(token.address, resolved)
+              req.tokenMetadata = [...merged.values()]
+              this.update()
+            },
+            (addresses) => {
+              if (!isCurrent() || req.locked || req.status !== undefined) {
+                stopped = true
+                return false
+              }
+              addresses.forEach((address) => dispatched.add(address))
+              return true
+            }
+          )
+        } finally {
+          if (isCurrent()) {
+            const retryAt = performance.now() + TOKEN_METADATA_RETRY_MS
+            for (const address of missing) {
+              const attempt = currentReads.attempts.get(address)!
+              if (dispatched.has(address) || !stopped) attempt.retryAt = retryAt
+              else {
+                attempt.count--
+                attempt.retryAt = 0
+              }
+            }
+            scheduleRetry()
+          }
+        }
+      })
+      .catch(() => {
+        // Optional display data; exact addresses and base-unit amounts remain usable.
+      })
   }
 
   refreshTransactionSimulation(
@@ -2030,6 +2190,10 @@ class FrameAccount {
 
   close() {
     this.ensLookupClosed = true
+    Object.values(this.requests).forEach((request) => {
+      if (isTransactionRequest(request)) clearTimeout(this.transactionMetadataReads.get(request)?.retryTimer)
+    })
+    this.transactionMetadataReads = new WeakMap()
     Object.keys(this.requests).forEach((handlerId) =>
       this.accounts.cancelEip7702Operation?.(this.id, handlerId)
     )

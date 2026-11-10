@@ -1,7 +1,7 @@
 // Reveal details about pending transactions
 
 import log from 'electron-log'
-import { loadSigningMetadata } from './signingMetadata'
+import { loadSigningMetadata, type SigningMetadata } from './signingMetadata'
 import EthereumProvider from 'ethereum-provider'
 import { addHexPrefix } from '@ethereumjs/util'
 import { toBeHex } from 'ethers'
@@ -151,12 +151,23 @@ function identifyKnownContractActions(
 }
 
 const surface = {
-  signingMetadata: (chainId: number, targets: { tokens: string[]; spender?: string }) =>
-    loadSigningMetadata(chainId, targets, {
-      rpc: (id, method, params) =>
-        provider.request({ method, params, chainId: addHexPrefix(id.toString(16)) }),
-      fetchContract
-    }),
+  signingMetadata: (
+    chainId: number,
+    targets: { tokens: string[]; spender?: string },
+    onToken?: (token: SigningMetadata['tokens'][number]) => void,
+    beforeBatch?: (addresses: readonly string[]) => boolean
+  ) =>
+    loadSigningMetadata(
+      chainId,
+      targets,
+      {
+        rpc: (id, method, params) =>
+          provider.request({ method, params, chainId: addHexPrefix(id.toString(16)) }),
+        fetchContract
+      },
+      onToken,
+      beforeBatch
+    ),
   identity: async (address = '', chainId?: number) => {
     // Resolve ens, type and other data about address entities
 
