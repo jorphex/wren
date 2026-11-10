@@ -199,6 +199,14 @@ const rpc = {
       (error) => cb(error)
     )
   },
+  reloadSigner: (id, cb) => {
+    Promise.resolve()
+      .then(() => signers.reload(id))
+      .then(
+        () => cb(),
+        (error) => cb(error)
+      )
+  },
   cancelTrezorConnect: (cb) => {
     signers.cancelTrezorConnect()
     cb()

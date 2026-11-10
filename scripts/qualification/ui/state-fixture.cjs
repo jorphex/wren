@@ -1586,6 +1586,26 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'signer-trezor-reconnect') {
+    const signerId = 'qualification-trezor-reconnect'
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'expandedSigner', data: { signer: signerId } }]
+    }
+    state.main.signers = {
+      [signerId]: {
+        id: signerId,
+        name: 'Trezor wallet',
+        model: 'Trezor T',
+        type: 'trezor',
+        status: 'reconnect-required',
+        addresses: [QUALIFICATION_ACCOUNT],
+        createdAt: 1
+      }
+    }
+  }
+
   if (scenario.state === 'signer-seed-locked' || scenario.state === 'signer-ring-locked') {
     const type = scenario.state === 'signer-seed-locked' ? 'seed' : 'ring'
     const signerId = `qualification-${type}-locked`

@@ -29,6 +29,8 @@ const preload = path.join(bundleRoot, 'bridge.js')
 const stateByWebContents = new Map()
 const scenarioByWebContents = new Map()
 const rendererErrors = new Map()
+const reconnectCalls = new Map()
+const reconnectInteractions = new Map()
 const isolation = {
   blockedOutbound: 0,
   blockedPermissions: 0,
@@ -384,7 +386,84 @@ const clickCheckboxText = async (webContents, text) => {
   if (!clicked) throw new Error(`Could not find checkbox text ${text}`)
 }
 
+const exerciseSignerReconnect = async (webContents) => {
+  const calls = []
+  reconnectCalls.set(webContents.id, calls)
+  const scenario = scenarioByWebContents.get(webContents.id)
+  const state = stateByWebContents.get(webContents.id)
+  const enabled = `Array.from(document.querySelectorAll('button')).some(
+    (button) => button.textContent.trim() === 'Connect with Suite' && !button.disabled)`
+  const disabled = `Array.from(document.querySelectorAll('button')).some(
+    (button) => button.textContent.trim() === 'Connecting…' && button.disabled)`
+  const waitForCalls = async (count) => {
+    for (let attempt = 0; attempt < 100 && calls.length < count; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    if (calls.length !== count)
+      throw new Error(`Expected ${count} acknowledged reload requests; got ${calls.length}`)
+  }
+  const reply = (index) => webContents.send('main:rpc', calls[index].id, null)
+  const sync = (updates) =>
+    webContents.send(
+      'main:action',
+      'stateSync',
+      JSON.stringify([{ name: 'qualification-reconnect', count: calls.length, deferred: false, updates }])
+    )
+  await waitFor(webContents, enabled)
+  await clickText(webContents, 'Connect with Suite')
+  await waitForCalls(1)
+  if (scenario.variant === 'held' || scenario.variant === 'navigation') {
+    await waitFor(webContents, disabled)
+    await webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(
+      (button) => button.textContent.trim() === 'Connecting…').click()`)
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    if (calls.length !== 1) throw new Error('Pending reconnect allowed a duplicate request')
+    if (scenario.variant === 'navigation') {
+      const nextId = 'qualification-trezor-other'
+      state.main.signers[nextId] = {
+        ...state.main.signers[calls[0].signerId],
+        id: nextId,
+        name: 'Other Trezor wallet'
+      }
+      state.windows.dash.nav = [{ view: 'expandedSigner', data: { signer: nextId } }]
+      sync([
+        { path: 'main.signers', value: state.main.signers },
+        { path: 'windows.dash.nav', value: state.windows.dash.nav }
+      ])
+      await waitFor(webContents, enabled)
+      await clickText(webContents, 'Connect with Suite')
+      await waitForCalls(2)
+      reply(0)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await waitFor(webContents, disabled)
+      reply(1)
+    } else {
+      sync([
+        { path: `main.signers.${calls[0].signerId}.status`, value: 'connecting' },
+        { path: `main.signers.${calls[0].signerId}.status`, value: 'reconnect-required' }
+      ])
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await waitFor(webContents, disabled)
+      reply(0)
+    }
+  }
+  await waitFor(webContents, enabled)
+  if (scenario.variant !== 'navigation') {
+    await clickText(webContents, 'Connect with Suite')
+    await waitForCalls(2)
+    if (scenario.variant === 'held') reply(1)
+    await waitFor(webContents, enabled)
+  }
+  reconnectInteractions.set(webContents.id, {
+    requests: calls.map(({ signerId }) => signerId),
+    retryEnabled: true,
+    ...(scenario.variant === 'held' && { pendingStatusDidNotSettleRequest: true, duplicateBlocked: true }),
+    ...(scenario.variant === 'navigation' && { oldReplyDidNotSettleNewRequest: true })
+  })
+}
+
 const performAction = async (webContents, action) => {
+  if (action.type === 'reconnectSigner') return exerciseSignerReconnect(webContents)
   if (action.type === 'sequence') {
     for (const step of action.steps) {
       await performAction(webContents, step)
@@ -654,7 +733,7 @@ const runScenario = async (scenario) => {
       const image = await window.capturePage(undefined, { stayAwake: true })
       fs.writeFileSync(screenshot, image.toPNG(), { mode: 0o600 })
     }
-    return { ...scenario, audit, screenshot }
+    return { ...scenario, audit, screenshot, interaction: reconnectInteractions.get(window.webContents.id) }
   } catch (error) {
     const errors = rendererErrors.get(window.webContents.id) || []
     throw new Error(`${scenario.id}: ${error.message}${errors.length ? `; ${errors.join(' | ')}` : ''}`)
@@ -662,6 +741,8 @@ const runScenario = async (scenario) => {
     stateByWebContents.delete(window.webContents.id)
     scenarioByWebContents.delete(window.webContents.id)
     rendererErrors.delete(window.webContents.id)
+    reconnectCalls.delete(window.webContents.id)
+    reconnectInteractions.delete(window.webContents.id)
     window.destroy()
   }
 }
@@ -731,6 +812,17 @@ const main = async () => {
     const method = parseWireValue(methodWire)
     const args = argWires.map(parseWireValue)
     const scenario = scenarioByWebContents.get(event.sender.id)
+    if (method === 'reloadSigner' && scenario?.state === 'signer-trezor-reconnect') {
+      const calls = reconnectCalls.get(event.sender.id)
+      const state = stateByWebContents.get(event.sender.id)
+      if (!calls || args.length !== 1 || !state.main.signers[args[0]])
+        throw new Error('Invalid reconnect fixture request')
+      calls.push({ id, signerId: args[0] })
+      if (scenario.variant === 'error')
+        event.sender.send('main:rpc', id, JSON.stringify('Fixture reconnect failed'))
+      else if (scenario.variant === 'settled') event.sender.send('main:rpc', id, null)
+      return
+    }
     if (scenario?.deferRpcs?.includes(method)) return
     const error = scenario?.rpcErrors?.[method]
     if (error) {

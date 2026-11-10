@@ -400,6 +400,7 @@ const rpcSchemas = {
     response: result(CompatibilitySchema)
   },
   connectTrezor: { request: noArgs, response: result(SignerIdSchema) },
+  reloadSigner: { request: z.tuple([IdSchema]), response: actionResult },
   cancelTrezorConnect: { request: noArgs, response: actionResult },
   unlockSigner: { request: z.tuple([IdSchema, PasswordSchema]), response: actionResult },
   getApprovalBalance: {

@@ -57,6 +57,7 @@ const dashboardOnlyRpcMethods = new Set([
   'createFromPhrase',
   'createFromPrivateKey',
   'removeSigner',
+  'reloadSigner',
   'reserveGeneratedWallet',
   'beginGeneratedWallet',
   'completeGeneratedWallet',

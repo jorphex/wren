@@ -2228,6 +2228,19 @@ const reviewScenarios = () => [
     requiredControls: ['Connect with Suite'],
     requiredText: ['Open Trezor Suite, then connect again.']
   },
+  ...['error', 'settled', 'held', 'navigation'].map((variant) => ({
+    id: `dash-trezor-reconnect-${variant}-full-1`,
+    renderer: 'dash',
+    state: 'signer-trezor-reconnect',
+    variant,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'reconnectSigner' },
+    ready: '.expandedSigner',
+    requiredControls: ['Connect with Suite'],
+    requiredText: ['Connect with Trezor Suite']
+  })),
   {
     id: 'dash-accounts-icons-full-1',
     renderer: 'dash',
