@@ -48,7 +48,7 @@ const basePath = "m/44'/60'/0'/0"
 const wallet = (derivation = `${basePath}/0`) =>
   new Wallet(`0x${Buffer.from(hd.derive(derivation).privateKey).toString('hex')}`)
 const address = wallet().address.toLowerCase()
-const device = { path: 'suite-device-path', state: { staticSessionId: 'fixture-wallet' } }
+const device = { path: 'suite-device-path', instance: 2, state: { staticSessionId: 'fixture-wallet' } }
 const features = { model: 'T', major_version: 2, minor_version: 13, patch_version: 0, capabilities: [] }
 const state = {
   main: {
@@ -64,6 +64,7 @@ let cancellations = 0
 let bridge
 let adapter
 let connected
+let Signers
 const logger = Object.fromEntries(['info', 'debug', 'error', 'warn', 'verbose'].map((key) => [key, () => {}]))
 const server = http.createServer()
 const wss = new WebSocketServer({ server })
@@ -94,6 +95,32 @@ function load(relative) {
   const localRequire = (name) => {
     if (name === 'electron-log') return logger
     if (name === 'electron') throw new Error('Qualification cannot load Electron or access a real profile')
+    if (filename === path.join(root, 'main/signers/index.ts')) {
+      // Keep the real manager admission/removal methods without starting other
+      // hardware adapters, software-wallet sessions or Electron window hooks.
+      const type = {
+        './ledger/adapter': 'ledger',
+        './lattice/adapter': 'lattice',
+        './hot/adapter': 'hot'
+      }[name]
+      if (type) {
+        const { SignerAdapter } = load('main/signers/adapters.ts')
+        return class extends SignerAdapter {
+          constructor() {
+            super(type)
+          }
+        }
+      }
+      if (name === './hot') return {}
+      if (name === './hot/RingSigner') return class {}
+      if (name === './generated')
+        return {
+          GeneratedWalletSessions: class {
+            close() {}
+          }
+        }
+      if (name === '../windows/closeToTray') return { onCloseToTray: () => () => false }
+    }
     if (name === '@trezor/connect-web/lib/impl/core-in-suite-desktop.js') {
       return {
         CoreInSuiteDesktop: class extends CoreInSuiteDesktop {
@@ -109,7 +136,18 @@ function load(relative) {
     if (!name.startsWith('.')) return require(name)
     const target = path.resolve(path.dirname(filename), name)
     if (target === path.join(root, 'main/store')) return store
-    if (target === path.join(root, 'main/store/action')) return { requireStoreAction: () => () => {} }
+    if (target === path.join(root, 'main/store/action'))
+      return {
+        requireStoreAction:
+          (name) =>
+          (...args) => {
+            if (name === 'newSigner' || name === 'updateSigner') {
+              const summary = args[0]
+              state.main.signers[summary.id] = { ...state.main.signers[summary.id], ...summary }
+            } else if (name === 'removeSigner') delete state.main.signers[args[0]]
+            else if (name !== 'navClearSigner') throw new Error(`Unexpected store action: ${name}`)
+          }
+      }
     if (target === path.join(root, 'main/crypt'))
       return { stringToKey: (value) => crypto.createHash('sha256').update(value).digest() }
     return load(path.relative(root, target))
@@ -225,12 +263,19 @@ wss.on('connection', (ws, request) => {
       )
       return
     }
+    const responseDevice = {
+      ...device,
+      instance: message.payload.device ? (message.payload.device.instance ?? 0) : device.instance
+    }
+    if (mode === 'changed-instance') responseDevice.instance = device.instance + 1
+    if (mode === 'invalid-instance') responseDevice.instance = -1
+    if (mode === 'missing-instance') delete responseDevice.instance
     ws.send(
       JSON.stringify({
         id: message.id,
         success: true,
         payload: mode === 'malformed' ? null : await payloadFor(message.payload),
-        device
+        device: responseDevice
       })
     )
   })
@@ -242,15 +287,20 @@ wss.on('connection', (ws, request) => {
 async function check(name, operation) {
   const start = requests.length
   console.log(`Checking ${name}`)
-  await operation()
-  results.push({
-    name,
-    passed: true,
-    methods: requests
+  const result = { name, passed: false, methods: [] }
+  results.push(result)
+  try {
+    await operation()
+    result.passed = true
+  } catch (error) {
+    result.error = error.message
+    throw error
+  } finally {
+    result.methods = requests
       .slice(start)
       .filter((item) => item.type === 'iframe-call')
       .map((item) => item.payload.method)
-  })
+  }
 }
 
 async function waitFor(predicate) {
@@ -266,9 +316,31 @@ const sign = (method, ...args) =>
     connected[method](...args, (error, result) => (error ? reject(error) : resolve(result)))
   )
 
+async function withSignerManager(operation) {
+  const listeners = Object.fromEntries(
+    ['add', 'update', 'remove'].map((event) => [event, adapter.listeners(event)])
+  )
+  Object.keys(listeners).forEach((event) => adapter.removeAllListeners(event))
+  const manager = new Signers([adapter])
+  manager.add(connected)
+  try {
+    await operation(manager)
+  } finally {
+    delete state.main.pendingSignerRemovals
+    manager.removeAdapter(adapter)
+    await manager.close()
+    for (const [event, handlers] of Object.entries(listeners)) {
+      handlers.forEach((handler) => adapter.on(event, handler))
+    }
+  }
+}
+
 try {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
   bridge = load('main/signers/trezor/bridge.ts').default
+  const managerModule = load('main/signers/index.ts')
+  Signers = managerModule.Signers
+  await managerModule.default.close()
   const Adapter = load('main/signers/trezor/adapter.ts').default
   adapter = new Adapter()
   adapter.on('add', (signer) => {
@@ -278,6 +350,9 @@ try {
   adapter.on('update', (signer) => {
     if (connected?.id === signer.id) connected = signer
     state.main.signers[signer.id] = signer.summary()
+  })
+  adapter.on('remove', (id) => {
+    delete state.main.signers[id]
   })
   await check('startup does not contact Suite or open a device', async () => {
     adapter.open()
@@ -291,6 +366,46 @@ try {
     assert.equal(JSON.stringify(state.main.accounts), savedAccounts)
     assert.equal(connected.addresses.length, 100)
   })
+  for (const instance of [2, 0]) {
+    await check(`preserves Suite wallet instance ${instance} across requests`, async () => {
+      device.instance = instance
+      const start = requests.length
+      const id = connected.id
+      await adapter.connect()
+      await sign('signMessage', 0, '0x01')
+      assert.equal(connected.id, id)
+      const calls = requests.slice(start).filter((item) => item.type === 'iframe-call' && item.payload.device)
+      assert(calls.length >= 3)
+      calls.forEach((call) => assert.equal(call.payload.device.instance, instance))
+    })
+  }
+  device.instance = 2
+  await adapter.connect()
+  for (const phase of ['hold', 'hold-verification']) {
+    await check(`removal during ${phase} cannot restore the signer`, async () => {
+      mode = phase
+      held = undefined
+      const id = connected.id
+      const rejected = assert.rejects(adapter.connect(), /cancel|closed/i)
+      await waitFor(() => held)
+      const late = held
+      adapter.remove(connected)
+      mode = 'normal'
+      if (late.ws.readyState === 1)
+        late.ws.send(
+          JSON.stringify({
+            id: late.message.id,
+            success: true,
+            payload: late.message.payload.method === 'getFeatures' ? features : { address },
+            device
+          })
+        )
+      await rejected
+      await delay(10)
+      assert.equal(state.main.signers[id], undefined)
+      assert.equal(await adapter.connect(), id)
+    })
+  }
   await check('on-device address verification uses the selected Suite wallet', async () => {
     assert.equal(await sign('verifyAddress', 0, address, true), true)
     const call = requests.at(-1).payload
@@ -308,22 +423,257 @@ try {
     ])
     assert.deepEqual(await checks, [true, true])
   })
-  await check('a reconnect cannot replace a signer that starts signing during selection', async () => {
-    mode = 'hold-verification'
-    held = undefined
-    const reconnectRejected = assert.rejects(adapter.connect(), /Finish the current/)
-    await waitFor(() => held)
-    const signing = sign('signMessage', 0, '0x04')
-    mode = 'normal'
-    held.ws.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
-    await reconnectRejected
-    assert.equal(verifyMessage(getBytes('0x04'), await signing).toLowerCase(), address)
-  })
   const typedData = {
     types: { EIP712Domain: [{ name: 'name', type: 'string' }], Mail: [{ name: 'contents', type: 'string' }] },
     primaryType: 'Mail',
     domain: { name: 'Wren qualification' },
     message: { contents: 'Hello' }
+  }
+  await check('connection excludes signing and address checks without reporting user rejection', async () => {
+    mode = 'hold-verification'
+    held = undefined
+    const connection = adapter.connect()
+    void connection.catch(() => {})
+    assert.equal(adapter.connect(), connection)
+    await waitFor(() => held)
+    assert.equal(state.main.signers[connected.id].status, 'connecting')
+    const before = requests.length
+    const busy = (error) => /connecting.*Suite/i.test(error.message) && error.code !== 4001
+    await assert.rejects(sign('signMessage', 0, '0x04'), busy)
+    await assert.rejects(sign('signTypedData', 0, { data: typedData }), busy)
+    await assert.rejects(sign('verifyAddress', 0, address, false), busy)
+    await assert.rejects(
+      sign('signTransaction', 0, {
+        chainId: '0x1',
+        type: '0x0',
+        nonce: '0x0',
+        gasLimit: '0x5208',
+        gasPrice: '0x1',
+        value: '0x0',
+        data: '0x',
+        to: address
+      }),
+      busy
+    )
+    assert.equal(requests.length, before)
+    mode = 'normal'
+    held.ws.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
+    await connection
+    assert.equal(state.main.signers[connected.id].status, 'ready')
+  })
+  await check('connection cannot interrupt an active signing request', async () => {
+    mode = 'hold'
+    held = undefined
+    const signing = sign('signMessage', 0, '0x06')
+    void signing.catch(() => {})
+    await waitFor(() => held)
+    const before = requests.length
+    await assert.rejects(adapter.connect(), /Finish the current Trezor request/)
+    assert.equal(requests.length, before)
+    mode = 'normal'
+    held.ws.send(
+      JSON.stringify({
+        id: held.message.id,
+        success: true,
+        payload: await payloadFor(held.message.payload),
+        device
+      })
+    )
+    assert.equal(verifyMessage(getBytes('0x06'), await signing).toLowerCase(), address)
+  })
+  await check('canceling connection restores signing without rejecting an unrelated request', async () => {
+    mode = 'hold'
+    held = undefined
+    const canceled = assert.rejects(adapter.connect(), /cancel/i)
+    await waitFor(() => held)
+    assert.equal(state.main.signers[connected.id].status, 'connecting')
+    await assert.rejects(
+      sign('signMessage', 0, '0x05'),
+      (error) => /connecting.*Suite/i.test(error.message) && error.code !== 4001
+    )
+    adapter.cancelConnect()
+    await canceled
+    assert.equal(state.main.signers[connected.id].status, 'ready')
+    mode = 'normal'
+    assert.equal(verifyMessage(getBytes('0x05'), await sign('signMessage', 0, '0x05')).toLowerCase(), address)
+  })
+  await check('connection failure clears busy status and preserves the existing signer', async () => {
+    const id = connected.id
+    mode = 'deny'
+    await assert.rejects(adapter.connect(), /Permission denied/)
+    assert.equal(connected.id, id)
+    assert.equal(state.main.signers[id].status, 'ready')
+    mode = 'normal'
+    await sign('signMessage', 0, '0x07')
+  })
+  await check('failed replacement keeps the existing signer usable', async () => {
+    const current = connected
+    const rejectReplacement = (signer) => {
+      if (signer.id === current.id && signer !== current) throw new Error('Fixture replacement rejected')
+    }
+    adapter.prependListener('update', rejectReplacement)
+    try {
+      await assert.rejects(adapter.connect(), /Fixture replacement rejected/)
+    } finally {
+      adapter.removeListener('update', rejectReplacement)
+    }
+    assert.equal(state.main.signers[current.id].status, 'ready')
+    assert.equal(verifyMessage(getBytes('0x08'), await sign('signMessage', 0, '0x08')).toLowerCase(), address)
+  })
+  for (const phase of ['before selection', 'during verification']) {
+    await check(`pending signer removal ${phase} rejects replacement and stays removed`, async () => {
+      await withSignerManager(async (manager) => {
+        const current = connected
+        const id = current.id
+        const journal = { kind: 'hardware', addresses: [...current.addresses] }
+        if (phase === 'before selection') {
+          state.main.pendingSignerRemovals = { [id]: journal }
+          await assert.rejects(adapter.connect(), /removal.*completed/i)
+        } else {
+          mode = 'hold-verification'
+          held = undefined
+          const rejected = assert.rejects(adapter.connect(), /removal.*completed/i)
+          await waitFor(() => held)
+          state.main.pendingSignerRemovals = { [id]: journal }
+          mode = 'normal'
+          held.ws.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
+          await rejected
+        }
+        assert.equal(manager.get(id), current)
+        assert.equal(
+          verifyMessage(getBytes('0x09'), await sign('signMessage', 0, '0x09')).toLowerCase(),
+          address
+        )
+        manager.remove(id)
+        delete state.main.pendingSignerRemovals[id]
+        mode = 'deny'
+        await assert.rejects(adapter.connect(), /Permission denied/)
+        assert.equal(manager.exists(id), false)
+        assert.equal(state.main.signers[id], undefined)
+      })
+      mode = 'normal'
+      await adapter.connect()
+    })
+  }
+  await check('failed initial busy publication rejects setup before contacting Suite', async () => {
+    await withSignerManager(async (manager) => {
+      const current = connected
+      const before = requests.length
+      const rejectBusy = (signer) => {
+        if (signer.summary().status === 'connecting') throw new Error('Fixture initial busy update failed')
+      }
+      adapter.on('update', rejectBusy)
+      mode = 'deny'
+      try {
+        let connection
+        assert.doesNotThrow(() => {
+          connection = adapter.connect()
+        })
+        await assert.rejects(connection, /Fixture initial busy update failed/)
+        await delay(20)
+        assert.equal(requests.length, before)
+        assert.equal(manager.get(current.id), current)
+        assert.equal(state.main.signers[current.id].status, 'ready')
+        mode = 'normal'
+        await sign('signMessage', 0, '0x0a')
+      } finally {
+        adapter.removeListener('update', rejectBusy)
+        // Also consume an orphaned setup promise when running against the
+        // unfixed implementation, so the report retains its original failure.
+        await adapter.connect().catch(() => {})
+        connected = manager.get(current.id)
+        mode = 'normal'
+      }
+    })
+  })
+  await check('manager reload completion waits for Suite verification and restored status', async () => {
+    await withSignerManager(async (manager) => {
+      const current = connected
+      mode = 'hold-verification'
+      held = undefined
+      let completed = false
+      const completion = Promise.resolve(manager.reload(current.id)).then(() => {
+        completed = true
+      })
+      await waitFor(() => held)
+      assert.equal(completed, false)
+      assert.equal(state.main.signers[current.id].status, 'connecting')
+      mode = 'normal'
+      held.ws.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
+      await completion
+      assert.equal(state.main.signers[current.id].status, 'ready')
+      connected = manager.get(current.id)
+      await sign('signMessage', 0, '0x0d')
+    })
+  })
+  for (const phase of ['initial', 'initial and failure']) {
+    await check(`signer-details reconnect handles ${phase} status failure and allows retry`, async () => {
+      await withSignerManager(async (manager) => {
+        const current = connected
+        const before = requests.length
+        const unhandled = []
+        let busySeen = false
+        const onUnhandled = (error) => unhandled.push(error.message)
+        const rejectStatus = (signer) => {
+          const status = signer.summary().status
+          if (status === 'connecting') busySeen = true
+          if (status === 'connecting' || (phase === 'initial and failure' && status === 'reconnect-required'))
+            throw new Error('Fixture signer-details status update failed')
+        }
+        process.on('unhandledRejection', onUnhandled)
+        adapter.on('update', rejectStatus)
+        try {
+          manager.reload(current.id)
+          await waitFor(
+            () => busySeen && (state.main.signers[current.id].status !== 'connecting' || unhandled.length > 0)
+          )
+          await delay(20)
+          assert.deepEqual(unhandled, [])
+          assert.equal(manager.get(current.id), current)
+          assert.equal(current.status, 'reconnect-required')
+          assert.equal(state.main.signers[current.id].status, 'reconnect-required')
+          assert.equal(requests.length, before)
+          adapter.removeListener('update', rejectStatus)
+          mode = 'hold-verification'
+          held = undefined
+          manager.reload(current.id)
+          await waitFor(() => held)
+          assert.equal(state.main.signers[current.id].status, 'connecting')
+          mode = 'normal'
+          held.ws.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
+          await waitFor(
+            () => manager.get(current.id) !== current && state.main.signers[current.id].status === 'ready'
+          )
+          connected = manager.get(current.id)
+          assert.equal(
+            verifyMessage(getBytes('0x0c'), await sign('signMessage', 0, '0x0c')).toLowerCase(),
+            address
+          )
+          assert.deepEqual(unhandled, [])
+        } finally {
+          adapter.removeListener('update', rejectStatus)
+          process.removeListener('unhandledRejection', onUnhandled)
+        }
+      })
+    })
+  }
+  for (const phase of ['immediate', 'busy update']) {
+    await check(`${phase} cancellation cannot start Suite setup`, async () => {
+      const before = requests.length
+      const cancel = () => adapter.cancelConnect()
+      if (phase === 'busy update') adapter.once('update', cancel)
+      try {
+        const rejected = assert.rejects(adapter.connect(), /cancel/i)
+        if (phase === 'immediate') cancel()
+        await rejected
+        await delay(20)
+        assert.equal(requests.length, before)
+        assert.equal(state.main.signers[connected.id].status, 'ready')
+        await sign('signMessage', 0, '0x0b')
+      } finally {
+        adapter.removeListener('update', cancel)
+      }
+    })
   }
   await check('typed message signature recovers the expected account', async () => {
     const signature = await sign('signTypedData', 0, { data: typedData })
@@ -431,6 +781,61 @@ try {
     await assert.rejects(sign('verifyAddress', 0, address, false), /match/i)
     mode = 'normal'
     await adapter.connect()
+  })
+  for (const responseMode of ['changed-instance', 'invalid-instance', 'missing-instance']) {
+    await check(`${responseMode} response cannot complete an address check`, async () => {
+      mode = responseMode
+      await assert.rejects(sign('verifyAddress', 0, address, false), /device|wallet/i)
+      mode = 'normal'
+      await adapter.connect()
+    })
+  }
+  await check('canceling a queued transaction preserves other work and the Suite connection', async () => {
+    mode = 'hold'
+    held = undefined
+    const verifying = sign('verifyAddress', 0, address, false)
+    void verifying.catch(() => {})
+    await waitFor(() => held)
+    const socket = held.ws
+    const before = requests.length
+    const transaction = {
+      chainId: '0x1',
+      type: '0x0',
+      nonce: '0x0',
+      gasLimit: '0x5208',
+      gasPrice: '0x1',
+      value: '0x0',
+      data: '0x',
+      to: address
+    }
+    const rejected = assert.rejects(sign('signTransaction', 0, transaction), (error) => error.code === 4001)
+    void rejected.catch(() => {})
+    await delay(10)
+    const following = bridge.signMessage(connected.device, `${basePath}/0`, '02').then(
+      (signature) => ({ signature }),
+      (error) => ({ error })
+    )
+    assert.equal(connected.cancelTransactionSigning(), true)
+    mode = 'normal'
+    socket.send(JSON.stringify({ id: held.message.id, success: true, payload: { address }, device }))
+    assert.equal(await verifying, true)
+    await rejected
+    const result = await following
+    if (result.error) throw result.error
+    assert.equal(verifyMessage(getBytes('0x02'), `0x${result.signature}`).toLowerCase(), address)
+    assert.equal(connected.status, 'ready')
+    assert.equal(state.main.signers[connected.id].status, 'ready')
+    assert.equal(socket.readyState, 1)
+    assert.equal(
+      requests
+        .slice(before)
+        .filter((item) => item.type === 'iframe-call' && item.payload.method === 'ethereumSignTransaction')
+        .length,
+      0
+    )
+    await sign('signTransaction', 0, transaction)
+    assert.equal(socket.readyState, 1)
+    assert.equal(connected.status, 'ready')
   })
   await check('cancellation settles Wren calls and rejects queued work', async () => {
     mode = 'hold'

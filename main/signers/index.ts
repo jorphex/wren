@@ -325,7 +325,7 @@ export class Signers extends EventEmitter {
     if (signer) {
       const type = signer.type === 'ring' || signer.type === 'seed' ? 'hot' : signer.type
       if (type === 'hot') delete this.signers[id]
-      this.adapters[type]?.adapter.reload(signer)
+      return this.adapters[type]?.adapter.reload(signer)
     }
   }
 

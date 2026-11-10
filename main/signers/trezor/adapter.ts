@@ -45,23 +45,32 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       return Promise.reject(new Error('Finish the current Trezor request first'))
     }
     const generation = this.generation
-    this.connecting = this.connectDevice(generation).finally(() => {
-      if (generation === this.generation) delete this.connecting
-    })
-    return this.connecting
+    const connection = Promise.resolve()
+      .then(() => {
+        this.emitSignerUpdates()
+        if (this.closed || generation !== this.generation) throw new Error('Trezor connection cancelled')
+        return this.connectDevice(generation)
+      })
+      .finally(() => {
+        if (this.connecting !== connection) return
+        delete this.connecting
+        this.emitSignerUpdates()
+      })
+    this.connecting = connection
+    return connection
   }
 
   cancelConnect() {
     if (!this.connecting) return
     ++this.generation
-    delete this.connecting
     TrezorBridge.cancelCurrentRequest()
   }
 
   private async connectDevice(generation: number) {
     const device = await TrezorBridge.connectDevice()
-    const signer = new Trezor(device.path)
+    const signer = new Trezor(device.path, () => !!this.connecting)
     signer.derivation = store('main.trezor.derivation')
+    let previous: Trezor | undefined
     try {
       await signer.open(device)
       await signer.deriveAddresses()
@@ -74,19 +83,26 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       // USB paths are owned by Suite and can change. A verified wallet address
       // keeps the live signer stable across reconnects and separates passphrases.
       signer.id = Trezor.generateId(signer.addresses[0].toLowerCase())
-      const previous = this.knownSigners.get(signer.id)
-      if (previous?.hasActiveSigningOperation()) throw new Error('Finish the current Trezor request first')
-      if (previous) {
-        previous.removeAllListeners()
-        previous.close()
+      if (Object.prototype.hasOwnProperty.call(store('main.pendingSignerRemovals') || {}, signer.id)) {
+        throw new Error('Signer removal is still being completed')
       }
+      previous = this.knownSigners.get(signer.id)
+      if (previous?.hasActiveSigningOperation()) throw new Error('Finish the current Trezor request first')
       this.knownSigners.set(signer.id, signer)
       signer.on('update', () => {
         if (this.knownSigners.get(signer.id) === signer) this.emit('update', signer)
       })
       this.emit(previous ? 'update' : 'add', signer)
+      if (previous) {
+        previous.removeAllListeners()
+        previous.close()
+      }
       return signer.id
     } catch (error) {
+      if (this.knownSigners.get(signer.id) === signer) {
+        if (previous) this.knownSigners.set(signer.id, previous)
+        else this.knownSigners.delete(signer.id)
+      }
       signer.close()
       throw error
     }
@@ -94,9 +110,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
 
   override async reload(signer: Trezor) {
     if (this.knownSigners.get(signer.id) !== signer || signer.hasActiveSigningOperation()) return
-    signer.status = Status.INITIAL
-    this.emit('update', signer)
     try {
+      signer.status = Status.INITIAL
       const id = await this.connect()
       if (id !== signer.id) {
         signer.status = Status.NEEDS_RECONNECTION
@@ -105,13 +120,18 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     } catch (error) {
       if (this.closed || this.knownSigners.get(signer.id) !== signer) return
       signer.status = Status.NEEDS_RECONNECTION
-      this.emit('update', signer)
+      try {
+        this.emit('update', signer)
+      } catch (updateError) {
+        log.warn('Could not update Trezor connection status', updateError)
+      }
       log.warn('Could not reconnect Trezor through Suite', error)
     }
   }
 
   override remove(signer: Trezor) {
     if (this.knownSigners.get(signer.id) !== signer) return
+    this.cancelConnect()
     this.knownSigners.delete(signer.id)
     signer.close()
     this.emit('remove', signer.id)
@@ -127,5 +147,9 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     TrezorBridge.close()
     this.knownSigners.forEach((signer) => signer.close())
     this.knownSigners.clear()
+  }
+
+  private emitSignerUpdates() {
+    this.knownSigners.forEach((signer) => this.emit('update', signer))
   }
 }

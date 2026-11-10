@@ -90,7 +90,10 @@ export default class Trezor extends Signer {
   private timers = new Set<ReturnType<typeof setTimeout>>()
   private pendingCallbacks = new Set<(error: Error) => void>()
 
-  constructor(path: string) {
+  constructor(
+    path: string,
+    private readonly connectionPending: () => boolean = () => false
+  ) {
     super()
 
     this.path = path
@@ -166,6 +169,7 @@ export default class Trezor extends Signer {
 
     return {
       ...summary,
+      status: this.connectionPending() && this.status === Status.OK ? Status.INITIAL : this.status,
       capabilities: this.device?.features?.capabilities || []
     }
   }
@@ -210,6 +214,7 @@ export default class Trezor extends Signer {
     display = false,
     cb: Callback<boolean>
   ) {
+    if (!this.canUseDevice(cb)) return
     const done = this.trackCallback(cb)
     const lifecycleGeneration = this.lifecycleGeneration
     const verificationGeneration = ++this.verificationGeneration
@@ -344,6 +349,7 @@ export default class Trezor extends Signer {
   }
 
   override async signMessage(index: number, rawMessage: string, cb: Callback<string>) {
+    if (!this.canUseDevice(cb)) return
     const done = this.trackCallback(cb)
     const signingOperation = {}
     this.activeSigningOperations.add(signingOperation)
@@ -375,6 +381,7 @@ export default class Trezor extends Signer {
     typedMessage: TypedMessage<SignTypedDataVersion.V4>,
     cb: Callback<string>
   ) {
+    if (!this.canUseDevice(cb)) return
     const done = this.trackCallback(cb)
     const signingOperation = {}
     this.activeSigningOperations.add(signingOperation)
@@ -446,6 +453,7 @@ export default class Trezor extends Signer {
     cb: Callback<string>,
     onPhase?: (phase: SignerTransactionPhase) => void
   ) {
+    if (!this.canUseDevice(cb)) return
     const done = this.trackCallback(cb)
     const signing = { cancelled: false, dispatched: false }
     this.activeSigningOperations.add(signing)
@@ -468,7 +476,8 @@ export default class Trezor extends Signer {
           return await this.runForegroundDeviceRequest(
             async () => {
               const signature = await TrezorBridge.signTransaction(this.device!, path, trezorTx, () => {
-                if (signing.cancelled) throw new SignerUserRejectedError()
+                if (signing.cancelled)
+                  throw new DeviceError('Transaction signing cancelled', 'Method_Interrupted')
                 signing.dispatched = true
                 onPhase?.('waiting')
               })
@@ -508,6 +517,12 @@ export default class Trezor extends Signer {
 
   hasActiveSigningOperation() {
     return this.activeSigningOperations.size > 0 || this.pendingCallbacks.size > 0
+  }
+
+  private canUseDevice<T>(cb: Callback<T>) {
+    if (!this.closed && !this.connectionPending()) return true
+    cb(new Error(this.closed ? 'Trezor signer closed' : 'Finish connecting in Trezor Suite first'))
+    return false
   }
 
   private assertSigner(index: number, address: string) {

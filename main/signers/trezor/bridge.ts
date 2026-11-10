@@ -21,6 +21,7 @@ export class DeviceError extends Error {
 
 export type SuiteDevice = {
   path: NonNullable<DeviceIdentity['path']>
+  instance?: number | undefined
   state?: z.output<typeof identitySchema>['state']
   features?: Device['features']
 }
@@ -46,6 +47,7 @@ const txSignatureSchema = z.object({
 })
 const identitySchema = z.object({
   path: z.string().min(1).max(1024),
+  instance: z.number().int().nonnegative().optional(),
   state: z
     .object({
       sessionId: z.string().optional(),
@@ -213,7 +215,13 @@ class TrezorBridge extends EventEmitter {
               ...params,
               method,
               keepSession: true,
-              ...(device && { device: { path: device.path, ...(device.state && { state: device.state }) } })
+              ...(device && {
+                device: {
+                  path: device.path,
+                  ...(device.instance !== undefined && { instance: device.instance }),
+                  ...(device.state && { state: device.state })
+                }
+              })
             } as CallMethodPayload),
             300_000,
             new DeviceError('Trezor Suite request timed out. Connect again to retry.', 'Method_Timeout')
@@ -234,14 +242,16 @@ class TrezorBridge extends EventEmitter {
             if (
               !identity.success ||
               identity.data.path !== device.path ||
+              (identity.data.instance ?? 0) !== (device.instance ?? 0) ||
               (device.state?.staticSessionId &&
                 identity.data.state?.staticSessionId !== device.state.staticSessionId)
             )
               throw new DeviceError(
-                'Trezor Suite selected a different device. Connect again.',
+                'Device or wallet changed in Trezor Suite. Connect again.',
                 'Device_InvalidState'
               )
             if (identity.data.state) device.state = identity.data.state
+            if (identity.data.instance !== undefined) device.instance = identity.data.instance
           }
           return { payload: payload.data, ...(response.device && { device: response.device }) }
         } catch (error) {

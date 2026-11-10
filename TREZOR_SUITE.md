@@ -16,10 +16,9 @@ After a restart, connect once to load the Trezor accounts again. Saved account
 names, addresses and settings stay in Wren. Each passphrase wallet has its own
 signer. Changing the address path requires a new connection.
 
-Cancel in Wren to end its current connection attempt or transaction signing.
-Wren closes its Suite connection and discards pending replies. A request can
-also be rejected in Suite or on the device. After a connection error, open
-Suite and connect again.
+Cancel in Wren to end the current connection attempt or transaction signing.
+Wren ignores late replies to canceled requests. You can also reject a request
+in Suite or on the device. After a connection error, open Suite and connect again.
 
 ## Implementation
 
@@ -36,10 +35,15 @@ Companion has no Trezor role. The extension and mobile packages are not needed.
 
 Wren serializes requests, keeps Suite's device and wallet session reference,
 checks response shapes and verifies signatures against the selected account.
+The reference includes Suite's wallet instance. Connection setup blocks other
+Trezor signing and address checks until it finishes. Removing a signer cancels
+pending setup, so a late reply cannot add it back.
+Pending removal blocks signer replacement. If the initial status update fails,
+setup ends before Wren contacts Suite.
 Verified wallet addresses identify live signers independently of Suite's USB
 paths. Wren does not store PINs, passphrases or Suite session references on disk.
-Connection attempts have a four-second limit. Device requests have a five-minute
-limit; address verification has a one-minute limit. Cancellation, timeout and
+Opening the Suite connection has a four-second limit. Device requests have a
+five-minute limit; address verification has a one-minute limit. Cancellation, timeout and
 shutdown settle callers and prevent old replies from completing a new request.
 
 Wren no longer bundles `@trezor/connect`, `@trezor/connect-core` or a direct

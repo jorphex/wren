@@ -19,7 +19,7 @@ export class SignerAdapter extends EventEmitter {
   remove(_signer: Signer) {
     // Optional adapter lifecycle hook.
   }
-  reload(_signer: Signer) {
+  reload(_signer: Signer): void | Promise<void> {
     // Optional adapter lifecycle hook.
   }
   dismissAuthentication(_signer: Signer) {
