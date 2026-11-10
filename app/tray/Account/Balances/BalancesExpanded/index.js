@@ -87,6 +87,7 @@ export class BalancesExpanded extends React.Component {
         <div className='panelFilterInput'>
           <input
             aria-label='Filter balances'
+            placeholder='Search balances'
             className='wrenInput wrenInputQuiet'
             type='text'
             spellCheck='false'

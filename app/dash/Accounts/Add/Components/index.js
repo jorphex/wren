@@ -115,6 +115,7 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
           className='wrenInput'
           ref={inputRef}
           aria-label={title}
+          placeholder={newAccountType === 'seed' ? 'Enter your recovery phrase' : 'Enter your private key'}
           autoCapitalize='none'
           autoComplete='off'
           spellCheck={false}
@@ -133,14 +134,16 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
       <div role={error && error !== EMPTY_STATE ? 'alert' : undefined} className='addAccountItemOptionError'>
         {error !== EMPTY_STATE ? error : ''}
       </div>
-      <button
-        type='button'
-        className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
-        disabled={Boolean(error) || submitting}
-        onClick={() => handleSubmit()}
-      >
-        {'Next'}
-      </button>
+      <div className='addAccountSecretShelf'>
+        <button
+          type='button'
+          className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
+          disabled={Boolean(error) || submitting}
+          onClick={() => handleSubmit()}
+        >
+          {'Next'}
+        </button>
+      </div>
     </div>
   )
 }

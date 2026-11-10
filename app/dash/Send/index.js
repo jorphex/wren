@@ -1786,7 +1786,7 @@ export class Send extends React.Component {
             onClick={() => this.setMode('send', context)}
             type='button'
           >
-            Send one
+            Send
           </button>
           <button
             aria-pressed={this.state.mode === 'sweep'}
@@ -2011,7 +2011,7 @@ export class Send extends React.Component {
               {this.state.queueing
                 ? COPY.primarySubmitting
                 : this.state.maxReview
-                  ? 'Queue transfer'
+                  ? 'Review transaction'
                   : this.state.maxQuote
                     ? 'Review maximum send'
                     : canSubmit

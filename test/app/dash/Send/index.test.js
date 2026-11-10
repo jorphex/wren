@@ -553,7 +553,7 @@ it('clears stale native amount while quoting, exposes exact reserve evidence, an
   fireEvent.click(screen.getByRole('button', { name: 'Review maximum send' }))
   expect(queueSend).not.toHaveBeenCalled()
   expect(screen.getByText('Review maximum send')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review transaction' }))
   await waitFor(() =>
     expect(queueSend).toHaveBeenCalledWith(
       expect.objectContaining({ amount: '0.5', maxQuoteId: 'max-review-quote', recipient })
@@ -690,7 +690,7 @@ it('trusts a valid bound native Max quote over a stale lower cached scanner bala
   expect(screen.queryByText('Amount exceeds available balance')).toBeNull()
   expect(screen.getByRole('button', { name: 'Review maximum send' }).disabled).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: 'Review maximum send' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review transaction' }))
   await waitFor(() =>
     expect(queueSend).toHaveBeenCalledWith(
       expect.objectContaining({ amount: '0.5', maxQuoteId: 'fresh-over-stale' })

@@ -570,9 +570,7 @@ export class Inspector extends React.Component {
     return (
       <main className='inspector cardShow' aria-busy={pending ? 'true' : 'false'}>
         <header className='inspectorHeader'>
-          <div>
-            <h1>Inspector</h1>
-          </div>
+          <h1 className='wrenScreenReaderOnly'>Inspector</h1>
           <div className='inspectorSafetyContract'>
             <Icon name='eye' size={16} />
             <span>

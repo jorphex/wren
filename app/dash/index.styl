@@ -420,6 +420,10 @@ button,
     .dashControlContent
       min-width 0
 
+      > .earn
+        min-height 0
+        padding 0
+
       .cardShow
         animation none
 
@@ -520,11 +524,11 @@ button,
 
   .network .signerPermissionToggleOn
     &::before
-      border-color var(--wren-success)
-      background var(--wren-success-soft)
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-active)
 
     .signerPermissionToggleSwitch
-      background var(--wren-success)
+      background var(--wren-text-primary)
       transform translateX(20px)
 
   .network .signerPermissionToggle:disabled

@@ -35,9 +35,8 @@ const renderMain = () => {
 }
 
 it.each([
-  ['Earn', 'earn'],
   ['Contacts', 'addressBook'],
-  ['Read-only inspector', 'inspector'],
+  ['Inspector', 'inspector'],
   ['Contracts', 'contracts'],
   ['Tokens', 'tokens']
 ])('opens %s from the dashboard', (label, view) => {

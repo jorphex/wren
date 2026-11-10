@@ -325,7 +325,7 @@ export const ChainHeader = ({
         <div className='signerDetails'>{identity}</div>
       )}
       {status ? <span className={`networkRowStatus networkRowStatus${status}`}>{status}</span> : null}
-      <div className='signerMenuItems'>
+      <div className='signerMenuItems' title={isMainnet ? `${name} is always enabled` : undefined}>
         {showToggle && (
           <button
             type='button'

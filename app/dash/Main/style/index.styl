@@ -659,3 +659,38 @@ button.dashSupportWrenButton.wrenControl
   padding 12px
   code
     overflow-wrap anywhere
+
+// Home and destinations share one grid, in the same reading and focus order.
+.dashControlShell > .dashControlNavigation
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-2)
+
+  button.dashModule.wrenControl
+    grid-template-columns 30px minmax(0, 1fr)
+    width 100%
+    height 44px
+    min-height 44px
+    padding 0 var(--wren-space-3)
+    border 1px solid rgba(150, 182, 150, .16)
+    background var(--wren-surface-card)
+    box-shadow none
+
+    &:hover:not(:disabled),
+    &:active:not(:disabled),
+    &:focus-visible
+      border-color rgba(150, 182, 150, .16)
+      background var(--wren-surface-card)
+      box-shadow none
+      transform none
+
+    .dashModuleTitle
+      font-size 14px
+      white-space nowrap
+
+    &.dashModuleCurrent,
+    &.dashModuleCurrent:hover:not(:disabled),
+    &.dashModuleCurrent:active:not(:disabled),
+    &.dashModuleCurrent:focus-visible
+      border-color rgba(168, 116, 63, .34)
+      background linear-gradient(180deg, rgba(168, 116, 63, .10), var(--wren-surface-card))

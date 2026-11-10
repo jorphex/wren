@@ -58,16 +58,16 @@
 
 .wrenToggleOn
   &::before
-    border-color var(--wren-success)
-    background var(--wren-success-soft)
+    border-color var(--wren-border-strong)
+    background var(--wren-surface-active)
 
   &:hover:not(:disabled)
     &::before
-      border-color var(--wren-accent-secondary-hover)
-      background var(--wren-accent-secondary-soft)
+      border-color var(--wren-text-muted)
+      background var(--wren-surface-active)
 
   .wrenToggleThumb
-    background var(--wren-success)
+    background var(--wren-text-primary)
     transform translateX(20px)
 
   &:disabled .wrenToggleThumb

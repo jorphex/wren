@@ -575,7 +575,11 @@ export class AddressBook extends React.Component {
           </div>
         ) : null}
         <div className='addressBookAddAction'>
-          <button className='wrenControl wrenControlPrimary' onClick={() => this.openEditor()} type='button'>
+          <button
+            className='wrenControl wrenControlSecondary wrenControlLarge'
+            onClick={() => this.openEditor()}
+            type='button'
+          >
             Add contact
           </button>
         </div>

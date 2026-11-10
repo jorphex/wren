@@ -7,6 +7,8 @@ import BigNumber from 'bignumber.js'
 import Icon from '../../../resources/Components/Icon'
 import QrCode from '../../../resources/Components/QrCode'
 import Receive from '../../../resources/Components/Receive'
+import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
+import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
 import { isNetworkConnected } from '../../../resources/utils/chains'
@@ -133,7 +135,7 @@ export const portfolioSummary = (store, accountId) => {
               : !positive
                 ? 'No balances found on connected networks'
                 : ''
-  return { value, note, partial }
+  return { value, note, partial, empty: !partial && !positive }
 }
 
 export const AccountAddressActions = ({ address, name }) => {
@@ -428,7 +430,11 @@ class _AccountMain extends React.Component {
         <div className='accountPortfolioHeader'>
           <span>{partial && !hideBalances ? 'Known value' : 'Portfolio balance'}</span>
         </div>
-        <div className='accountPortfolioValue'>
+        <div
+          className='accountPortfolioValue'
+          title={hideBalances ? 'Balances hidden' : value === '—' ? 'Portfolio value unavailable' : undefined}
+          aria-label={!hideBalances && value === '—' ? 'Portfolio value unavailable' : undefined}
+        >
           {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : value}
         </div>
         <div className='accountPortfolioActions'>
@@ -450,6 +456,7 @@ class _AccountMain extends React.Component {
     const accountModules = this.store('panel.account.modules')
     const accountModuleOrder = this.store('panel.account.moduleOrder')
     const activity = this.store('main.activity') || []
+    const empty = portfolioSummary(this.store, this.props.id).empty && !this.store('selected.hideBalances')
     let slideHeight = 0
     let previousVisibleModuleId
     const modules = accountModuleOrder.map((id, i) => {
@@ -497,6 +504,15 @@ class _AccountMain extends React.Component {
           <div className='accountMainSlide' style={{ height: slideHeight + 'px' }}>
             {modules}
           </div>
+          {empty ? (
+            <WrenEmptyState
+              image={emptyBalances}
+              transparentImage
+              expanded
+              title='No balances yet'
+              copy='Use Receive to add assets to this account.'
+            />
+          ) : null}
         </div>
         <div
           className={

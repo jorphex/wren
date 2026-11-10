@@ -10,6 +10,12 @@ export const primaryDashboardItems = [
     icon: 'overview'
   },
   {
+    view: 'earn',
+    title: 'Earn',
+    description: 'Review selected Yearn vaults by network.',
+    icon: 'earn'
+  },
+  {
     view: 'accounts',
     title: 'Accounts',
     description: 'Manage signing and watch-only accounts.',

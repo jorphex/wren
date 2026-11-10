@@ -74,6 +74,7 @@ export class Command extends React.Component {
       dapps: 'Connected apps',
       deployment: 'Contracts',
       earn: 'Earn',
+      inspector: 'Inspector',
       notify: 'Notice',
       default: 'Wren',
       settings: 'Settings',

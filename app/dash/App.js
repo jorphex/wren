@@ -16,38 +16,9 @@ import Dapps from './Dapps'
 import Inspector from './Inspector'
 import Contracts from './Contracts'
 import ControlNavigation from './ControlNavigation'
-import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
-import { capitalize } from '../../resources/utils'
 import { MAX_TIMER_DELAY, selectConnectedAppSummary } from '../../resources/domain/connectedApps'
 import { requestDashNavigation } from './navigationGuard'
-
-function itemName(view) {
-  return capitalize(view.slice(0, -1))
-}
-
-const AddNewItemButton = ({ view, req }) => {
-  const dataMap = {
-    accounts: { showAddAccounts: true },
-    chains: { newChain: {} },
-    tokens: { notify: 'addToken', notifyData: req }
-  }
-
-  return (
-    <div className='dashFooter'>
-      <button
-        type='button'
-        className='dashFooterButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
-        onClick={() => link.send('tray:action', 'navDash', { view, data: dataMap[view] })}
-      >
-        <div className='newAccountIcon'>
-          <Icon name='add' size={16} />
-        </div>
-        Add {itemName(view).toLowerCase()}
-      </button>
-    </div>
-  )
-}
 
 export class Dash extends React.Component {
   constructor(props, context) {
@@ -175,11 +146,10 @@ export class Dash extends React.Component {
     const promptSigner = hardwarePrompt?.signerId
       ? this.store('main.signers', hardwarePrompt.signerId)
       : undefined
-    const showAddButton = view === 'tokens' && (!data || Object.keys(data).length === 0)
     const topLevelControlView =
       !view ||
       view === 'default' ||
-      (['accounts', 'chains', 'dapps', 'settings'].includes(view) &&
+      (['accounts', 'earn', 'chains', 'dapps', 'settings'].includes(view) &&
         (!data || Object.keys(data).length === 0))
     const controlCounts = this.controlCounts()
     const controlCurrent = view === 'default' || !view ? 'overview' : view
@@ -187,7 +157,7 @@ export class Dash extends React.Component {
     return (
       <div className='dash'>
         <Command />
-        <div className='dashMain' style={showAddButton ? { bottom: '78px' } : undefined}>
+        <div className='dashMain'>
           <div className='dashMainOverlay' />
           <div className='dashMainScroll'>
             {topLevelControlView ? (
@@ -208,7 +178,6 @@ export class Dash extends React.Component {
             {...promptSigner}
           />
         ) : null}
-        {showAddButton && <AddNewItemButton view={view} req={this.props.req} />}
       </div>
     )
   }

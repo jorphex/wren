@@ -431,7 +431,7 @@ const sendComposerScenarios = () =>
           ]
         },
         ready: '.sendComposer',
-        requiredControls: ['Send one', 'Sweep assets', 'Choose an asset', 'Choose recipient', 'Review send'],
+        requiredControls: ['Send', 'Sweep assets', 'Choose an asset', 'Choose recipient', 'Review send'],
         requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH'],
         layoutExpectations: [
           {
@@ -518,7 +518,7 @@ const sendComposerScenarios = () =>
           ]
         },
         ready: '.sendSweepAssetSelected',
-        requiredControls: ['Send one', 'Sweep assets'],
+        requiredControls: ['Send', 'Sweep assets'],
         requiredText: ['Select positive balances', '1 selected · 16 per sweep', 'Transfers run separately.'],
         layoutExpectations: [
           {
@@ -989,7 +989,7 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       {
-        kind: 'scroll-fits',
+        kind: geometry === 'full' ? 'scroll-fits' : 'scroll-overflows',
         selector: '.dashMainScroll'
       }
     ]
@@ -1677,7 +1677,7 @@ const reviewScenarios = () => [
           ]
         },
         ready: '.sendQuotePanelReview',
-        requiredControls: ['Edit amount', 'Queue transfer'],
+        requiredControls: ['Edit amount', 'Review transaction'],
         requiredText: [
           'Review maximum send',
           'Maximum fee reserve',
@@ -4757,7 +4757,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         [
           'dash-send-max-review-full-1',
           ['Fee details'],
-          ['Queue transfer'],
+          ['Review transaction'],
           ['L1 data fee', 'Quote expires']
         ],
         [
@@ -4840,6 +4840,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         selector: '.accountPortfolioActions button',
         container: '.accountPortfolioCard'
       })
+    }
+    if (['tokens', 'tokens-list'].includes(scenario.state)) {
+      layout.push({ kind: 'contained', selector: '.customTokensActionShelf', container: '.dash' })
+    }
+    if (scenario.state === 'account-add-seed') {
+      layout.push({ kind: 'contained', selector: '.addAccountSecretShelf', container: '.dash' })
     }
     if (scenario.id.includes('dash-token-expanded') || scenario.id.includes('dash-token-removal')) {
       layout.push({

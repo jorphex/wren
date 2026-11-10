@@ -52,9 +52,7 @@ export class Contracts extends React.Component {
 
     return (
       <main className='contracts cardShow'>
-        <header className='contractsHeader'>
-          <h1>Contracts</h1>
-        </header>
+        <h1 className='wrenScreenReaderOnly'>Contracts</h1>
 
         <div aria-label='Contract tool' className='sendModeSwitch contractsModeSwitch' role='group'>
           <button aria-pressed={!verify} onClick={() => this.setMode(DEPLOY_MODE)} type='button'>

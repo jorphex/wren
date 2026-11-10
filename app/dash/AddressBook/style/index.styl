@@ -8,6 +8,7 @@
 .addressBook
   display flex
   flex-direction column
+  padding-bottom var(--wren-space-6)
 
 .addressBookHeader, .addressBookEditorHeader
   display flex
@@ -302,7 +303,7 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 
 .addressBookTransfer
   display flex
-  justify-content center
+  justify-content flex-start
   gap var(--wren-space-2)
   padding var(--wren-space-5) 0 var(--wren-space-2)
 
@@ -312,12 +313,10 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 .addressBookAddAction
   display flex
   justify-content flex-end
+  min-height 60px
+  box-sizing border-box
   margin-top auto
   padding var(--wren-space-4) 0 0
-
-  button.wrenControl.wrenControlPrimary
-    min-width 132px
-    min-height 44px
 
 .addressBookStatus, .addressBookError
   margin var(--wren-space-2) 0
@@ -609,11 +608,11 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 
 .addressBookExportNotice
   max-width 360px
-  margin 0 auto
+  margin 0
   color var(--wren-text-tertiary)
   font-size 12px
   line-height 18px
-  text-align center
+  text-align left
 
 .addressBookEditor details > summary
   box-sizing border-box

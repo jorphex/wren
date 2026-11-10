@@ -15,6 +15,7 @@ it('owns the stable Control destination order and replaces top-level routes', ()
 
   expect(primaryDashboardItems.map((item) => item.title)).toEqual([
     'Home',
+    'Earn',
     'Accounts',
     'Networks',
     'Connected apps',
@@ -37,9 +38,7 @@ it('keeps the selected destination stable and allows keyboard navigation', async
   await user.click(home)
   expect(link.send).not.toHaveBeenCalled()
   await user.tab()
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Accounts' }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Earn' }))
   await user.keyboard('{Enter}')
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'navReplace', 'dash', [
-    { view: 'accounts', data: {} }
-  ])
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navReplace', 'dash', [{ view: 'earn', data: {} }])
 })

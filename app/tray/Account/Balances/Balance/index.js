@@ -57,9 +57,7 @@ export class Balance extends React.Component {
               }}
             />
           </div>
-          <div className='signerBalanceChain' style={{ color: chainColor }}>
-            {chainName}
-          </div>
+          <div className='signerBalanceChain'>{chainName}</div>
           <div className='signerBalanceCurrency' title={name}>
             {name}
           </div>

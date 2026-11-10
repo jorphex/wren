@@ -78,6 +78,7 @@ export class ChainsPreview extends React.Component {
               <button
                 type='button'
                 aria-label={`Previous network from ${name}`}
+                title='Show gas for the previous network'
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index - 1)}
               >
@@ -88,6 +89,7 @@ export class ChainsPreview extends React.Component {
               <button
                 type='button'
                 aria-label={`Next network from ${name}`}
+                title='Show gas for the next network'
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index + 1)}
               >

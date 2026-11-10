@@ -136,7 +136,7 @@ class CustomTokens extends React.Component {
     const removalActive = removalConfirmTokenId !== null || removingTokenId !== null
 
     return (
-      <div className='cardShow' onMouseDown={(e) => e.stopPropagation()}>
+      <div className='cardShow customTokensPage' onMouseDown={(e) => e.stopPropagation()}>
         <div className='customTokens'>
           <div ref={this.listRef} className='customTokensList' tabIndex={-1} aria-label='Custom tokens'>
             {tokens.length > 0 ? (
@@ -287,6 +287,18 @@ class CustomTokens extends React.Component {
               </div>
             )}
           </div>
+        </div>
+        <div className='customTokensActionShelf'>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlLarge'
+            disabled={removalActive}
+            onClick={() =>
+              link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
+            }
+          >
+            Add token
+          </button>
         </div>
       </div>
     )

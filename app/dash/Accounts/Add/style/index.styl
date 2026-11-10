@@ -1174,3 +1174,25 @@
   .wrenControl
     min-height 44px
     min-width 44px
+
+// Keep the secret and its validation in view; continue at the viewport edge.
+.addAccountItem:not(.generatedWalletSetup):has(.addAccountSecretShelf)
+  .addAccountItemOption
+    bottom 0
+
+  .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
+    padding-bottom 0
+
+  .addAccountSecretShelf
+    display flex
+    flex none
+    align-items center
+    justify-content flex-end
+    width 100%
+    min-height 76px
+    margin-top auto
+    padding var(--wren-space-4) 0
+    box-sizing border-box
+
+    .addAccountItemOptionSubmit
+      margin 0
