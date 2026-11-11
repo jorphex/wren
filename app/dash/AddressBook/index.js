@@ -550,7 +550,7 @@ export class AddressBook extends React.Component {
 
         <div className='addressBookTransfer'>
           <button
-            className='wrenControl wrenControlGhost wrenControlCompact'
+            className='wrenControl wrenControlSecondary'
             disabled={this.state.working}
             onClick={() => this.transfer('import')}
             type='button'
@@ -558,7 +558,7 @@ export class AddressBook extends React.Component {
             Import JSON
           </button>
           <button
-            className='wrenControl wrenControlGhost wrenControlCompact'
+            className='wrenControl wrenControlSecondary'
             disabled={this.state.working}
             onClick={() => this.transfer('export')}
             type='button'

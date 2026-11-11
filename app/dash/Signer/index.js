@@ -483,7 +483,7 @@ export class Signer extends React.Component {
             <button
               ref={this.signerRemovalTrigger}
               type='button'
-              className='signerControlOption wrenControl wrenControlGhost'
+              className='signerControlOption wrenControl wrenControlSecondary'
               disabled={this.state.removalPending}
               onClick={() => this.armRemoval()}
             >
@@ -525,7 +525,7 @@ export class Signer extends React.Component {
             <button
               type='button'
               data-dialog-initial-focus
-              className='hardwareSignerPromptDismiss wrenControl wrenControlGhost'
+              className='hardwareSignerPromptDismiss wrenControl wrenControlSecondary'
               disabled={this.state.promptDismissalPending}
               onClick={() => this.dismissHardwarePrompt()}
             >

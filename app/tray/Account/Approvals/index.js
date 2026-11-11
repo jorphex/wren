@@ -235,7 +235,7 @@ export class Approvals extends React.Component {
             <button
               type='button'
               ref={this.refreshRef}
-              className='wrenControl wrenControlGhost wrenControlLarge'
+              className='wrenControl wrenControlSecondary wrenControlLarge'
               disabled={busy || Boolean(opening)}
               onClick={() => void this.load(true)}
             >

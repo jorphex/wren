@@ -1020,7 +1020,7 @@ export class Activity extends React.Component {
             ) : (
               <button
                 type='button'
-                className='activityClearButton wrenControl wrenControlGhost wrenControlLarge'
+                className='activityClearButton wrenControl wrenControlSecondary wrenControlLarge'
                 onClick={() => this.beginClear()}
                 ref={this.clearButtonRef}
               >

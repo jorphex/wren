@@ -931,7 +931,7 @@ export class ContractVerification extends React.Component {
           <div className='contractVerificationResultActions'>
             <button
               type='button'
-              className='wrenControl wrenControlGhost'
+              className='wrenControl wrenControlSecondary'
               disabled={Boolean(this.state.busy)}
               onClick={() => this.checkAnother()}
             >
@@ -1041,7 +1041,7 @@ export class ContractVerification extends React.Component {
             </label>
             <button
               type='button'
-              className='wrenControl wrenControlGhost'
+              className='wrenControl wrenControlSecondary'
               disabled={
                 Boolean(this.state.busy) ||
                 !this.state.etherscanAcknowledged ||

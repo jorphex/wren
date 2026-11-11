@@ -1571,6 +1571,13 @@ export class Send extends React.Component {
     } = this.requestStatePresentation(request)
     const savedContact = confirmed ? this.confirmedContact() : undefined
     const assertive = failed
+    const showRequestAction =
+      Boolean(
+        this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId) ||
+        !this.lastRequest
+      ) &&
+      !declined &&
+      !failed
 
     return (
       <section className={`sendRequestState ${confirmed ? 'sendRequestStateSuccess' : ''}`}>
@@ -1613,10 +1620,7 @@ export class Send extends React.Component {
             ) : null}
           </div>
         ) : null}
-        {(this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId) ||
-          !this.lastRequest) &&
-        !declined &&
-        !failed ? (
+        {showRequestAction ? (
           <button
             type='button'
             className='wrenControl wrenControlPrimary wrenControlLarge'
@@ -1667,7 +1671,7 @@ export class Send extends React.Component {
         ) : confirmed ? (
           <div className='sendConfirmedActions'>
             <button
-              className='wrenControl wrenControlGhost wrenControlLarge'
+              className='wrenControl wrenControlSecondary wrenControlLarge'
               onClick={() => this.openConfirmedContact()}
               type='button'
             >
@@ -1683,7 +1687,7 @@ export class Send extends React.Component {
           </div>
         ) : (
           <button
-            className='wrenControl wrenControlGhost wrenControlLarge'
+            className={`wrenControl ${showRequestAction ? 'wrenControlGhost' : 'wrenControlSecondary'} wrenControlLarge`}
             onClick={() => this.closeRequestPanel()}
             type='button'
           >

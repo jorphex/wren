@@ -131,7 +131,7 @@ export class ContractVerificationCredential extends Component {
                   />
                   <button
                     type='button'
-                    className='wrenControl wrenControlGhost'
+                    className='wrenControl wrenControlSecondary'
                     aria-describedby={formatHintVisible ? keyFormatId : undefined}
                     disabled={busy || !keyReady}
                     onClick={() => this.save()}

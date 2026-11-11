@@ -1,5 +1,7 @@
 'use strict'
 
+const checkCommandAffordance = require('./command-affordance.cjs')
+
 // Native-renderer coverage for management controls, panel navigation and initial loading.
 // Uses only the isolated qualification fixtures, restoring edited state before capture.
 const inspect = async () => {
@@ -12,10 +14,6 @@ const inspect = async () => {
   if (tokens) {
     for (const network of tokens.querySelectorAll('.customTokensListItemChain > div')) {
       ensure(!/^Chain \d+$/.test(network.textContent), 'Token list exposes a raw chain fallback')
-    }
-    for (const button of tokens.querySelectorAll('.customTokensListItemBottom button')) {
-      ensure(button.classList.contains('wrenControlGhost'), 'Token action bypasses shared ghost control')
-      ensure(button.getBoundingClientRect().height >= 44, 'Token action target is under 44px')
     }
     const edit = tokens.querySelector('[aria-label^="Edit "]')
     if (edit) {
@@ -116,7 +114,12 @@ const inspect = async () => {
 }
 
 module.exports = async (webContents, fixture) => {
+  const affordance = await checkCommandAffordance(webContents)
   const checks = await webContents.executeJavaScript(`(${inspect.toString()})()`, true)
+  checks.push(
+    ...affordance.commands,
+    ...affordance.protectedFlat.map((name) => `${name}: remains contextual`)
+  )
   const loading = await webContents.executeJavaScript("!!document.querySelector('.accountPortfolioSkeleton')")
   if (!loading) return checks
   const assert = require('node:assert/strict')
