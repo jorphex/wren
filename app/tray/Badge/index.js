@@ -69,7 +69,7 @@ export class Bridge extends React.Component {
           </div>
           {available ? (
             <button
-              className='updateDialogSkip wrenControl wrenControlGhost wrenControlCompact'
+              className='updateDialogSkip wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
               onClick={() => link.send('tray:dismissUpdate', badge.version, false)}
               type='button'
             >

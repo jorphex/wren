@@ -192,7 +192,7 @@ export class SettingsPreview extends React.Component {
                   <button
                     type='button'
                     ref={this.cancelRemoveRef}
-                    className='wrenControl wrenControlGhost'
+                    className='wrenControl wrenControlGhost wrenCommandLabel'
                     disabled={this.state.removing}
                     onClick={() => this.resetRemoveConfirmation()}
                   >

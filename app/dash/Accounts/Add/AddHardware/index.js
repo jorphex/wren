@@ -101,7 +101,11 @@ export class AddHardware extends React.Component {
                   {this.state.connecting ? 'Connecting…' : 'Connect with Suite'}
                 </button>
                 {this.state.connecting ? (
-                  <button type='button' className='wrenControl wrenControlGhost' onClick={this.cancel}>
+                  <button
+                    type='button'
+                    className='wrenControl wrenControlGhost wrenCommandLabel'
+                    onClick={this.cancel}
+                  >
                     Cancel
                   </button>
                 ) : null}

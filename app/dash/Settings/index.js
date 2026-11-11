@@ -473,7 +473,7 @@ export class Settings extends Component {
                   {summonShortcut.configuring ? (
                     <EditShortcut
                       type='button'
-                      className='wrenControl wrenControlGhost wrenControlLarge'
+                      className='wrenControl wrenControlGhost wrenCommandLabel wrenControlLarge'
                       onClick={() => {
                         link.send('tray:action', 'setShortcut', 'summon', {
                           ...summonShortcut,
@@ -486,7 +486,7 @@ export class Settings extends Component {
                   ) : (
                     <EditShortcut
                       type='button'
-                      className='wrenControl wrenControlGhost wrenControlLarge'
+                      className='wrenControl wrenControlGhost wrenCommandLabel wrenControlLarge'
                       onClick={() => {
                         link.send('tray:action', 'setShortcut', 'summon', {
                           ...summonShortcut,
@@ -849,7 +849,7 @@ export class Settings extends Component {
                     <button
                       type='button'
                       ref={this.recentDisableCancelRef}
-                      className='wrenControl wrenControlGhost'
+                      className='wrenControl wrenControlGhost wrenCommandLabel'
                       disabled={this.state.recentPrivacyPending}
                       onClick={() => this.cancelRecentDisable()}
                     >
@@ -874,7 +874,7 @@ export class Settings extends Component {
                   <button
                     type='button'
                     ref={this.recentClearTriggerRef}
-                    className='wrenControl wrenControlGhost'
+                    className='wrenControl wrenControlGhost wrenCommandLabel'
                     disabled={this.store('main.rememberRecentRecipients') !== true}
                     onClick={() => this.armRecentClear()}
                   >
@@ -906,7 +906,7 @@ export class Settings extends Component {
                     <button
                       type='button'
                       ref={this.recentClearCancelRef}
-                      className='wrenControl wrenControlGhost'
+                      className='wrenControl wrenControlGhost wrenCommandLabel'
                       disabled={this.state.recentPrivacyPending}
                       onClick={() => this.cancelRecentClear()}
                     >
@@ -961,7 +961,7 @@ export class Settings extends Component {
                         <RevokeCompanion
                           ref={this.revokeTriggerRefs[credential.fingerprint]}
                           type='button'
-                          className='wrenControl wrenControlGhost'
+                          className='wrenControl wrenControlGhost wrenCommandLabel'
                           onClick={() => this.armCompanionRevocation(credential)}
                         >
                           Revoke
@@ -998,7 +998,7 @@ export class Settings extends Component {
                           <button
                             type='button'
                             ref={this.revokeCancelRef}
-                            className='wrenControl wrenControlGhost'
+                            className='wrenControl wrenControlGhost wrenCommandLabel'
                             disabled={this.state.revokeCompanionPending}
                             onClick={() => this.cancelCompanionRevocation(credential.fingerprint)}
                           >
@@ -1050,7 +1050,7 @@ export class Settings extends Component {
                         >{`Connection ID ${shortId}`}</CompanionIdentity>
                         <button
                           type='button'
-                          className='localConnectionTarget wrenControl wrenControlGhost'
+                          className='localConnectionTarget wrenControl wrenControlGhost wrenCommandLabel'
                           onClick={() => link.send('tray:clipboardData', credential.fingerprint)}
                         >
                           Copy full connection ID
@@ -1060,7 +1060,7 @@ export class Settings extends Component {
                         <RevokeCompanion
                           ref={this.revokeNativeTriggerRefs[credential.fingerprint]}
                           type='button'
-                          className='localConnectionTarget wrenControl wrenControlGhost'
+                          className='localConnectionTarget wrenControl wrenControlGhost wrenCommandLabel'
                           aria-label='Revoke local app'
                           onClick={() => this.armNativeRevocation(credential)}
                         >
@@ -1096,7 +1096,7 @@ export class Settings extends Component {
                           <button
                             type='button'
                             ref={this.revokeNativeCancelRef}
-                            className='wrenControl wrenControlGhost'
+                            className='wrenControl wrenControlGhost wrenCommandLabel'
                             disabled={this.state.revokeNativePending}
                             onClick={() => this.cancelNativeRevocation(credential.fingerprint)}
                           >

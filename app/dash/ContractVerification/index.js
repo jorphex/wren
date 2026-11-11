@@ -204,7 +204,7 @@ const ArtifactSummary = ({ artifact, busy, buttonRef, frozen = false, onReplace 
           <button
             type='button'
             ref={buttonRef}
-            className='wrenControl wrenControlGhost'
+            className='wrenControl wrenControlGhost wrenCommandLabel'
             disabled={busy}
             onClick={onReplace}
           >
@@ -939,7 +939,7 @@ export class ContractVerification extends React.Component {
             </button>
             <button
               type='button'
-              className='wrenControl wrenControlGhost'
+              className='wrenControl wrenControlGhost wrenCommandLabel'
               disabled={Boolean(this.state.busy)}
               onClick={() => this.refresh()}
             >
@@ -961,7 +961,7 @@ export class ContractVerification extends React.Component {
                   {entry.explorerUrl ? (
                     <button
                       type='button'
-                      className='wrenControl wrenControlGhost contractVerificationExternal'
+                      className='wrenControl wrenControlGhost wrenCommandLabel contractVerificationExternal'
                       disabled={Boolean(this.state.busy)}
                       onClick={() => this.openResult(entry.destination)}
                     >

@@ -83,6 +83,51 @@ const protectedControls = () => {
 
 const painted = (value) => value !== 'transparent' && !(/^rgba\(/.test(value) && /,\s*0\)$/.test(value))
 
+// Select critical command contexts independently of the typography marker.
+const labelTypography = () => {
+  const targets = new Set(
+    document.querySelectorAll(
+      '.addressBookRow .addressBookEdit, .addressBookRow .addressBookRemove, ' +
+        '.revokeAccessButton, .revokeAccessLabel, .clearPermissionsAction, ' +
+        '.sendMaxAction, .sendRecipientCopy, .sendQuoteEdit, .sendSweepSelectAll, ' +
+        '.sendSweepRecipient button, .sendSweepCopies button, .sendConfirmedDestination button, ' +
+        '.requestClearAll, .earnYearnLink, .contractVerificationExternal'
+    )
+  )
+  for (const button of document.querySelectorAll('.wrenSettingsSection button')) {
+    if (/^(Edit|Cancel|Clear|Revoke|Remove|Copy full connection ID)$/.test(button.textContent.trim())) {
+      targets.add(button)
+    }
+  }
+  for (const button of document.querySelectorAll('button')) {
+    const label = button.textContent.trim()
+    if (/^(Cancel|Skip this version|Replace|Refresh status)$/.test(label)) targets.add(button)
+  }
+  const reference = document.createElement('button')
+  reference.className = 'wrenControl wrenControlSecondary'
+  reference.hidden = true
+  document.body.append(reference)
+  try {
+    return [...targets]
+      .filter(
+        (element) => element.getClientRects().length && !element.closest('[hidden], details:not([open])')
+      )
+      .map((element) => {
+        const actual = getComputedStyle(element)
+        reference.style.fontSize = actual.fontSize
+        const expected = getComputedStyle(reference)
+        const keys = ['fontFamily', 'fontWeight', 'letterSpacing', 'textTransform']
+        return {
+          name: element.getAttribute('aria-label') || element.textContent.trim(),
+          actual: keys.map((key) => actual[key]),
+          expected: keys.map((key) => expected[key])
+        }
+      })
+  } finally {
+    reference.remove()
+  }
+}
+
 module.exports = async (webContents) => {
   const targets = await webContents.executeJavaScript(`(${commands.toString()})()`)
   const results = []
@@ -154,6 +199,15 @@ module.exports = async (webContents) => {
       !painted(control.fill) && control.shadow === 'none',
       `${control.name}: contextual control became tactile`
     )
+  }
+  const labels = await webContents.executeJavaScript(`(${labelTypography.toString()})()`)
+  for (const label of labels) {
+    assert.deepEqual(
+      label.actual,
+      label.expected,
+      `${label.name}: command label differs from bordered buttons`
+    )
+    results.push(`${label.name}: shared command label typography`)
   }
   return { commands: results, protectedFlat: flat.map((control) => control.name) }
 }

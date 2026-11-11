@@ -594,7 +594,7 @@ export class Requests extends React.Component {
               ref={this.clearReturnFocusRef}
               type='button'
               aria-label='Clear all requests'
-              className='requestClearAll wrenControl wrenControlGhost wrenControlCompact'
+              className='requestClearAll wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
               disabled={this.state.clearing}
               onClick={() => this.openClearConfirmation()}
             >

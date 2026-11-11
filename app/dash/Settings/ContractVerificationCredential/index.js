@@ -143,7 +143,7 @@ export class ContractVerificationCredential extends Component {
               {credential.configured ? (
                 <button
                   type='button'
-                  className='wrenControl wrenControlGhost'
+                  className='wrenControl wrenControlGhost wrenCommandLabel'
                   disabled={busy}
                   onClick={() => this.remove()}
                 >

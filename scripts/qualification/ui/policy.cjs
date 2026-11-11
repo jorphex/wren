@@ -592,7 +592,7 @@ const sendComposerScenarios = () =>
             kind: 'computed-style',
             selector: '.sendSweepSelectAll',
             property: 'fontWeight',
-            value: '430'
+            value: '550'
           },
           {
             kind: 'computed-style',

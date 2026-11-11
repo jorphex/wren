@@ -1199,7 +1199,7 @@ export class Send extends React.Component {
           <span className='sendQuoteBadge'>Expires {expiryLabel(maxQuote.expiresAt)}</span>
         </div>
         <button
-          className='wrenControl wrenControlGhost wrenControlCompact sendQuoteEdit'
+          className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact sendQuoteEdit'
           onClick={() => {
             this.clearDerivedReview({ clearAmount: true })
             setTimeout(() => this.amountRef.current?.focus(), 0)
@@ -1284,7 +1284,7 @@ export class Send extends React.Component {
                 <code>{quote.recipient || this.state.recipientResolved}</code>
                 <button
                   aria-label='Copy full sweep recipient address'
-                  className='wrenControl wrenControlGhost wrenControlCompact'
+                  className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                   onClick={() =>
                     this.copySweepValue('Recipient address', quote.recipient || this.state.recipientResolved)
                   }
@@ -1312,7 +1312,7 @@ export class Send extends React.Component {
                       <span className='sendSweepCopies'>
                         <button
                           aria-label={`Copy full token ${index + 1} address`}
-                          className='wrenControl wrenControlGhost wrenControlCompact'
+                          className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                           onClick={() => this.copySweepValue(`Token ${index + 1} address`, asset.address)}
                           type='button'
                         >
@@ -1321,7 +1321,7 @@ export class Send extends React.Component {
                         <button
                           aria-label={`Copy full token ${index + 1} amount`}
                           aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
-                          className='wrenControl wrenControlGhost wrenControlCompact'
+                          className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                           disabled={hideBalances}
                           onClick={() => this.copySweepValue(`Token ${index + 1} amount`, asset.balance)}
                           type='button'
@@ -1345,7 +1345,7 @@ export class Send extends React.Component {
                   <button
                     aria-label='Copy full native amount'
                     aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
-                    className='wrenControl wrenControlGhost wrenControlCompact'
+                    className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                     disabled={hideBalances}
                     onClick={() => this.copySweepValue('Native amount', quote.native.value)}
                     type='button'
@@ -1474,7 +1474,7 @@ export class Send extends React.Component {
               <span aria-live='polite'>Scanning fresh balances…</span>
             ) : null}
             <button
-              className='sendSweepSelectAll wrenControl wrenControlGhost wrenControlCompact'
+              className='sendSweepSelectAll wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
               disabled={busy || (tokens.length === 0 && !native)}
               onClick={() => this.selectSweepAssets(tokens, native)}
               type='button'
@@ -1607,7 +1607,7 @@ export class Send extends React.Component {
             {savedContact ? <strong>{savedContact.name}</strong> : null}
             <code>{this.state.requestRecipient}</code>
             <button
-              className='wrenControl wrenControlGhost wrenControlCompact'
+              className='wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
               onClick={() => this.copyAddress(this.state.requestRecipient)}
               type='button'
             >
@@ -1687,7 +1687,7 @@ export class Send extends React.Component {
           </div>
         ) : (
           <button
-            className={`wrenControl ${showRequestAction ? 'wrenControlGhost' : 'wrenControlSecondary'} wrenControlLarge`}
+            className={`wrenControl ${showRequestAction ? 'wrenControlGhost wrenCommandLabel' : 'wrenControlSecondary'} wrenControlLarge`}
             onClick={() => this.closeRequestPanel()}
             type='button'
           >
@@ -1894,7 +1894,7 @@ export class Send extends React.Component {
                     <code>{this.state.recipientResolved}</code>
                     <button
                       aria-label='Copy recipient address'
-                      className='sendRecipientCopy'
+                      className='sendRecipientCopy wrenCommandLabel'
                       disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                       onClick={() => this.copyAddress(this.state.recipientResolved)}
                       type='button'
@@ -1952,7 +1952,7 @@ export class Send extends React.Component {
                 <span className='sendAmountSymbol'>{selected.symbol}</span>
                 <button
                   aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
-                  className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
+                  className='sendMaxAction wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                   disabled={
                     maxNeedsRecipient || derivationBusy || this.state.queueing || Boolean(this.state.maxQuote)
                   }

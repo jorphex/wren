@@ -631,7 +631,7 @@ export class DappsPermissionsExpanded extends React.Component {
                 </div>
                 <button
                   type='button'
-                  className='clearPermissionsAction wrenControl wrenControlGhost wrenControlCompact'
+                  className='clearPermissionsAction wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                   aria-label='Revoke all app access'
                   onClick={() => this.beginClear()}
                   ref={this.clearButtonRef}

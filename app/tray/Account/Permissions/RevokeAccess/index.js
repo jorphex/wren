@@ -187,7 +187,7 @@ export class RevokeAccess extends React.Component {
           ref={this.triggerRef}
           type='button'
           data-permission-id={this.props.permissionId}
-          className='revokeAccessButton wrenControl wrenControlGhost'
+          className='revokeAccessButton wrenControl wrenControlGhost wrenCommandLabel'
           aria-label='Revoke access'
           disabled={this.state.pending}
           onClick={() => this.open()}

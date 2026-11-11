@@ -469,7 +469,7 @@ export class AddressBook extends React.Component {
                   </span>
                   <button
                     ref={this.removeCancelRef}
-                    className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
+                    className='addressBookEdit wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                     disabled={this.state.working}
                     onClick={() => this.cancelRemoveConfirmation()}
                     type='button'
@@ -513,7 +513,7 @@ export class AddressBook extends React.Component {
                   </button>
                   <button
                     aria-label={`Edit ${entry.name}`}
-                    className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
+                    className='addressBookEdit wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                     disabled={this.state.working}
                     onClick={() => this.openEditor(entry.address)}
                     type='button'
@@ -523,7 +523,7 @@ export class AddressBook extends React.Component {
                   <button
                     ref={(element) => this.setRemoveButtonRef(entry.address, element)}
                     aria-label={`Remove ${entry.name}`}
-                    className='addressBookRemove wrenControl wrenControlGhost wrenControlCompact'
+                    className='addressBookRemove wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
                     disabled={this.state.working}
                     onClick={() => this.openRemoveConfirmation(entry.address)}
                     type='button'

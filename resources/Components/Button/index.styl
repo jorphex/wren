@@ -1,3 +1,9 @@
+wrenUiLabel()
+  font-family var(--wren-font-ui)
+  font-weight 550
+  letter-spacing .01em
+  text-transform none
+
 button.wrenControl
   appearance none
   min-height 38px
@@ -13,12 +19,9 @@ button.wrenControl
   background-color var(--wren-bg-elevated)
   background-image var(--wren-control-texture-dark)
   box-shadow var(--wren-control-shadow)
-  font-family var(--wren-font-ui)
+  wrenUiLabel()
   font-size 13px
-  font-weight 550
   line-height 1
-  letter-spacing .01em
-  text-transform none
   cursor pointer
   transform translateY(0)
   transition background-color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
@@ -90,6 +93,11 @@ button.wrenControl.wrenControlGhost
     background-color var(--wren-surface-active)
     background-image none
     box-shadow none
+
+// Only command words opt in; navigation, disclosures and data keep their own type.
+button.wrenCommandLabel,
+button.wrenControl.wrenControlGhost.wrenCommandLabel
+  wrenUiLabel()
 
 // Persistent selection is a quiet state surface, not a tactile action.
 // Keep this rule after the ghost variant so hover cannot erase the applied state.

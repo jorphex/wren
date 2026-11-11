@@ -1129,14 +1129,14 @@ const VaultDetails = ({
         <div className='earnDetailsFooter'>
           <button
             type='button'
-            className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
+            className='earnYearnLink wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
             onClick={() => link.send('tray:openExternal', vault.yearnUrl)}
           >
             View on Yearn (external)
           </button>
           <button
             type='button'
-            className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
+            className='earnYearnLink wrenControl wrenControlGhost wrenCommandLabel wrenControlCompact'
             onClick={() =>
               link.send('tray:openExplorer', { type: 'ethereum', id: vault.chainId }, null, vault.address)
             }
