@@ -390,6 +390,7 @@ export class Signer extends React.Component {
                 <button
                   type='button'
                   aria-label='Previous address page'
+                  title='Previous address page'
                   className='signerBottomPageBack wrenControl wrenControlGhost wrenControlIcon'
                   disabled={page === 0}
                   onClick={() => this.nextPage(true)}
@@ -402,6 +403,7 @@ export class Signer extends React.Component {
                 <button
                   type='button'
                   aria-label='Next address page'
+                  title='Next address page'
                   className='signerBottomPageNext wrenControl wrenControlGhost wrenControlIcon'
                   disabled={startIndex + addressLimit >= signer.addresses.length}
                   onClick={() => this.nextPage()}

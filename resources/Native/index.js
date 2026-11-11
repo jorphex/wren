@@ -38,6 +38,7 @@ export class NativeControls extends React.Component {
                 type='button'
                 className='windowsControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                 aria-label='Minimize window'
+                title='Minimize window'
                 onClick={this.handleMin}
               >
                 <Icon name='minimize' size={14} />
@@ -47,6 +48,7 @@ export class NativeControls extends React.Component {
                   type='button'
                   className='windowsControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                   aria-label='Restore window'
+                  title='Restore window'
                   onClick={this.handleUnmax}
                 >
                   <Icon name='restore' size={14} />
@@ -56,6 +58,7 @@ export class NativeControls extends React.Component {
                   type='button'
                   className='windowsControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                   aria-label='Maximize window'
+                  title='Maximize window'
                   onClick={this.handleMax}
                 >
                   <Icon name='maximize' size={14} />
@@ -65,6 +68,7 @@ export class NativeControls extends React.Component {
                 type='button'
                 className='windowsControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                 aria-label='Close window'
+                title='Close window'
                 onClick={this.handleClose}
               >
                 <Icon name='close' size={14} />
@@ -79,6 +83,7 @@ export class NativeControls extends React.Component {
                 type='button'
                 className='linuxControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                 aria-label='Minimize window'
+                title='Minimize window'
                 onClick={this.handleMin}
               >
                 <Icon name='minimize' size={14} />
@@ -88,6 +93,7 @@ export class NativeControls extends React.Component {
                   type='button'
                   className='linuxControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                   aria-label='Restore window'
+                  title='Restore window'
                   onClick={this.handleUnmax}
                 >
                   <Icon name='restore' size={14} />
@@ -97,6 +103,7 @@ export class NativeControls extends React.Component {
                   type='button'
                   className='linuxControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                   aria-label='Maximize window'
+                  title='Maximize window'
                   onClick={this.handleMax}
                 >
                   <Icon name='maximize' size={14} />
@@ -106,6 +113,7 @@ export class NativeControls extends React.Component {
                 type='button'
                 className='linuxControlsButton wrenControl wrenControlSecondary wrenControlChrome'
                 aria-label='Close window'
+                title='Close window'
                 onClick={this.handleClose}
               >
                 <Icon name='close' size={14} />

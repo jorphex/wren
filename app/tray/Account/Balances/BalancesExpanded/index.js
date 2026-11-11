@@ -102,6 +102,7 @@ export class BalancesExpanded extends React.Component {
           <button
             type='button'
             aria-label='Clear balance filter'
+            title='Clear balance filter'
             className='panelFilterClear wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => {
               this.setState({ balanceFilter: '' })

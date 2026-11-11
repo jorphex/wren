@@ -48,6 +48,7 @@ const NonceControl = ({ req, nonce = req.data.nonce, displayValue, hint, readOnl
             <button
               type='button'
               aria-label='Reset nonce'
+              title='Reset nonce'
               className='transactionNonceButton transactionNonceReset'
               onClick={() => link.send('tray:resetNonce', requestReference)}
             >

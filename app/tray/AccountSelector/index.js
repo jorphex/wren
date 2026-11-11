@@ -67,6 +67,7 @@ export class AccountSelector extends React.Component {
           <button
             type='button'
             aria-label='Clear account filter'
+            title='Clear account filter'
             className='panelFilterClear wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => {
               this.setState({ accountFilter: '' })

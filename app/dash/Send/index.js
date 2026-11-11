@@ -1853,6 +1853,7 @@ export class Send extends React.Component {
               />
               <button
                 aria-label={COPY.chooseContact}
+                title={COPY.chooseContact}
                 className='sendInlineAction'
                 disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                 ref={this.contactTriggerRef}
@@ -1867,6 +1868,7 @@ export class Send extends React.Component {
               {this.state.recipient ? (
                 <button
                   aria-label={COPY.clearRecipient}
+                  title={COPY.clearRecipient}
                   className='sendInlineAction'
                   disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                   onClick={() => this.updateRecipient('')}

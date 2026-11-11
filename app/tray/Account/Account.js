@@ -410,6 +410,7 @@ class _AccountMain extends React.Component {
           <button
             type='button'
             aria-label='Clear account view filter'
+            title='Clear account view filter'
             className='panelFilterClear wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => {
               this.setState({ accountModuleFilter: '' })
@@ -572,6 +573,7 @@ class _AccountView extends React.Component {
           <button
             type='button'
             aria-label='Back'
+            title='Back'
             className='accountViewBack wrenControl wrenControlIcon wrenShellNav'
             onClick={() => this.props.back()}
           >

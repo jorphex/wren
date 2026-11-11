@@ -176,6 +176,7 @@ class CustomTokens extends React.Component {
                           }}
                           type='button'
                           aria-label={`${expanded ? 'Collapse' : 'Expand'} ${token.symbol} token on chain ${token.chainId}`}
+                          title={`${expanded ? 'Collapse' : 'Expand'} ${token.symbol} token on chain ${token.chainId}`}
                           aria-expanded={expanded}
                           disabled={removalActive}
                           className={
@@ -244,6 +245,15 @@ class CustomTokens extends React.Component {
                         ) : (
                           <div className='customTokensListItemBottom'>
                             <button
+                              type='button'
+                              aria-label={`Edit ${token.symbol} token`}
+                              className='customTokensListItemButton wrenControl wrenControlSecondary wrenControlCompact'
+                              disabled={navigatingTokenId !== null || removalActive}
+                              onClick={() => this.editToken(token)}
+                            >
+                              {navigatingTokenId === tokenId ? 'Opening token' : 'Edit token'}
+                            </button>
+                            <button
                               ref={(node) => {
                                 if (node) {
                                   this.removeButtons.set(tokenId, node)
@@ -261,15 +271,6 @@ class CustomTokens extends React.Component {
                               onClick={() => this.removeToken(token)}
                             >
                               Remove token
-                            </button>
-                            <button
-                              type='button'
-                              aria-label={`Edit ${token.symbol} token`}
-                              className='customTokensListItemButton wrenControl wrenControlSecondary wrenControlCompact'
-                              disabled={navigatingTokenId !== null || removalActive}
-                              onClick={() => this.editToken(token)}
-                            >
-                              {navigatingTokenId === tokenId ? 'Opening token' : 'Edit token'}
                             </button>
                           </div>
                         )}

@@ -101,7 +101,15 @@ const labelTypography = () => {
   }
   for (const button of document.querySelectorAll('button')) {
     const label = button.textContent.trim()
-    if (/^(Cancel|Skip this version|Replace|Refresh status)$/.test(label)) targets.add(button)
+    // These words also occur on bespoke bordered transaction controls, outside this pass.
+    const css = getComputedStyle(button)
+    const flat = css.backgroundColor === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(css.backgroundColor)
+    if (
+      flat &&
+      !button.closest('.requestActionButtons') &&
+      /^(Cancel|Skip this version|Replace|Refresh status)$/.test(label)
+    )
+      targets.add(button)
   }
   const reference = document.createElement('button')
   reference.className = 'wrenControl wrenControlSecondary'
@@ -137,14 +145,14 @@ module.exports = async (webContents) => {
     const expression = `document.querySelectorAll('button')[${target.index}]`
     await webContents.executeJavaScript(`${expression}.scrollIntoView({block:'center'})`)
     const rest = await read(target.index)
+    const zoom = webContents.getZoomFactor()
     assert(rest.height >= 44, `${target.name}: command target below 44px`)
     assert(
-      rest.border >= 1 && painted(rest.edge) && painted(rest.fill),
+      rest.border * zoom >= 0.99 && painted(rest.edge) && painted(rest.fill),
       `${target.name}: no resting button body`
     )
     if (!target.disabled) {
       assert.equal(rest.cursor, 'pointer', `${target.name}: no action cursor`)
-      const zoom = webContents.getZoomFactor()
       const point = {
         x: Math.round((rest.x + rest.width / 2) * zoom),
         y: Math.round((rest.y + rest.height / 2) * zoom)
@@ -175,7 +183,7 @@ module.exports = async (webContents) => {
       webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab' })
       webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab' })
       await webContents.executeJavaScript(`${expression}.focus({preventScroll:true})`)
-      assert((await read(target.index)).outline >= 2, `${target.name}: no keyboard focus ring`)
+      assert((await read(target.index)).outline * zoom >= 1.99, `${target.name}: no keyboard focus ring`)
       try {
         await webContents.executeJavaScript(`${expression}.disabled = true`)
         await settle()

@@ -229,6 +229,7 @@ export const RpcEndpointLedger = ({
                 <button
                   type='button'
                   aria-label={`Move RPC endpoint ${index + 1} up`}
+                  title={`Move RPC endpoint ${index + 1} up`}
                   disabled={index === 0}
                   onClick={() => onMove(endpoint.id, -1)}
                 >
@@ -237,6 +238,7 @@ export const RpcEndpointLedger = ({
                 <button
                   type='button'
                   aria-label={`Move RPC endpoint ${index + 1} down`}
+                  title={`Move RPC endpoint ${index + 1} down`}
                   disabled={index === endpoints.length - 1}
                   onClick={() => onMove(endpoint.id, 1)}
                 >
@@ -255,6 +257,7 @@ export const RpcEndpointLedger = ({
                   type='button'
                   className='rpcEndpointRemove'
                   aria-label={`Remove RPC endpoint ${index + 1}`}
+                  title={`Remove RPC endpoint ${index + 1}`}
                   onClick={() => removeEndpoint(endpoint.id, index)}
                 >
                   <Icon name='remove' size={14} />
@@ -330,6 +333,7 @@ export const ChainHeader = ({
           <button
             type='button'
             aria-label={isMainnet ? `${name} is always enabled` : `${on ? 'Disable' : 'Enable'} ${name}`}
+            title={isMainnet ? `${name} is always enabled` : `${on ? 'Disable' : 'Enable'} ${name}`}
             aria-pressed={on}
             className={on ? 'signerPermissionToggle signerPermissionToggleOn' : 'signerPermissionToggle'}
             disabled={isMainnet}
@@ -370,6 +374,7 @@ export const EditChainColor = ({ currentColor, onChange }) => {
           <button
             type='button'
             aria-label={`Use ${label} as the network color`}
+            title={`Use ${label} as the network color`}
             aria-pressed={currentColor === color}
             key={color}
             className={
@@ -503,6 +508,7 @@ export const EditTestnet = ({ testnet, onChange }) => {
       <button
         type='button'
         aria-label={`${testnet ? 'Disable' : 'Enable'} testnet mode`}
+        title={`${testnet ? 'Disable' : 'Enable'} testnet mode`}
         aria-pressed={testnet}
         className={testnet ? 'signerPermissionToggle signerPermissionToggleOn' : 'signerPermissionToggle'}
         onClick={() => onChange(!testnet)}

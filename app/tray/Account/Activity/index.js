@@ -613,6 +613,7 @@ const ActivityDetail = ({
                       <button
                         type='button'
                         aria-label={`Copy transaction ${index + 1} hash`}
+                        title={`Copy transaction ${index + 1} hash`}
                         className='wrenControl wrenControlGhost wrenControlIcon'
                         onClick={() => onCopyHash(transaction.hash)}
                       >
@@ -622,6 +623,7 @@ const ActivityDetail = ({
                         <button
                           type='button'
                           aria-label={`View transaction ${index + 1} on explorer`}
+                          title={`View transaction ${index + 1} on explorer`}
                           className='wrenControl wrenControlGhost wrenControlIcon'
                           onClick={() => onOpenExplorer(transaction.hash)}
                         >

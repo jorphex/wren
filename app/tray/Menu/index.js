@@ -13,6 +13,7 @@ export class Menu extends React.Component {
           type='button'
           className='panelMenuItem panelMenuItemOpen panelWorkspaceToggle wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
           aria-label={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
+          title={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
           aria-pressed={workspaceOpen}
           onClick={() => {
             link.send('tray:action', 'setDash', {

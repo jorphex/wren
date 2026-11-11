@@ -58,6 +58,7 @@ export class Inventory extends React.Component {
                   key={id}
                   className='inventoryCollectionItem'
                   aria-label={`Open ${name || `token ${tokenId}`} in browser`}
+                  title={`Open ${name || `token ${tokenId}`} in browser`}
                   onClick={() => {
                     this.store.notify('openExternal', { url: openSeaLink })
                   }}

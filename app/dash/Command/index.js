@@ -18,6 +18,7 @@ export class Command extends React.Component {
         <button
           type='button'
           aria-label='Close'
+          title='Close'
           className='commandHomeClose wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
           onClick={() => {
             requestDashNavigation('close', () => link.send('tray:action', 'closeDash'))
@@ -92,6 +93,7 @@ export class Command extends React.Component {
           <button
             type='button'
             aria-label='Back'
+            title='Back'
             className='commandItem commandItemBack cardShow wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
             onClick={() => {
               requestDashNavigation('back', () => link.send('tray:action', 'backDash'))
@@ -106,6 +108,7 @@ export class Command extends React.Component {
         <button
           type='button'
           aria-label='Close'
+          title='Close'
           className='commandItem commandItemClose wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           onClick={() => {
             requestDashNavigation('close', () => link.send('tray:action', 'closeDash'))

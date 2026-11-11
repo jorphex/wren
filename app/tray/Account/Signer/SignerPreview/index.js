@@ -234,6 +234,7 @@ export class Signer extends React.Component {
                 <button
                   type='button'
                   aria-label='Verify account address on signer'
+                  title='Verify account address on signer'
                   className='signerPreviewVerify'
                   disabled={this.state.verifying}
                   onClick={() => this.verifyAddress(hardwareSigner)}

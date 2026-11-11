@@ -17,6 +17,11 @@ const inspect = async () => {
     }
     const edit = tokens.querySelector('[aria-label^="Edit "]')
     if (edit) {
+      const actions = [...edit.parentElement.querySelectorAll('button')]
+      ensure(
+        actions[0] === edit && /^Remove /.test(actions[1]?.getAttribute('aria-label')),
+        'Token actions must put Edit before Remove'
+      )
       const css = getComputedStyle(edit)
       const neutral = document.createElement('span')
       neutral.style.color = 'var(--wren-text-secondary)'
@@ -92,7 +97,21 @@ const inspect = async () => {
       ensure(!hidden && card.getAttribute('aria-busy') === 'true', 'Loading value exposes private state')
       ensure(rows.length === 1, 'Initial loading rows are missing or duplicated')
       ensure(rows[0].querySelectorAll('.balanceLoadingRow').length === 3, 'Loading rows incomplete')
-      ensure(getComputedStyle(skeleton).animationName === 'none', 'Loading skeleton animates')
+      const css = getComputedStyle(skeleton)
+      ensure(css.animationName === 'none', 'Loading skeleton animates')
+      const swatch = document.createElement('span')
+      swatch.style.backgroundColor = 'var(--wren-border-strong)'
+      card.append(swatch)
+      ensure(css.backgroundColor === getComputedStyle(swatch).backgroundColor, 'Loading value is too faint')
+      for (const block of rows[0].querySelectorAll(
+        '.balanceLoadingIcon, .balanceLoadingName span, .balanceLoadingAmount'
+      )) {
+        ensure(
+          getComputedStyle(block).backgroundColor === css.backgroundColor,
+          'Loading blocks use inconsistent contrast'
+        )
+      }
+      swatch.remove()
       ensure(
         card.querySelector('.accountPortfolioValue').getAttribute('aria-label') ===
           'Loading portfolio balance',
@@ -110,6 +129,22 @@ const inspect = async () => {
     }
     checks.push('portfolio loading/privacy and tray icon labels')
   }
+  let iconCount = 0
+  for (const button of document.querySelectorAll('button')) {
+    if (button.getAttribute('role') === 'switch') continue // Labeled state widgets are not icon commands.
+    // Cluster overlay buttons act on the adjacent visible address/value, not an unlabeled icon.
+    const visibleValue =
+      button.nextElementSibling?.matches('.clusterValueContent') &&
+      button.nextElementSibling.textContent.trim()
+    if (button.textContent.trim() || visibleValue || !button.getBoundingClientRect().height) continue
+    const name =
+      button.getAttribute('aria-label') ||
+      document.getElementById(button.getAttribute('aria-labelledby'))?.textContent
+    ensure(name?.trim(), 'Icon-only button has no accessible name: ' + button.className)
+    ensure(button.title.trim(), 'Icon-only button has no tooltip: ' + button.className)
+    iconCount++
+  }
+  if (iconCount) checks.push(`${iconCount} icon-only controls: names and tooltips`)
   return checks
 }
 
@@ -178,6 +213,15 @@ module.exports = async (webContents, fixture) => {
       "!document.querySelector('.balanceLoading') && [...document.querySelectorAll('.balancesPreview .signerBalanceInner')].every(row => getComputedStyle(row).opacity === '1')",
       'Refresh hides cached balances'
     )
+    const empty = structuredClone(populated)
+    empty.balances[address].forEach((balance) => {
+      balance.balance = '0'
+    })
+    await replace(empty)
+    await verify(
+      "!document.querySelector('.accountPortfolioSkeleton, .balanceLoading') && document.querySelector('.accountPortfolioValue').textContent.includes('$0')",
+      'Empty portfolio is confused with loading'
+    )
     const unavailable = structuredClone(populated)
     unavailable.networksMeta.ethereum[ids[0]].nativeCurrency.usd = {}
     await replace(unavailable)
@@ -189,6 +233,6 @@ module.exports = async (webContents, fixture) => {
     await replace(original)
   }
   await verify("!!document.querySelector('.accountPortfolioSkeleton')", 'Loading fixture was not restored')
-  checks.push('loading recovery, cached refresh and unavailable value')
+  checks.push('loading recovery, cached refresh, empty and unavailable value')
   return checks
 }

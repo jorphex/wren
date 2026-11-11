@@ -103,6 +103,11 @@ export class ChainsPreview extends React.Component {
                   ? `View ${name} account on block explorer`
                   : `Block explorer unavailable for ${name}`
               }
+              title={
+                explorerAvailable
+                  ? `View ${name} account on block explorer`
+                  : `Block explorer unavailable for ${name}`
+              }
               className='chainMonitorExplorer wrenControl wrenControlGhost wrenControlIcon'
               disabled={!explorerAvailable}
               onClick={() => link.send('tray:openExplorer', chain, null, this.props.account)}
