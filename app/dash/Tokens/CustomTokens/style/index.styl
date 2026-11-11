@@ -274,54 +274,14 @@
     .customTokensListItemBottom
       display flex
       align-items center
+      justify-content flex-end
       gap var(--wren-space-2)
       padding var(--wren-space-3)
 
-    .customTokensListItemButton
-      appearance none
-      width 50%
+    button.customTokensListItemButton.wrenControl
       min-height 44px
-      display flex
-      justify-content center
-      align-items center
-      box-sizing border-box
-      padding 0 var(--wren-space-2)
-      border 1px solid var(--wren-border-default)
-      border-radius var(--wren-radius-sm)
-      background var(--wren-bg-elevated)
-      color var(--wren-text-primary)
-      font-family inherit
-      font-size var(--wren-type-small)
-      font-weight 500
-      cursor pointer
-      transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
-      *
-        pointer-events none
-
-    .customTokensListItemButton:hover
-      background var(--wren-surface-hover)
-      border-color var(--wren-border-strong)
-
-    .customTokensListItemButton:focus-visible
-      outline 2px solid var(--wren-focus)
-      outline-offset 2px
-
-    .customTokensListItemButton:disabled,
-    .customTokensListItemButton[aria-disabled='true']
-      color var(--wren-text-disabled)
-      cursor default
-      opacity .6
-
-    .customTokensListItemButton:disabled:hover,
-    .customTokensListItemButton[aria-disabled='true']:hover
-      background var(--wren-bg-elevated)
-      border-color var(--wren-border-default)
-
-    .editButton
-      color var(--wren-accent-secondary-hover)
-
-    .removeButton
+    button.customTokensRemoveAction.wrenControlGhost:not(:disabled)
       color var(--wren-danger)
 
     .customTokensListItemRemoval

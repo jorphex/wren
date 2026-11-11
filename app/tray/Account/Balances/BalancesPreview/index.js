@@ -20,6 +20,7 @@ import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Comp
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
 import Balance from '../Balance'
+import BalanceLoading from '../Loading'
 
 export class BalancesPreview extends React.Component {
   constructor(...args) {
@@ -111,6 +112,7 @@ export class BalancesPreview extends React.Component {
 
     // scan if balances are more than a minute old
     const scanning = !lastBalanceUpdate || new Date() - new Date(lastBalanceUpdate) > 1000 * 60
+    const initialLoading = scanning && !storedBalances.length
     const hotSigner = ['ring', 'seed'].includes(lastSignerType)
     const hideBalances = this.store('selected.hideBalances')
 
@@ -122,10 +124,14 @@ export class BalancesPreview extends React.Component {
           </span>
           <span>{'Balances'}</span>
         </div>
-        {scanning ? (
-          <div className='signerBalancesLoading'>
-            <div className='loader' />
-          </div>
+        {initialLoading ? (
+          hideBalances ? (
+            <div className='signerBalancesLoading' role='status' aria-label='Loading balances'>
+              <div className='loader' />
+            </div>
+          ) : (
+            <BalanceLoading />
+          )
         ) : balances.length === 0 ? (
           this.props.filter ? (
             <div className='wrenEmptyFilter'>No matching balances</div>
@@ -143,7 +149,13 @@ export class BalancesPreview extends React.Component {
               return (
                 <ClusterRow key={chainId + symbol}>
                   <ClusterValue>
-                    <Balance chainId={chainId} symbol={symbol} balance={balance} i={i} scanning={scanning} />
+                    <Balance
+                      chainId={chainId}
+                      symbol={symbol}
+                      balance={balance}
+                      i={i}
+                      scanning={initialLoading}
+                    />
                   </ClusterValue>
                 </ClusterRow>
               )
@@ -151,7 +163,7 @@ export class BalancesPreview extends React.Component {
           </Cluster>
         )}
         {balances.length > 0 || this.props.expanded ? (
-          <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
+          <div className='signerBalanceTotal' style={{ opacity: !initialLoading ? 1 : 0 }}>
             {!this.props.expanded ? (
               <div className='signerBalanceButtons'>
                 <button

@@ -166,9 +166,8 @@ class CustomTokens extends React.Component {
                         </div>
                       </div>
                       <div className='customTokensListItemChain'>
-                        <div>
-                          {this.store('main.networks.ethereum', token.chainId, 'name') ||
-                            `Chain ${token.chainId}`}
+                        <div title={`Chain ID ${token.chainId}`}>
+                          {this.store('main.networks.ethereum', token.chainId, 'name') || 'Unknown network'}
                         </div>
                         <button
                           ref={(node) => {
@@ -226,7 +225,7 @@ class CustomTokens extends React.Component {
                               <button
                                 ref={this.removeCancelRef}
                                 type='button'
-                                className='customTokensListItemButton'
+                                className='customTokensListItemButton wrenControl wrenControlSecondary'
                                 disabled={removingTokenId !== null}
                                 onClick={() => this.cancelTokenRemoval(tokenId)}
                               >
@@ -234,7 +233,7 @@ class CustomTokens extends React.Component {
                               </button>
                               <button
                                 type='button'
-                                className='customTokensListItemButton removeButton'
+                                className='customTokensListItemButton wrenControl wrenControlDanger'
                                 disabled={removingTokenId !== null}
                                 onClick={() => this.confirmTokenRemoval(token)}
                               >
@@ -258,7 +257,7 @@ class CustomTokens extends React.Component {
                               type='button'
                               aria-label={`Remove ${token.symbol} token`}
                               disabled={removalActive}
-                              className='customTokensListItemButton removeButton'
+                              className='customTokensListItemButton customTokensRemoveAction wrenControl wrenControlGhost wrenControlCompact'
                               onClick={() => this.removeToken(token)}
                             >
                               Remove token
@@ -266,7 +265,7 @@ class CustomTokens extends React.Component {
                             <button
                               type='button'
                               aria-label={`Edit ${token.symbol} token`}
-                              className='customTokensListItemButton editButton'
+                              className='customTokensListItemButton wrenControl wrenControlGhost wrenControlCompact'
                               disabled={navigatingTokenId !== null || removalActive}
                               onClick={() => this.editToken(token)}
                             >

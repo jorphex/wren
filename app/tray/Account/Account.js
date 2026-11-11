@@ -18,6 +18,7 @@ import Default from './Default'
 
 import Chains from './Chains'
 import Balances from './Balances'
+import BalanceLoading from './Balances/Loading'
 import Activity, { ACTIVITY_PREVIEW_LIMIT } from './Activity'
 import Gas from '../../../resources/Components/Monitor'
 import Inventory from './Inventory'
@@ -77,7 +78,7 @@ export const portfolioSummary = (store, accountId) => {
   const updated = account.balances?.lastUpdated
   if (!connected.length) return { value: '—', note: 'No connected networks', partial: false }
   if (!Array.isArray(stored) || (!stored.length && !updated)) {
-    return { value: '—', note: 'Loading balances…', partial: false }
+    return { value: '—', note: 'Loading balances…', partial: false, loading: true }
   }
   const networksMeta = store('main.networksMeta.ethereum') || {}
   const rates = store('main.rates') || {}
@@ -422,20 +423,33 @@ class _AccountMain extends React.Component {
   }
 
   renderPortfolioSummary() {
-    const { value, partial } = portfolioSummary(this.store, this.props.id)
+    const { value, partial, loading } = portfolioSummary(this.store, this.props.id)
     const hideBalances = this.store('selected.hideBalances')
+    const valueLabel = hideBalances
+      ? 'Balances hidden'
+      : loading
+        ? 'Loading portfolio balance'
+        : value === '—'
+          ? 'Portfolio value unavailable'
+          : undefined
     return (
-      <section className='accountPortfolioCard' aria-label='Portfolio balance'>
+      <section
+        className='accountPortfolioCard'
+        aria-label='Portfolio balance'
+        aria-busy={loading && !hideBalances}
+      >
         <div className='accountPortfolioGlow' aria-hidden='true' />
         <div className='accountPortfolioHeader'>
           <span>{partial && !hideBalances ? 'Known value' : 'Portfolio balance'}</span>
         </div>
-        <div
-          className='accountPortfolioValue'
-          title={hideBalances ? 'Balances hidden' : value === '—' ? 'Portfolio value unavailable' : undefined}
-          aria-label={!hideBalances && value === '—' ? 'Portfolio value unavailable' : undefined}
-        >
-          {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : value}
+        <div className='accountPortfolioValue' title={valueLabel} aria-label={valueLabel}>
+          {hideBalances ? (
+            <span aria-label='Portfolio balance hidden'>$••••</span>
+          ) : loading ? (
+            <span className='accountPortfolioSkeleton' aria-hidden='true' />
+          ) : (
+            value
+          )}
         </div>
         <div className='accountPortfolioActions'>
           <Receive address={this.props.id} />
@@ -456,7 +470,13 @@ class _AccountMain extends React.Component {
     const accountModules = this.store('panel.account.modules')
     const accountModuleOrder = this.store('panel.account.moduleOrder')
     const activity = this.store('main.activity') || []
-    const empty = portfolioSummary(this.store, this.props.id).empty && !this.store('selected.hideBalances')
+    const summary = portfolioSummary(this.store, this.props.id)
+    const hideBalances = this.store('selected.hideBalances')
+    const empty = summary.empty && !hideBalances
+    const loadingRows =
+      summary.loading &&
+      !hideBalances &&
+      !(accountModuleOrder.includes('balances') && accountModules.balances?.height > 0)
     let slideHeight = 0
     let previousVisibleModuleId
     const modules = accountModuleOrder.map((id, i) => {
@@ -504,6 +524,7 @@ class _AccountMain extends React.Component {
           <div className='accountMainSlide' style={{ height: slideHeight + 'px' }}>
             {modules}
           </div>
+          {loadingRows ? <BalanceLoading /> : null}
           {empty ? (
             <WrenEmptyState
               image={emptyBalances}

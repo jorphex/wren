@@ -6,6 +6,7 @@ const { app, BrowserWindow, ipcMain, session } = require('electron')
 
 const { auditPage } = require('./audit-page.cjs')
 const checkControlLayout = require('./control-layout.cjs')
+const checkConsistency = require('./consistency.cjs')
 const { COMPACT_TARGET_EXCEPTIONS, physicalSize, scenarioMatrix } = require('./policy.cjs')
 const {
   QUALIFICATION_INVOKE_CHANNELS,
@@ -781,6 +782,10 @@ const runScenario = async (scenario) => {
     await assertGeneratedViewport()
     await assertApprovalPresentation(window, scenario)
     const controlLayout = await checkControlLayout(window.webContents)
+    const consistency = await checkConsistency(
+      window.webContents,
+      stateByWebContents.get(window.webContents.id)
+    )
 
     const audit = await window.webContents.executeJavaScript(
       `(${auditPage.toString()})(${JSON.stringify({
@@ -863,6 +868,7 @@ const runScenario = async (scenario) => {
       ...scenario,
       audit,
       screenshot,
+      consistency,
       interaction:
         reconnectInteractions.get(window.webContents.id) ||
         metadataInteractions.get(window.webContents.id) ||

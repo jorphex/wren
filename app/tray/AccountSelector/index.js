@@ -191,6 +191,7 @@ export class AccountSelector extends React.Component {
                   : 'accountPrivacyToggle wrenControl wrenControlGhost wrenControlIcon'
               }
               aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
+              title={hideBalances ? 'Show balances' : 'Hide balances'}
               aria-pressed={hideBalances}
               onClick={() => this.store.toggleHideBalances()}
             >
@@ -201,6 +202,7 @@ export class AccountSelector extends React.Component {
             type='button'
             className='accountCopyAddress wrenControl wrenControlGhost wrenControlIcon'
             aria-label='Copy account address'
+            title='Copy account address'
             onClick={() => link.send('tray:clipboardData', address)}
           >
             <Icon name='copy' size={17} />
@@ -209,6 +211,7 @@ export class AccountSelector extends React.Component {
             type='button'
             className='accountWorkspaceToggle wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
             aria-label={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
+            title={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
             aria-pressed={workspaceOpen}
             onClick={() => link.send('tray:action', 'setDash', { showing: !workspaceOpen })}
           >

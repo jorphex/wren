@@ -150,6 +150,22 @@ const ChainExpanded = ({
     link.send('tray:action', 'backDash')
   }
 
+  const handleTabKey = (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const tabs = [...event.currentTarget.querySelectorAll('[role="tab"]:not(:disabled)')]
+    const index = tabs.indexOf(document.activeElement)
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? tabs.length - 1
+          : (index + (event.key === 'ArrowLeft' ? -1 : 1) + tabs.length) % tabs.length
+    tabs[next]?.focus()
+    tabs[next]?.click()
+  }
+  const tabId = (name) => `network-${id}-${name}-tab`
+  const panelId = `network-${id}-panel`
   const isMainnet = id === 1
 
   return (
@@ -158,11 +174,20 @@ const ChainExpanded = ({
         <h1>Edit {currentName}</h1>
         <p>Chain ID {id}</p>
       </div>
-      <div className='networkEditorSections' role='group' aria-label='Network settings'>
+      <div
+        className='networkEditorSections'
+        role='tablist'
+        aria-label='Network settings'
+        onKeyDown={handleTabKey}
+      >
         <button
           type='button'
           className='wrenControl wrenControlGhost'
-          aria-pressed={section === 'details'}
+          role='tab'
+          id={tabId('details')}
+          aria-controls={panelId}
+          aria-selected={section === 'details'}
+          tabIndex={section === 'details' ? 0 : -1}
           onClick={() => setSection('details')}
         >
           Network details
@@ -172,7 +197,11 @@ const ChainExpanded = ({
           className='wrenControl wrenControlGhost'
           disabled={section === 'details' && detailsChanged}
           title={detailsChanged ? 'Save or cancel network details first' : undefined}
-          aria-pressed={section === 'connections'}
+          role='tab'
+          id={tabId('connections')}
+          aria-controls={panelId}
+          aria-selected={section === 'connections'}
+          tabIndex={section === 'connections' ? 0 : -1}
           onClick={() => setSection('connections')}
         >
           RPC connections
@@ -180,7 +209,12 @@ const ChainExpanded = ({
       </div>
       {section === 'connections' ? (
         <>
-          <div className='networkEditorBody networkEditorConnections'>
+          <div
+            className='networkEditorBody networkEditorConnections'
+            role='tabpanel'
+            id={panelId}
+            aria-labelledby={tabId('connections')}
+          >
             <p className='networkEditorLiveStatus'>Changes apply immediately</p>
             <div className='networkEditorWide'>
               <RpcEndpointLedger
@@ -220,7 +254,7 @@ const ChainExpanded = ({
         </>
       ) : (
         <>
-          <div className='networkEditorBody'>
+          <div className='networkEditorBody' role='tabpanel' id={panelId} aria-labelledby={tabId('details')}>
             <div className='networkEditorGrid'>
               <NetworkEditorField label='Network name' value={currentName} onChange={setName} />
               <NetworkEditorField label='Chain ID' value={id} technical readOnly />

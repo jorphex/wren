@@ -1211,6 +1211,13 @@ const fixtureFor = (scenario) => {
       nav: [{ view: 'tokens', data: {} }]
     }
     if (scenario.state === 'tokens-list') {
+      state.main.networks.ethereum[1] = {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [] }
+      }
       state.main.tokens.custom = [
         {
           address: '0xc56413869c6cdf96496f2b1ef801fedbdfa7ddb0',

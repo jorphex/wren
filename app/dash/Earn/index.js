@@ -229,7 +229,7 @@ const EarnCatalogLoading = () => (
         <span>Vaults from</span>
         <img src={yearnLogo} alt='Yearn' />
       </div>
-      <h1>Earn</h1>
+      <h1 className='wrenScreenReaderOnly'>Earn</h1>
     </header>
     <div className='earnTabs earnTabsSkeleton' aria-hidden='true'>
       {CHAINS.map(({ id }) => (
@@ -1707,7 +1707,7 @@ export class Earn extends React.Component {
     return (
       <div className='earn cardShow'>
         <header className='earnHero'>
-          <h1>Earn</h1>
+          <h1 className='wrenScreenReaderOnly'>Earn</h1>
           <div className='earnEyebrow earnProvider'>
             <span>Vaults from</span>
             <img src={yearnLogo} alt='Yearn' />
