@@ -151,6 +151,7 @@ export const PasswordInput = ({
           type='button'
           className='addAccountItemOptionPasswordReveal wrenControl wrenControlSecondary wrenControlIcon'
           aria-label={revealed ? 'Hide password' : 'Show password'}
+          title={revealed ? 'Hide password' : 'Show password'}
           aria-pressed={revealed}
           onClick={() => setRevealed((value) => !value)}
         >

@@ -4514,10 +4514,13 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale: 1,
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
-        ready: '.accountPortfolioCard',
+        ready:
+          variant === 'loading'
+            ? '.accountPortfolioCard[aria-busy="true"] .accountPortfolioSkeleton'
+            : '.accountPortfolioCard',
         requiredControls: ['Send'],
         requiredText: {
-          loading: ['PORTFOLIO BALANCE', '—'],
+          loading: ['PORTFOLIO BALANCE'],
           unavailable: ['PORTFOLIO BALANCE', '—'],
           partial: ['KNOWN VALUE', '$3,200.00'],
           empty: ['$0.00'],

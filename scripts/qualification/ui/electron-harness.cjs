@@ -787,6 +787,12 @@ const runScenario = async (scenario) => {
       stateByWebContents.get(window.webContents.id)
     )
 
+    // Qualification interactions move the pointer; restore the requested hover evidence.
+    if (scenario.action?.type === 'hoverText') {
+      await hoverText(window.webContents, scenario.action.text)
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
+
     const audit = await window.webContents.executeJavaScript(
       `(${auditPage.toString()})(${JSON.stringify({
         compactExceptions: COMPACT_TARGET_EXCEPTIONS,
@@ -855,6 +861,10 @@ const runScenario = async (scenario) => {
             })()`,
             true
           )
+        }
+        if (scenario.action?.type === 'hoverText') {
+          await hoverText(window.webContents, scenario.action.text)
+          await new Promise((resolve) => setTimeout(resolve, 200))
         }
         await new Promise((resolve) => setTimeout(resolve, 50))
         window.webContents.invalidate()
