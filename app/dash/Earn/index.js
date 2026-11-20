@@ -1151,14 +1151,6 @@ const VaultDetails = ({
             <div className='earnCooldownActions'>
               <button
                 type='button'
-                className='wrenControl wrenControlDanger wrenControlLarge'
-                disabled={!canCancelCooldown}
-                onClick={() => onOpenAction('cancel-cooldown', 'locked')}
-              >
-                Cancel cooldown
-              </button>
-              <button
-                type='button'
                 className='wrenControl wrenControlSecondary wrenControlLarge'
                 disabled={!canDeposit}
                 onClick={() => {
@@ -1167,6 +1159,14 @@ const VaultDetails = ({
                 }}
               >
                 Deposit
+              </button>
+              <button
+                type='button'
+                className='wrenControl wrenControlDanger wrenControlLarge'
+                disabled={!canCancelCooldown}
+                onClick={() => onOpenAction('cancel-cooldown', 'locked')}
+              >
+                Cancel cooldown
               </button>
             </div>
           ) : null}

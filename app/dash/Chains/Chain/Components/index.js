@@ -81,11 +81,6 @@ export const NetworkEditorToggle = ({ label, checked, disabled = false, onChange
 
 export const NetworkEditorActions = ({ primaryLabel, primaryEnabled, onCancel, onPrimary, onRemove }) => (
   <div className='networkEditorFooter'>
-    {onRemove && (
-      <button type='button' className='networkEditorRemove wrenControl wrenControlDanger' onClick={onRemove}>
-        Remove network
-      </button>
-    )}
     <div className='networkEditorFooterActions'>
       <button
         type='button'
@@ -103,6 +98,11 @@ export const NetworkEditorActions = ({ primaryLabel, primaryEnabled, onCancel, o
         {primaryLabel}
       </button>
     </div>
+    {onRemove && (
+      <button type='button' className='networkEditorRemove wrenControl wrenControlDanger' onClick={onRemove}>
+        Remove network
+      </button>
+    )}
   </div>
 )
 

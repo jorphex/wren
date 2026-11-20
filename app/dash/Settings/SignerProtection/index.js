@@ -164,6 +164,14 @@ export class SignerProtection extends Component {
       return (
         <span className='recoveryOptionActions'>
           <button
+            type='button'
+            className='wrenControl wrenControlPrimary wrenControlLarge'
+            disabled={!status.available}
+            onClick={() => this.arm('enable')}
+          >
+            Finish enabling
+          </button>
+          <button
             ref={this.actionRef}
             type='button'
             className='wrenControl wrenControlSecondary wrenControlLarge'
@@ -171,14 +179,6 @@ export class SignerProtection extends Component {
             onClick={() => this.arm('disable')}
           >
             Restore password-only
-          </button>
-          <button
-            type='button'
-            className='wrenControl wrenControlPrimary wrenControlLarge'
-            disabled={!status.available}
-            onClick={() => this.arm('enable')}
-          >
-            Finish enabling
           </button>
         </span>
       )

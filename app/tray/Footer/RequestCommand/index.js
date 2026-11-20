@@ -419,18 +419,6 @@ export class RequestCommand extends React.Component {
           </dl>
         )}
         <div className='txLifecycleActions'>
-          {replaceable && (
-            <button
-              type='button'
-              className='txLifecycleAction txLifecycleActionBad'
-              disabled={this.state.requestActionPending}
-              onClick={() => {
-                this.runReplacementAction('cancel', req)
-              }}
-            >
-              Cancel
-            </button>
-          )}
           {hash && (
             <button
               type='button'
@@ -479,6 +467,18 @@ export class RequestCommand extends React.Component {
               onClick={() => this.continueContractVerification(req)}
             >
               {this.state.requestActionPending ? 'Opening…' : 'Verify source'}
+            </button>
+          )}
+          {replaceable && (
+            <button
+              type='button'
+              className='txLifecycleAction txLifecycleActionBad'
+              disabled={this.state.requestActionPending}
+              onClick={() => {
+                this.runReplacementAction('cancel', req)
+              }}
+            >
+              Cancel
             </button>
           )}
         </div>

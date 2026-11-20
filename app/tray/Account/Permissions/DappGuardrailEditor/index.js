@@ -549,6 +549,9 @@ export class DappGuardrailEditor extends React.Component {
 
           {!this.state.confirmation ? (
             <div className='dappGuardrailActions'>
+              <button type='submit' className='wrenControl wrenControlPrimary' disabled={fieldDisabled}>
+                Save changes
+              </button>
               {guardrail ? (
                 <button
                   type='button'
@@ -560,9 +563,6 @@ export class DappGuardrailEditor extends React.Component {
                   Remove guardrail
                 </button>
               ) : null}
-              <button type='submit' className='wrenControl wrenControlPrimary' disabled={fieldDisabled}>
-                Save changes
-              </button>
             </div>
           ) : null}
         </form>
