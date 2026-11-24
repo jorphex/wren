@@ -52,6 +52,14 @@ function londonToLegacy(txData: TransactionData): TransactionData {
   return txData
 }
 
+export function transactionForSigner(
+  txData: TransactionData,
+  signer: Parameters<typeof getSignerCapabilities>[0]
+) {
+  const { nativeEip1559, eip1559LegacyFallback } = getSignerCapabilities(signer)
+  return !nativeEip1559 && eip1559LegacyFallback ? londonToLegacy(txData) : { ...txData }
+}
+
 function maxFee(rawTx: TransactionData) {
   const chainId =
     parseRpcQuantity(rawTx.chainId) ??

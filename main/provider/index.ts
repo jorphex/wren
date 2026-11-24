@@ -45,6 +45,7 @@ import {
   WALLET_CALL_FUNDING_UNAVAILABLE
 } from '../../resources/domain/transaction/funding'
 import { populate as populateTransaction, maxFee, classifyTransaction } from '../transaction'
+import { transactionSigningIntent, verifySignedTransaction } from '../transaction/signedTransaction'
 import { capitalize } from '../../resources/utils'
 import { ApprovalType } from '../../resources/constants'
 import { createObserver as AssetsObserver, loadAssets } from './assets'
@@ -694,10 +695,27 @@ export class Provider extends EventEmitter {
       resError(err, payload, res)
       cb(new Error(err))
     } else {
+      let signingIntent: ReturnType<typeof transactionSigningIntent> | undefined
+      let signerReturned = false
+      const assertActiveRequest = () => {
+        try {
+          if (
+            accounts.getActiveRequestForAccount(accountId, handlerId) === req &&
+            req.data === rawTx &&
+            (req.status === undefined || req.status === RequestStatus.Pending)
+          )
+            return
+        } catch {
+          // Removed requests have no active review.
+        }
+        throw new SignerUserRejectedError('Transaction request was cancelled')
+      }
       accounts.signTransactionForAccount(
         accountId,
         rawTx,
         (err, signedTx) => {
+          if (signerReturned) return
+          signerReturned = true
           // Sign Transaction
           if (err) {
             // A fresh account-code check happens before the signer is invoked. Keep the
@@ -706,15 +724,23 @@ export class Provider extends EventEmitter {
             if (!isRecoverableAccountCodeEvidenceError(err)) resError(err, payload, res)
             cb(err)
           } else {
-            let signedHash: string
             try {
-              if (typeof signedTx !== 'string') throw new Error('Missing signed transaction')
-              signedHash = keccak256(signedTx).toLowerCase()
+              assertActiveRequest()
+            } catch (error) {
+              return cb(error as Error)
+            }
+            let verifiedBytes: string
+            try {
+              if (!signingIntent) throw new Error('Missing transaction signing intent')
+              verifiedBytes = verifySignedTransaction(signedTx, signingIntent)
             } catch {
-              const error = new Error('Signer returned an invalid signed transaction')
+              const error = new Error(
+                'Signed transaction does not match the approved transaction. Nothing was sent.'
+              )
               resError(error, payload, res)
               return cb(error)
             }
+            const signedHash = keccak256(verifiedBytes)
             accounts.setTxSigned(
               handlerId,
               (err) => {
@@ -808,7 +834,7 @@ export class Provider extends EventEmitter {
                       id: payload.id,
                       jsonrpc: payload.jsonrpc,
                       method: 'eth_sendRawTransaction',
-                      params: [signedTx]
+                      params: [verifiedBytes]
                     },
                     (response) => {
                       if (transportSettled) return
@@ -868,9 +894,11 @@ export class Provider extends EventEmitter {
             )
           }
         },
-        () => {
+        (signerTransaction) => {
           this.assertManagedSendRuntimeAuthorization(req)
           this.assertDappGuardrailReview(req)
+          assertActiveRequest()
+          signingIntent = transactionSigningIntent(signerTransaction)
         }
       )
     }

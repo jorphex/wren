@@ -6,7 +6,7 @@ import { TypedTransaction } from '@ethereumjs/tx'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import Signer from '../../Signer'
-import { sign, signerCompatibility, londonToLegacy } from '../../../transaction'
+import { sign, transactionForSigner } from '../../../transaction'
 import { Derivation, getDerivationPath } from '../../Signer/derive'
 import { hexToInt } from '../../../../resources/utils'
 import { decodeLocalCalldata } from '../../../inspector/localDecode'
@@ -485,8 +485,7 @@ export default class Lattice extends Signer {
 
     try {
       const { connection, generation } = this.connectionSnapshot()
-      const compatibility = signerCompatibility(rawTx, this.summary())
-      const latticeTx = compatibility.compatible ? { ...rawTx } : londonToLegacy(rawTx)
+      const latticeTx = transactionForSigner(rawTx, this.summary())
       const derivation = this.derivation
       if (!derivation) throw new Error('attempted to sign transaction with unknown derivation')
 

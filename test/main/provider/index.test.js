@@ -1,7 +1,8 @@
 import log from 'electron-log'
 import { keccak256, parseUnits, toBeHex } from 'ethers'
 import { validate as validateUUID } from 'uuid'
-import { addHexPrefix, intToHex } from '@ethereumjs/util'
+import { addHexPrefix, intToHex, privateToAddress } from '@ethereumjs/util'
+import { TransactionFactory } from '@ethereumjs/tx'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import provider from '../../../main/provider'
@@ -35,8 +36,15 @@ import {
   WALLET_CALL_FUNDING_ERROR
 } from '../../../resources/domain/transaction/funding'
 
-const address = '0x22dd63c3619818fdbc262c78baee43cb61e9cccf'
+const signingKey = Buffer.alloc(32, 42)
+const address = '0x' + privateToAddress(signingKey).toString('hex')
 const defaultOriginId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
+
+const encodeTransaction = (tx, { key = signingKey, hardfork } = {}) => {
+  const common = chainConfig(Number(tx.chainId), hardfork || (Number(tx.type) === 2 ? 'london' : 'berlin'))
+  const unsigned = TransactionFactory.fromTxData(tx, { common })
+  return '0x' + (key ? unsigned.sign(key) : unsigned).serialize().toString('hex')
+}
 
 const grant = (originId = defaultOriginId, origin = 'example.test', chains = [1, 5, 99]) =>
   createAccountPermission({ account: address, chains, handlerId: originId, origin })
@@ -3495,8 +3503,8 @@ describe('#send', () => {
 
     beforeEach(() => {
       tx = {
-        from: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
-        to: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
+        from: address,
+        to: address,
         chainId: '0x1',
         gasLimit: intToHex(21000),
         type: '0x1',
@@ -3736,8 +3744,8 @@ describe('#send', () => {
 
     it('admits, approves, signs, and broadcasts a managed Send transaction once', (done) => {
       const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
-      const signedTransaction = `0x${'ab'.repeat(32)}`
-      const transactionHash = keccak256(signedTransaction)
+      let signedTransaction
+      let transactionHash
       accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
       store.set('main.origins', managedOrigin, {
         name: FRAME_SEND_ORIGIN,
@@ -3746,9 +3754,11 @@ describe('#send', () => {
         session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
       })
       accounts.signTransactionForAccount.mockImplementation(
-        (_accountId, _transaction, callback, assertBeforeSign) => {
+        (_accountId, transaction, callback, assertBeforeSign) => {
           try {
-            assertBeforeSign()
+            assertBeforeSign(transaction)
+            signedTransaction = encodeTransaction(transaction)
+            transactionHash = keccak256(signedTransaction)
             callback(null, signedTransaction)
           } catch (error) {
             callback(error)
@@ -5675,18 +5685,40 @@ describe('#signAndSend', () => {
   })
 
   describe('broadcasting transactions', () => {
-    const signedTx = '0x2eca5b929f8a671f0a3c0a7996f83141b2260fdfac62a1da8a8098b326001b99'
-    const txHash = keccak256(signedTx)
+    let signedTx
+    let txHash
+    const target = '0x2222222222222222222222222222222222222222'
+    const storageKey = (byte) => `0x${byte.repeat(64)}`
 
     beforeEach(() => {
+      const site = 'https://signing.example'
+      request.type = 'transaction'
+      request.origin = originIdForInvoker(site, { provenance: 'direct' })
+      store.set('main.origins', request.origin, {
+        name: site,
+        provenance: 'direct',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      store.set('main.permissions', address, { [request.origin]: grant(request.origin, site, [1]) })
       Object.assign(tx, {
+        from: address,
+        to: target,
+        data: '0x',
+        value: '0x0',
+        nonce: '0x7',
         chainId: '0x1',
         type: '0x0',
         gasPrice: '0x1',
         gasLimit: '0x5208'
       })
-      accounts.signTransactionForAccount.mockImplementation((accountId, _tx, cb) => {
+      accountRequests.push(request)
+      provider.prepareDappGuardrailReview(request)
+      signedTx = encodeTransaction(tx)
+      txHash = keccak256(signedTx)
+      accounts.signTransactionForAccount.mockImplementation((accountId, transaction, cb, beforeSign) => {
         expect(accountId).toBe(address)
+        beforeSign(transaction)
         cb(null, signedTx)
       })
       accounts.setTxSigned.mockImplementation((reqId, cb, accountId) => {
@@ -5694,6 +5726,118 @@ describe('#signAndSend', () => {
         expect(accountId).toBe(address)
         cb()
       })
+    })
+
+    it.each([
+      ['recipient', (value) => encodeTransaction({ ...value, to: address })],
+      ['value', (value) => encodeTransaction({ ...value, value: '0x1' })],
+      ['calldata', (value) => encodeTransaction({ ...value, data: '0x00' })],
+      ['nonce', (value) => encodeTransaction({ ...value, nonce: '0x8' })],
+      ['gas limit', (value) => encodeTransaction({ ...value, gasLimit: '0x5300' })],
+      ['gas price', (value) => encodeTransaction({ ...value, gasPrice: '0x2' })],
+      ['chain', (value) => encodeTransaction({ ...value, chainId: '0x5' })],
+      ['sender', (value) => encodeTransaction(value, { key: Buffer.alloc(32, 24) })],
+      ['envelope type', (value) => encodeTransaction({ ...value, type: '0x1' })],
+      ['missing replay protection', (value) => encodeTransaction(value, { hardfork: 'homestead' })],
+      ['unsigned bytes', (value) => encodeTransaction(value, { key: null })],
+      ['malformed bytes', () => '0x01'],
+      ['invalid hex prefix', (value) => encodeTransaction(value).replace(/^0x/, '0X')]
+    ])('rejects signed output with a different %s before submitting', (_field, encode) => {
+      signedTx = encode(tx)
+      const handler = jest.fn()
+      const callback = jest.fn()
+      provider.handlers[request.handlerId] = handler
+
+      signAndSend(callback)
+
+      expect(accounts.setTxSigned).not.toHaveBeenCalled()
+      expect(commitMainState).not.toHaveBeenCalled()
+      expect(connection.send).not.toHaveBeenCalled()
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ message: expect.stringMatching(/signed transaction/i) })
+        })
+      )
+      expect(callback).toHaveBeenCalledTimes(1)
+      expect(callback.mock.calls[0][0]).toBeInstanceOf(Error)
+    })
+
+    it.each(['access list order', 'max fee', 'priority fee', 'unapproved fallback'])(
+      'rejects typed output with a different %s',
+      (field) => {
+        delete tx.gasPrice
+        Object.assign(tx, {
+          type: '0x2',
+          gasLimit: '0x10000',
+          accessList: [{ address: target, storageKeys: [storageKey('1'), storageKey('2')] }],
+          maxFeePerGas: '0x10',
+          maxPriorityFeePerGas: '0x2'
+        })
+        const changed = {
+          'access list order': {
+            accessList: [{ address: target, storageKeys: [storageKey('2'), storageKey('1')] }]
+          },
+          'max fee': { maxFeePerGas: '0x11' },
+          'priority fee': { maxPriorityFeePerGas: '0x3' },
+          'unapproved fallback': { type: '0x0', accessList: undefined, gasPrice: tx.maxFeePerGas }
+        }[field]
+        signedTx = encodeTransaction({ ...tx, ...changed })
+        provider.prepareDappGuardrailReview(request)
+        const callback = jest.fn()
+        signAndSend(callback)
+        expect(accounts.setTxSigned).not.toHaveBeenCalled()
+        expect(connection.send).not.toHaveBeenCalled()
+        expect(callback.mock.calls[0][0]).toBeInstanceOf(Error)
+      }
+    )
+
+    it.each(['0x1', '0x2'])('broadcasts the exact authorized %s transaction once', (type) => {
+      delete tx.gasPrice
+      if (type === '0x1') {
+        Object.assign(tx, { type, gasPrice: '0x1' })
+      } else {
+        Object.assign(tx, { type: '0x2', maxFeePerGas: '0x10', maxPriorityFeePerGas: '0x2' })
+      }
+      // Keep explicit contract creation and access-list bytes in the typed fixtures.
+      if (type === '0x1') {
+        delete tx.to
+        Object.assign(tx, { data: '0x6000', gasLimit: '0x10000' })
+      }
+      if (type === '0x2') tx.accessList = [{ address: target, storageKeys: [storageKey('1')] }]
+      provider.prepareDappGuardrailReview(request)
+      signedTx = encodeTransaction(tx)
+      txHash = keccak256(signedTx)
+      accounts.signTransactionForAccount.mockImplementationOnce((_account, _tx, cb, beforeSign) => {
+        beforeSign(tx)
+        cb(null, signedTx)
+      })
+      connection.send.mockImplementationOnce(({ id, jsonrpc, params }, cb) => {
+        expect(params).toEqual([signedTx])
+        cb({ id, jsonrpc, result: txHash })
+      })
+
+      const callback = jest.fn()
+      signAndSend(callback)
+
+      expect(connection.send).toHaveBeenCalledTimes(1)
+      expect(callback).toHaveBeenCalledTimes(1)
+      expect(callback).toHaveBeenCalledWith(null, txHash)
+    })
+
+    it('does not broadcast signed output after the request is removed', () => {
+      accounts.signTransactionForAccount.mockImplementationOnce((_account, transaction, cb, beforeSign) => {
+        beforeSign(transaction)
+        accountRequests = []
+        cb(null, signedTx)
+      })
+      const callback = jest.fn()
+
+      signAndSend(callback)
+
+      expect(accounts.setTxSigned).not.toHaveBeenCalled()
+      expect(connection.send).not.toHaveBeenCalled()
+      expect(callback.mock.calls[0][0]).toBeInstanceOf(Error)
     })
 
     it('fails before broadcast when the immutable lifecycle context cannot be captured', () => {
@@ -6353,6 +6497,7 @@ describe('#signAndSend', () => {
         const initcode = '0x60006000'
         request.type = 'transaction'
         request.origin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+        delete request.data.to
         Object.assign(request.data, { from: address, data: initcode, value: '0x0' })
         request.deployment = {
           version: 1,

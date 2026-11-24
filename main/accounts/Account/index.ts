@@ -20,6 +20,7 @@ import nav from '../../windows/nav'
 import store from '../../store'
 import { requireStoreAction } from '../../store/action'
 import { recordRequestActivity, type ActivityOutcome } from '../../activity'
+import { transactionForSigner } from '../../transaction'
 import { TransactionData } from '../../../resources/domain/transaction'
 import { MAX_UINT256, parseRpcQuantity } from '../../../resources/domain/transaction/quantity'
 import {
@@ -2257,7 +2258,11 @@ class FrameAccount {
     }
   }
 
-  signTransaction(rawTx: TransactionData, cb: Callback<string>, beforeSign?: () => void) {
+  signTransaction(
+    rawTx: TransactionData,
+    cb: Callback<string>,
+    beforeSign?: (transaction: Readonly<TransactionData>) => void
+  ) {
     // if(index === typeof 'object' && cb === typeof 'undefined' && typeof rawTx === 'function') cb = rawTx; rawTx = index; index = 0;
     this.validateTransaction(rawTx, (err) => {
       if (err) return cb(err)
@@ -2297,7 +2302,7 @@ class FrameAccount {
               signerIdentity
             )
           }
-          beforeSign?.()
+          beforeSign?.(transactionForSigner(rawTx, signerSummary))
           setPhase('sending-to-signer')
           if (s.type !== 'trezor') setPhase('waiting-for-signer')
           s.signTransaction(

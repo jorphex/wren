@@ -1,10 +1,8 @@
-import { Capability, TransactionFactory } from '@ethereumjs/tx'
-
 import { GasFeesSource, type TransactionData } from '../../resources/domain/transaction'
 import { snapshotSweepEvidence, type SweepEvidence } from '../../resources/domain/sweep'
 import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
-import chainConfig from '../chains/config'
 import { maxFee } from '../transaction'
+import { transactionSigningIntent, verifySignedTransaction } from '../transaction/signedTransaction'
 import { executeWalletCallBatch, hashSignedTransaction, snapshotWalletCalls } from './walletCallExecution'
 import type { PreparedWalletCallBatch } from './walletCallPreparation'
 import type { WalletCall } from './walletCalls'
@@ -119,49 +117,6 @@ function snapshotTransaction(
       : { gasPrice: toRpcQuantity(feePerGas) }),
     gasFeesSource: transaction.gasFeesSource
   }) as Readonly<TransactionData>
-}
-
-function verifySignedTransaction(rawTransaction: unknown, expected: Readonly<TransactionData>) {
-  hashSignedTransaction(rawTransaction)
-
-  try {
-    const type = parseRpcQuantity(expected.type) as bigint
-    const common = chainConfig(Number(parseRpcQuantity(expected.chainId)), type === 2n ? 'london' : 'berlin')
-    const signed = TransactionFactory.fromSerializedData(
-      Buffer.from((rawTransaction as string).slice(2), 'hex'),
-      { common }
-    )
-    const decoded = signed.toJSON()
-    const decodedChainId = signed.common.chainId()
-    const expectedTo = expected.to?.toLowerCase()
-    const decodedTo = decoded.to?.toLowerCase()
-    const sameFees =
-      type === 2n
-        ? decoded.maxFeePerGas === expected.maxFeePerGas &&
-          decoded.maxPriorityFeePerGas === expected.maxPriorityFeePerGas
-        : decoded.gasPrice === expected.gasPrice
-
-    if (
-      !signed.isSigned() ||
-      signed.type !== Number(type) ||
-      (type === 0n && !signed.supports(Capability.EIP155ReplayProtection)) ||
-      signed.getSenderAddress().toString().toLowerCase() !== expected.from ||
-      decodedChainId !== parseRpcQuantity(expected.chainId) ||
-      decoded.nonce !== expected.nonce ||
-      decoded.gasLimit !== expected.gasLimit ||
-      decodedTo !== expectedTo ||
-      decoded.data !== expected.data ||
-      decoded.value !== expected.value ||
-      ('accessList' in decoded && (!Array.isArray(decoded.accessList) || decoded.accessList.length > 0)) ||
-      !sameFees
-    ) {
-      throw new Error('mismatch')
-    }
-  } catch {
-    throw new Error('Signed wallet call transaction does not match prepared transaction')
-  }
-
-  return { rawTransaction: rawTransaction as string }
 }
 
 export function snapshotPreparedWalletCallExecutionInput(
@@ -308,8 +263,14 @@ export async function executePreparedWalletCallBatch(
         if (!preparedCall) throw new Error('Prepared wallet call is missing during execution')
         const transaction = preparedCall.transaction
         await beforeCall?.(transaction, index)
+        const intent = transactionSigningIntent(transaction)
         const signed = await signTransaction(transaction, index)
-        return verifySignedTransaction(signed?.rawTransaction, transaction)
+        hashSignedTransaction(signed?.rawTransaction)
+        try {
+          return { rawTransaction: verifySignedTransaction(signed.rawTransaction, intent) }
+        } catch {
+          throw new Error('Signed wallet call transaction does not match prepared transaction')
+        }
       },
       broadcast
     }

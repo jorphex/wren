@@ -2132,7 +2132,7 @@ export class Accounts extends EventEmitter {
     accountId: string,
     rawTx: TransactionData,
     cb: Callback<string>,
-    beforeSign?: () => void
+    beforeSign?: (transaction: Readonly<TransactionData>) => void
   ) {
     if (typeof accountId !== 'string') return cb(new Error('Invalid signing account'))
 

@@ -9,7 +9,7 @@ import { trezorSignerId } from '../deviceId'
 import Signer from '../../Signer'
 import type { SignerTransactionPhase } from '../../Signer'
 import { TransactionData } from '../../../../resources/domain/transaction'
-import { sign, londonToLegacy, signerCompatibility } from '../../../transaction'
+import { sign, transactionForSigner } from '../../../transaction'
 import { Derivation, getDerivationPath } from '../../Signer/derive'
 import TrezorBridge, { DeviceError } from '../bridge'
 import type { TypedMessage } from '../../../accounts/types'
@@ -461,8 +461,7 @@ export default class Trezor extends Signer {
     onPhase?.('queued')
 
     try {
-      const compatibility = signerCompatibility(rawTx, this.summary())
-      const compatibleTx = compatibility.compatible ? { ...rawTx } : londonToLegacy(rawTx)
+      const compatibleTx = transactionForSigner(rawTx, this.summary())
 
       const signedTx = await sign(compatibleTx, async (tx) => {
         if (!this.device) {
