@@ -5,6 +5,7 @@ import type { Token } from '../../store/state'
 interface TokenSpec extends Token {
   extensions?: {
     omit?: boolean
+    omitFromDiscovery?: boolean
   }
 }
 
@@ -28,7 +29,10 @@ export default class TokenLoader {
   }
 
   getTokens(chains: number[]) {
-    return this.tokens.filter((token) => !isBlacklisted(token) && chains.includes(token.chainId))
+    return this.tokens.filter(
+      (token) =>
+        !isBlacklisted(token) && !token.extensions?.omitFromDiscovery && chains.includes(token.chainId)
+    )
   }
 
   getBlacklist(chains: number[] = []) {

@@ -30,6 +30,12 @@ let server
 let worker
 let publisher
 
+const lookalikes = [
+  [1, '0x88c7385a403008b63dc028ba5acbad3edb1d1fa9', '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'],
+  [1, '0xdfe66b14d37c77f4e9b180ceb433d1b164f0281d', '0xae7ab96520de3a18e5e111b5eaab095312d7fe84'],
+  [59144, '0x6807857ab19c24e1a8f4b73453c477e1b59a5854', '0x1789e0043623282d5dcc7f213d703c6d8bafbb04']
+]
+
 afterEach(async () => {
   publisher?.stop()
   publisher = undefined
@@ -87,6 +93,13 @@ it('discovers a newly cataloged token through RPC with readable units and keeps 
   const excluded = new TokenLoader().getBlacklist([1])
   expect(excluded.length).toBeGreaterThan(0)
   expect(excluded.every((token) => !queried.has(token.address.toLowerCase()))).toBe(true)
+  const catalog = new TokenLoader()
+  for (const [chainId, misleading, issuer] of lookalikes) {
+    const addresses = catalog.getTokens([chainId]).map((token) => token.address.toLowerCase())
+    expect(addresses).toContain(issuer)
+    expect(addresses).not.toContain(misleading)
+    if (chainId === 1) expect(queried.has(misleading)).toBe(false)
+  }
   evidence.push({
     case: 'refreshed-catalog-discovery',
     loaded,
@@ -94,6 +107,59 @@ it('discovers a newly cataloged token through RPC with readable units and keeps 
     excluded: excluded.length
   })
 }, 30_000)
+
+it('keeps a saved custom balance when its contract is excluded from default discovery', async () => {
+  const [chainId, address] = lookalikes[0]
+  const customToken = { chainId, address, name: 'Saved custom token', symbol: 'CUSTOM', decimals: 2 }
+  const cached = { ...customToken, balance: '0x64', displayBalance: '1' }
+  server = await startJsonRpcFixture(({ params }) => {
+    const calls = multicall.decodeFunctionData('tryAggregate', params[0].data)[1]
+    return {
+      result: multicall.encodeFunctionResult('tryAggregate', [
+        calls.map(({ target }) =>
+          target.toLowerCase() === address
+            ? [true, erc20.encodeFunctionResult('balanceOf', [123n])]
+            : [false, '0x']
+        )
+      ])
+    }
+  })
+  const rpc = createDappClient(server.url, 'https://catalog-refresh.invalid')
+  worker = balanceWorkerHarness({
+    connections: { ethereum: { [chainId]: {} } },
+    send(payload, callback) {
+      rpc.request(payload.method, payload.params).then(
+        (result) => callback({ result }),
+        (error) => callback({ error })
+      )
+    }
+  })
+  const store = Restore.create(
+    {
+      main: {
+        accounts: { [account]: {} },
+        balances: { [account]: [cached] },
+        tokens: { custom: [customToken], known: { [account]: [customToken] } }
+      }
+    },
+    storeActions
+  )
+  publisher = worker.createPublisher(store)
+  await waitUntil(() => worker.events.some(({ name }) => name === 'ready'))
+  const storedBalance = () => store('main.balances', account).find((token) => token.address === address)
+
+  const scannedBlacklist = new Promise((resolve) => worker.controller.once('tokenBlacklist', resolve))
+  worker.controller.scanForTokenBalances(account, [customToken], [chainId])
+  await scannedBlacklist
+  expect(storedBalance()).toEqual(cached)
+
+  publisher.addTokens(account, [customToken])
+  await waitUntil(() => storedBalance()?.balance === '0x7b')
+  const refreshed = storedBalance()
+  expect(refreshed).toMatchObject({ ...customToken, balance: '0x7b', displayBalance: '1.23' })
+  expect(store('main.tokens.custom')).toEqual([customToken])
+  evidence.push({ case: 'discovery-exclusion-with-custom-tracking', cached, refreshed })
+})
 
 it.each([
   { chainId: 1, address: '0x720cd16b011b987da3518fbf38c3071d4f0d1495' },

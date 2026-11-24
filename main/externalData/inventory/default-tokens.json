@@ -45865,6 +45865,7 @@
       "name": "WildBitsTakeControl",
       "symbol": "WBTC",
       "decimals": 18,
+      "extensions": { "omitFromDiscovery": true },
       "tags": ["tokens"]
     },
     {
@@ -47321,6 +47322,7 @@
       "name": "stakedETH",
       "symbol": "stETH",
       "decimals": 18,
+      "extensions": { "omitFromDiscovery": true },
       "tags": []
     },
     {
@@ -74956,6 +74958,7 @@
       "symbol": "Ŀ",
       "address": "0x6807857ab19c24e1a8f4b73453c477e1b59a5854",
       "decimals": 18,
+      "extensions": { "omitFromDiscovery": true },
       "logoURI": ""
     },
     {
