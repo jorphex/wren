@@ -307,6 +307,15 @@ const wrenGlyphs = Object.freeze({
     </>
   ),
   seedling: pixelGlyphs.seedling,
+  trezor: createWrenGlyph(
+    <path
+      d='M28 35v-6a22 22 0 0 1 44 0v6h8v45L50 94 20 80V35h8zm10 0h24v-6a12 12 0 0 0-24 0v6zm-8 10v27l20 9 20-9V45H30z'
+      fill='currentColor'
+      fillRule='evenodd'
+      stroke='none'
+      transform='scale(.24)'
+    />
+  ),
   server: createWrenGlyph(
     <>
       <rect x='4' y='4' width='16' height='6' rx='1' />
@@ -407,6 +416,7 @@ const icons = Object.freeze({
   support: wrenGlyphs.support,
   sync: wrenGlyphs.sync,
   tokens: wrenGlyphs.tokens,
+  trezor: wrenGlyphs.trezor,
   tutorial: wrenGlyphs.tutorial,
   quit: wrenGlyphs.quit,
   verify: wrenGlyphs.shieldCheck,

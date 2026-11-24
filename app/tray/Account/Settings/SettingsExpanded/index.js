@@ -57,9 +57,6 @@ export class SettingsExpanded extends React.Component {
     return (
       <div className='accountViewScroll accountSettingsExpandedView'>
         <div className='expandedModule'>
-          <header className='accountSettingsIntro'>
-            <h2>Account</h2>
-          </header>
           <section className='panelBlock accountSettingsEditor'>
             <div className='accountSettingsAddress'>
               <span>Address</span>

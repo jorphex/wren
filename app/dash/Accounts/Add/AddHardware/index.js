@@ -51,7 +51,7 @@ export class AddHardware extends React.Component {
           <div className='addAccountItemTop'>
             <div className='addAccountItemTopType'>
               <div className='addAccountItemIcon'>
-                <Icon name='hardware' size={20} />
+                <Icon name={suite ? 'trezor' : 'hardware'} size={20} />
                 <div className='addAccountItemIconHex addAccountItemIconHexHardware' />
               </div>
               <div className='addAccountItemTopTitle'>{deviceName}</div>

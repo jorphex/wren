@@ -5,6 +5,7 @@ import App from './App'
 import RecoveryBoundary, { RecoveryView } from './RecoveryBoundary'
 
 import link from '../../resources/link'
+import observeScrollEdges from '../scrollEdges'
 import appStore from '../store'
 
 document.addEventListener('dragover', (e) => e.preventDefault())
@@ -27,7 +28,28 @@ link.on('flex', (event, value) => {
 })
 
 if (!document.body.classList.contains('light')) document.body.classList.add('dark')
-const root = createRoot(document.getElementById('tray'), {
+const tray = document.getElementById('tray')
+observeScrollEdges(tray, [
+  '.accountMainScroll',
+  '.accountViewScroll',
+  '.accountDrawerScroll',
+  '.accountSelectorScroll',
+  '.activityModuleExpanded',
+  '.balancesExpandedScroll',
+  '.inventoryCollectionItems',
+  '.moduleMainPermissions',
+  '.revokeAccessPanel',
+  '.approveTransaction',
+  '.approveRequest',
+  '.wrenTokenApprovalEditor',
+  '.eip7702RevokeRequest',
+  '.approveTransactionWarningMessage',
+  '.walletCallsSurface',
+  '.walletCallsStatusScroll',
+  '.walletCallsFundingRecovery .requestActionContext',
+  '.notifyBoxSlide'
+])
+const root = createRoot(tray, {
   // RecoveryBoundary reports only the category, without the error payload.
   onCaughtError: () => {}
 })

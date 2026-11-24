@@ -92,8 +92,11 @@
 
 .requestViewScroll
   background transparent
-  padding 20px var(--wren-page-gutter) var(--wren-space-5)
+  padding var(--wren-space-4) var(--wren-page-gutter) var(--wren-space-3)
   box-sizing border-box
+
+  > .requestGroupBlock:last-child
+    margin-bottom 0
 
 .requestGroupBlock
   margin-bottom var(--wren-space-3)
@@ -347,7 +350,7 @@
   left 0
   padding 64px 0px
   border-radius 24px
-  overflow-y scroll
+  overflow-y auto
 
   .approveTransactionPayload
     display flex

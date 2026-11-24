@@ -132,7 +132,7 @@ export class RevokeAccess extends React.Component {
 
     return createPortal(
       <DialogSurface
-        className='revokeAccessDialog'
+        className='revokeAccessDialog wrenModalBackdrop'
         role='alertdialog'
         modal
         ariaLabel={`Revoke access for ${this.props.origin}?`}

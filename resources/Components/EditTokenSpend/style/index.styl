@@ -1,8 +1,10 @@
 .wrenTokenApprovalEditor
   width 100%
+  height 100%
   margin 0
   padding var(--wren-space-5)
   box-sizing border-box
+  overflow-y auto
   color var(--wren-text-primary)
   font-family var(--wren-font-ui)
 
@@ -142,94 +144,15 @@
     font-size var(--wren-type-caption)
 
 .wrenTokenApprovalModes
-  display grid
   margin-top var(--wren-space-3)
-  overflow hidden
-  border 1px solid var(--wren-border-default)
-  border-radius var(--wren-radius-sm)
-  background var(--wren-surface-inset)
-  box-shadow inset 0 1px 2px rgba(0, 0, 0, .38)
-  grid-template-columns repeat(3, minmax(0, 1fr))
 
-.wrenTokenApprovalMode
-  appearance none
-  min-width 0
+button.wrenControl.wrenTokenApprovalRevoke
   min-height 44px
-  padding 0 var(--wren-space-2)
-  border 0
-  border-left 1px solid var(--wren-border-default)
-  color var(--wren-text-secondary)
-  background-color var(--wren-bg-elevated)
-  background-image var(--wren-control-texture-dark)
-  box-shadow var(--wren-control-shadow)
-  cursor pointer
-  transition background-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
-
-  &:first-child
-    border-left 0
-
-  span
-    display block
-    font-size var(--wren-type-small)
-    font-weight 560
-
-  &:hover:not(:disabled)
-    color var(--wren-text-primary)
-    background-color var(--wren-bg-panel)
-    box-shadow var(--wren-control-shadow-hover)
-
-  &:active:not(:disabled),
-  &[aria-pressed='true'],
-  &[aria-pressed='true']:hover:not(:disabled)
-    color var(--wren-text-primary)
-    background-color var(--wren-surface-active)
-    background-image none
-    box-shadow var(--wren-control-shadow-pressed)
-
-  &:focus-visible
-    position relative
-    z-index 1
-    outline 2px solid var(--wren-focus)
-    outline-offset -2px
-
-  &:disabled
-    color var(--wren-text-disabled)
-    background-image none
-    box-shadow var(--wren-control-shadow-disabled)
-    cursor default
-
-.wrenTokenApprovalRevoke
-  appearance none
-  display block
-  min-height 44px
-  width 100%
   margin var(--wren-space-2) 0 0
-  padding 0
-  border 1px solid transparent
-  border-radius var(--wren-radius-sm)
-  color var(--wren-danger)
-  background transparent
-  font-family var(--wren-font-ui)
-  font-size var(--wren-type-caption)
-  font-weight 600
-  cursor pointer
-  text-align left
 
-  &:hover:not(:disabled)
-    border-color var(--wren-border-subtle)
-    background var(--wren-ledger-hover)
-
-  &[aria-pressed='true']
-    border-color var(--wren-border-default)
-    background var(--wren-surface-active)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-  &:disabled
-    color var(--wren-text-disabled)
-    cursor default
+  &[aria-pressed='true']:not(:disabled)
+    background-color var(--wren-surface-active)
+    box-shadow var(--wren-control-shadow-pressed)
 
 .wrenTokenApprovalAmountEditor
   margin-top var(--wren-space-2)

@@ -4,6 +4,7 @@ import Restore from 'react-restore'
 import App from './App'
 
 import link from '../../resources/link'
+import observeScrollEdges from '../scrollEdges'
 import appStore from '../store'
 
 document.addEventListener('dragover', (e) => e.preventDefault())
@@ -63,6 +64,27 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) revealShellContent()
 })
 
+const dash = document.getElementById('dash')
+observeScrollEdges(document.body, [
+  '.dash',
+  '.dashMainScroll',
+  '.sendLedger',
+  '.sendSweepAssets',
+  '.sendSweepReviewContent',
+  '.addAccounts',
+  '.addAccountItemDevices',
+  '.addAccountItemOptionList',
+  '.addAccountItemOptionSetupFrame',
+  '.generatedWalletFrameBody',
+  '.hardwareSignerPromptSurface.expandedSigner',
+  '.earnDetailsContent',
+  '.addressBookEditorScroll',
+  '.networkEditorBody',
+  '.localSettingsWrap',
+  '.recentRecipientsDialog',
+  '.notifyBoxSlide'
+])
+
 link.rpc('getState', (err, state) => {
   if (err) return console.error('Could not get initial state from main')
   const store = appStore(state)
@@ -79,7 +101,7 @@ link.rpc('getState', (err, state) => {
     document.body.classList.toggle('workspace-edge-left', glideSide === 'left')
     document.body.classList.toggle('workspace-edge-right', glideSide === 'right')
   })
-  const root = createRoot(document.getElementById('dash'))
+  const root = createRoot(dash)
   const Dash = Restore.connect(AppComponent, store)
   root.render(<Dash />)
 })

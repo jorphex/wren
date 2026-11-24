@@ -358,34 +358,8 @@ class _AccountMain extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
-      expandedModule: '',
-      contentContinues: false
+      expandedModule: ''
     }
-    this.accountScrollRef = React.createRef()
-    this.scrollFrame = 0
-  }
-
-  componentDidMount() {
-    this.scheduleScrollAffordanceUpdate()
-  }
-
-  componentDidUpdate() {
-    this.scheduleScrollAffordanceUpdate()
-  }
-
-  componentWillUnmount() {
-    if (this.scrollFrame) window.cancelAnimationFrame(this.scrollFrame)
-  }
-
-  scheduleScrollAffordanceUpdate() {
-    if (this.scrollFrame) return
-    this.scrollFrame = window.requestAnimationFrame(() => {
-      this.scrollFrame = 0
-      const scroll = this.accountScrollRef.current
-      if (!scroll) return
-      const contentContinues = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight > 2
-      if (contentContinues !== this.state.contentContinues) this.setState({ contentContinues })
-    })
   }
   renderAccountFilter() {
     return (
@@ -503,11 +477,7 @@ class _AccountMain extends React.Component {
     })
     return (
       <div className='accountMain accountMainPerch'>
-        <div
-          className='accountMainScroll'
-          ref={this.accountScrollRef}
-          onScroll={() => this.scheduleScrollAffordanceUpdate()}
-        >
+        <div className='accountMainScroll'>
           {this.renderPortfolioSummary()}
           <button
             type='button'
@@ -536,12 +506,6 @@ class _AccountMain extends React.Component {
             />
           ) : null}
         </div>
-        <div
-          className={
-            this.state.contentContinues ? 'accountScrollFade accountScrollFadeVisible' : 'accountScrollFade'
-          }
-          aria-hidden='true'
-        />
       </div>
     )
   }
@@ -566,7 +530,7 @@ class _AccountView extends React.Component {
         className={className}
         style={{
           top: '0px',
-          bottom: footerHeight + 'px'
+          bottom: `var(--wren-measured-footer-height, ${footerHeight}px)`
         }}
       >
         <div className='accountViewMenu cardShow'>

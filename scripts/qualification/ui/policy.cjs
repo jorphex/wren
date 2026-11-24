@@ -1342,6 +1342,10 @@ const reviewScenarios = () => [
       logicalHeight,
       action: { type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' },
       ready: '.dappGuardrailEditor',
+      layoutExpectations: [
+        { kind: 'viewport-bottom', selector: '.guardrailEditorView' },
+        { kind: 'scroll-overflows', selector: '.guardrailEditorView[data-wren-scroll-below]' }
+      ],
       expectedInitialFocus: 'When a request exceeds a restriction',
       requiredControls: [
         'Close editor',
@@ -1950,6 +1954,13 @@ const reviewScenarios = () => [
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke'],
     requiredText: ['Token approval', 'Spending limit', '0', 'Changes apply to this transaction immediately.'],
     layoutExpectations: [
+      { kind: 'viewport-bottom', selector: '.wrenTokenApprovalEditor' },
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalModes',
+        property: 'gap',
+        value: '4px'
+      },
       {
         kind: 'computed-style',
         selector: '.wrenTokenApprovalContext',
@@ -2994,7 +3005,10 @@ const reviewScenarios = () => [
         'Queued · 2 of 3',
         'Queued · 3 of 3'
       ],
-      layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+      layoutExpectations: [
+        { kind: 'hidden', selector: '.accountSelectorOpen' },
+        ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.requestViewScroll' }] : [])
+      ]
     },
     {
       id: `tray-transaction-signing-queue-review-${geometry}-1`,
@@ -3061,7 +3075,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.requestApproveTransaction',
+    ready: '.requestSign:not(:disabled)',
     action: {
       type: 'confirmRequestWarning',
       text: 'Sign anyway',

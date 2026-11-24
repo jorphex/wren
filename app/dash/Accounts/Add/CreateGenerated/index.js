@@ -762,7 +762,7 @@ export default function CreateGenerated({ kind }) {
       {pendingNavigation
         ? createPortal(
             <DialogSurface
-              className='generatedWalletAbandonDialog'
+              className='generatedWalletAbandonDialog wrenModalBackdrop'
               role='alertdialog'
               modal
               labelledBy='generated-wallet-abandon-title'

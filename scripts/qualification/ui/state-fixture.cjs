@@ -2217,7 +2217,7 @@ const fixtureFor = (scenario) => {
             }
           }
     ]
-    state.windows.panel.footer.height = scenario.state === 'transaction-signing-queue-review' ? 113 : 132
+    state.windows.panel.footer.height = scenario.state === 'transaction-signing-queue-review' ? 113 : 0
   }
 
   if (

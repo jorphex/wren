@@ -489,18 +489,27 @@
 
 .accountChooserPanel
   position absolute
-  top 60px
+  top 64px
   right 0
   bottom 0
   left 0
   z-index 6
   display grid
-  padding 8px var(--wren-space-5) var(--wren-space-4)
+  padding var(--wren-space-5) var(--wren-space-5) var(--wren-space-4)
   box-sizing border-box
   overflow hidden
   grid-template-rows auto minmax(0, 1fr) auto
+  row-gap var(--wren-space-2)
   background transparent
   pointer-events auto
+
+  .panelFilterMain.accountDrawerFilter
+    height 44px
+    margin-top 0
+
+    .panelFilterInput
+      top 0
+      bottom 0
 
 .accountDrawerHeader
   display flex
@@ -553,8 +562,9 @@
 .accountSelector .accountDrawerScroll
   width 100%
   height auto
-  max-height none
+  max-height 100%
   align-self start
+  box-sizing border-box
   border 1px solid var(--wren-border-default)
   border-radius 10px
   background var(--wren-surface-card)

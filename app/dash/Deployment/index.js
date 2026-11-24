@@ -648,7 +648,7 @@ export class Deployment extends React.Component {
         {this.state.pendingNavigation
           ? createPortal(
               <DialogSurface
-                className='deploymentAbandonDialog'
+                className='deploymentAbandonDialog wrenModalBackdrop'
                 role='alertdialog'
                 modal
                 labelledBy='deployment-abandon-title'

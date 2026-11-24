@@ -245,6 +245,59 @@ button
   outline 2px solid var(--wren-focus, var(--moon))
   outline-offset 2px
 
+.wrenModalBackdrop
+  background rgba(7, 9, 7, .58)
+  backdrop-filter blur(4px)
+
+.wrenSegmented
+  display grid
+  grid-auto-flow column
+  grid-auto-columns minmax(0, 1fr)
+  gap var(--wren-space-1)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+  box-shadow var(--wren-shadow-inset)
+
+  > button
+    appearance none
+    min-width 0
+    min-height 44px
+    padding 0 var(--wren-space-2)
+    border 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background transparent
+    font-family var(--wren-font-ui)
+    font-weight 610
+    cursor pointer
+
+    &:hover:not(:disabled):not([aria-pressed='true'])
+      color var(--wren-text-primary)
+      background var(--wren-surface-hover)
+
+    &[aria-pressed='true']
+      color var(--wren-text-primary)
+      background var(--wren-surface-active)
+      box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+    &:disabled
+      color var(--wren-text-disabled)
+      cursor default
+
+[data-wren-scroll-above],
+[data-wren-scroll-below]
+  --wren-scroll-top-stop 0px
+  --wren-scroll-bottom-stop 0px
+  mask-image linear-gradient(to bottom, transparent, #000 var(--wren-scroll-top-stop), #000 calc(100% - var(--wren-scroll-bottom-stop)), transparent)
+
+[data-wren-scroll-above]
+  --wren-scroll-top-stop 24px
+
+[data-wren-scroll-below]
+  --wren-scroll-bottom-stop 24px
+
 @media (prefers-reduced-motion: reduce)
   *, *::before, *::after
     animation-duration 1ms !important
