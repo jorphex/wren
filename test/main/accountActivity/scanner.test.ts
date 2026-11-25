@@ -25,7 +25,6 @@ function fixture() {
   let accounts = [a, b]
   let cursor: AccountActivityCursor | undefined
   const entries = new Map<string, ActivityEntry>()
-  const branches = new Map<number, number>()
   const transactions = new Map<
     number,
     Array<{ hash: string; from: string; to: string | null; value: string; input: string }>
@@ -42,7 +41,7 @@ function fixture() {
   >()
   const localActivity = jest.fn()
   const notify = jest.fn()
-  const blockHash = (n: number) => hash(n + (branches.get(n) || 1000))
+  const blockHash = (n: number) => hash(n + 1000)
   const rpc = jest.fn(async (_chain, method, params) => {
     if (method === 'eth_blockNumber') return hex(head)
     if (method === 'eth_getBlockByNumber') {
@@ -66,11 +65,8 @@ function fixture() {
     if (method === 'eth_getTransactionReceipt') return receipts.get(params[0])
     throw new Error(method)
   })
-  const commit = jest.fn((_chain, next, additions, reorgAfter) => {
+  const commit = jest.fn((_chain, next, additions) => {
     cursor = JSON.parse(JSON.stringify(next))
-    if (reorgAfter !== undefined)
-      for (const [id, entry] of entries)
-        if (entry.observed!.blockNumber > reorgAfter) entries.set(id, { ...entry, outcome: 'reorged' })
     additions.forEach((entry: ActivityEntry) => entries.set(entry.id, ActivityEntrySchema.parse(entry)))
   })
   const deps = {
@@ -118,8 +114,6 @@ function fixture() {
     commit,
     entries,
     tx,
-    branches,
-    transactions,
     receipts,
     head: (n: number) => {
       head = n
@@ -210,45 +204,6 @@ test('keeps progress before an incomplete block and retries after a receipt fail
   await f.scanner.scan(1)
   expect(f.cursor()?.number).toBe(3)
   expect(f.notify).toHaveBeenCalledTimes(1)
-})
-test('replays changed ancestry, marks orphaned activity and avoids duplicate alerts', async () => {
-  const f = fixture()
-  await f.scanner.scan(1)
-  const tx = f.tx(3)
-  f.head(5)
-  await f.scanner.scan(1)
-  f.branches.set(3, 2000)
-  f.transactions.set(3, [])
-  f.receipts.delete(tx.hash)
-  await f.scanner.scan(1)
-  expect([...f.entries.values()][0].outcome).toBe('reorged')
-  f.branches.set(3, 3000)
-  f.transactions.set(3, [tx])
-  f.receipts.set(tx.hash, {
-    transactionHash: tx.hash,
-    blockHash: hash(3003),
-    blockNumber: '0x3',
-    status: '0x1',
-    logs: []
-  })
-  await f.scanner.scan(1)
-  expect([...f.entries.values()][0].outcome).toBe('confirmed')
-  expect(f.notify).toHaveBeenCalledTimes(1)
-})
-test('does not commit a block replaced during receipt collection', async () => {
-  const f = fixture()
-  await f.scanner.scan(1)
-  f.tx(3)
-  f.head(5)
-  const original = f.deps.rpc
-  f.deps.rpc = async (...args) => {
-    const result = await original(...args)
-    if (args[1] === 'eth_getTransactionReceipt') f.branches.set(3, 2000)
-    return result
-  }
-  await expect(createAccountActivityScanner(f.deps).scan(1)).rejects.toThrow('changed during scan')
-  expect(f.cursor()?.number).toBe(2)
-  expect(f.entries.size).toBe(0)
 })
 test('bounds catch-up and skips token RPC calls for an empty bloom', async () => {
   const f = fixture()

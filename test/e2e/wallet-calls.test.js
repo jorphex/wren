@@ -38,19 +38,30 @@ async function fixture(options = {}) {
   return { dapp: createDappClient(gateway.url, harness.origin), harness, storage }
 }
 
-it('executes approved calls sequentially and restores successful status after restart', async () => {
+it('executes approved calls sequentially and restores scoped, ordered receipts after restart', async () => {
   const { dapp, harness, storage } = await fixture({ name: 'success' })
-  const response = dapp.request('wallet_sendCalls', sendCalls({ id: 'success-batch' }))
+  const { origin, account, ledger } = harness
+  const id = 'success-batch'
+  const response = dapp.request('wallet_sendCalls', sendCalls({ id }))
   await waitForReview(harness)
+  expect(ledger.getStatus(origin, account, id)).toMatchObject({ status: 100, atomic: false })
   await expect(harness.approve()).resolves.toEqual([firstHash, secondHash])
-  await expect(response).resolves.toEqual({ id: 'success-batch' })
-
+  await expect(response).resolves.toEqual({ id })
   expect(upstream.requests.map(({ payload }) => payload.params[0])).toEqual(['0x01', '0x02'])
-  harness.ledger.recordReceipt(harness.origin, harness.account, 'success-batch', receipt(firstHash))
-  harness.ledger.recordReceipt(harness.origin, harness.account, 'success-batch', receipt(secondHash))
+
+  ledger.recordReceipt(origin, account, id, receipt(secondHash))
+  const pending = new WalletCallBatchLedger(storage)
+  expect(pending.getStatus(origin, account, id).status).toBe(100)
+  expect(() => pending.getStatus('https://other.example', account, id)).toThrow(
+    expect.objectContaining({ code: 5730 })
+  )
+  expect(() => pending.getStatus(origin, '0x3333333333333333333333333333333333333333', id)).toThrow(
+    expect.objectContaining({ code: 5730 })
+  )
+  pending.recordReceipt(origin, account, id, receipt(firstHash))
 
   const restarted = new WalletCallBatchLedger(storage)
-  expect(restarted.getStatus(harness.origin, harness.account, 'success-batch')).toMatchObject({
+  expect(restarted.getStatus(origin, account, id)).toMatchObject({
     status: 200,
     atomic: false,
     receipts: [{ transactionHash: firstHash }, { transactionHash: secondHash }]
@@ -107,24 +118,4 @@ it('recovers an ambiguous accepted broadcast from persisted restart state', asyn
   restarted.complete(harness.origin, harness.account, 'recovery-batch')
   restarted.recordReceipt(harness.origin, harness.account, 'recovery-batch', receipt(firstHash))
   expect(restarted.getStatus(harness.origin, harness.account, 'recovery-batch').status).toBe(200)
-})
-
-it('scopes status to the exact origin and account after restart', async () => {
-  const { dapp, harness, storage } = await fixture({ name: 'scope' })
-  const response = dapp.request(
-    'wallet_sendCalls',
-    sendCalls({ id: 'scoped-batch', calls: [sendCalls()[0].calls[0]] })
-  )
-  await waitForReview(harness)
-  await harness.approve()
-  await response
-
-  const restarted = new WalletCallBatchLedger(storage)
-  expect(() => restarted.getStatus('https://other.example', harness.account, 'scoped-batch')).toThrow(
-    expect.objectContaining({ code: 5730 })
-  )
-  expect(() =>
-    restarted.getStatus(harness.origin, '0x3333333333333333333333333333333333333333', 'scoped-batch')
-  ).toThrow(expect.objectContaining({ code: 5730 }))
-  expect(restarted.getStatus(harness.origin, harness.account, 'scoped-batch').status).toBe(100)
 })

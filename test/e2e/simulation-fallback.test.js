@@ -10,6 +10,7 @@ import { ACCOUNT, TARGET, createDappClient, startJsonRpcFixture } from './suppor
 const HASH = `0x${'ab'.repeat(32)}`
 const BLOCK = { hash: HASH, number: '0x123' }
 const SELECTOR = { blockHash: HASH, requireCanonical: true }
+const SECOND_TARGET = '0x3333333333333333333333333333333333333333'
 const transaction = {
   chainId: '0x1237',
   from: ACCOUNT,
@@ -50,7 +51,9 @@ async function preview(options = {}) {
   try {
     const started = Date.now()
     const result = await (options.batch ? simulateWalletCalls : simulateTransaction)(
-      options.batch ? [transaction, transaction] : { ...transaction, ...options.transaction },
+      options.batch
+        ? [transaction, { ...transaction, to: SECOND_TARGET }]
+        : { ...transaction, ...options.transaction },
       { send, timeoutMs: options.timeoutMs || 2000, onCoreResult: options.onCoreResult }
     )
     return { result, elapsed: Date.now() - started, requests: fixture.requests.map(({ payload }) => payload) }
@@ -84,8 +87,8 @@ afterAll(() => {
 
 describe('single-transaction preview across RPC capabilities', () => {
   it.each([
-    [-32601, 'Method not found'],
-    [-32004, 'Method not supported'],
+    [-32601, 'Unsupported'],
+    [-32004, 'Unsupported'],
     [-32002, 'the resource eth_simulateV1 is not available.'],
     [-32000, 'the method eth_simulateV1 does not exist/is not available'],
     [-32600, 'Unsupported method: eth_simulateV1']
@@ -128,8 +131,10 @@ describe('single-transaction preview across RPC capabilities', () => {
     [-32603, 'Internal error', 'failed']
   ])('does not hide execution or provider errors (%s)', async (code, message, status) => {
     const { result, requests } = await preview({ simulateError: { code, message } })
-    expect(result.status).toBe(status)
-    expect(requests.some(({ method }) => method === 'eth_call' || method === 'debug_traceCall')).toBe(false)
+    expect(result).toMatchObject({ status, source: 'eth_simulateV1', reason: message })
+    expect(requests.filter(({ method }) => method !== 'eth_getCode').map(({ method }) => method)).toEqual([
+      'eth_simulateV1'
+    ])
   })
 
   it('keeps basic execution when headers or block-hash selectors are unsupported', async () => {
@@ -154,7 +159,21 @@ describe('single-transaction preview across RPC capabilities', () => {
       })
       expect(result.effectsEvidence).toBeUndefined()
       expect(requests.filter(({ method }) => method === 'debug_traceCall')).toHaveLength(0)
-      expect(requests.filter(({ method }) => method === 'eth_call').at(-1).params[1]).toBe('latest')
+      expect(result.accountCodeEvidence).toMatchObject({
+        source: 'configured-rpc',
+        sender: { account: ACCOUNT, status: 'no-code' },
+        targets: [{ account: TARGET, status: 'no-code', callIndexes: [0] }]
+      })
+      expect(requests.filter(({ method }) => method === 'eth_call').at(-1).params).toEqual([
+        {
+          from: ACCOUNT,
+          to: TARGET,
+          gas: transaction.gasLimit,
+          value: transaction.value,
+          data: transaction.data
+        },
+        'latest'
+      ])
     }
   })
 
@@ -336,9 +355,21 @@ describe('single-transaction preview across RPC capabilities', () => {
 
   it('does not replace stateful Wallet Calls with independent eth_calls', async () => {
     const { result, requests } = await preview({ batch: true })
-    expect(result.status).not.toBe('succeeded')
-    expect(
-      requests.some(({ method }) => ['eth_call', 'debug_traceCall', 'eth_getBlockByNumber'].includes(method))
-    ).toBe(false)
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      source: 'eth_simulateV1',
+      reason: 'Configured RPC does not support stateful wallet call simulation',
+      calls: [],
+      accountCodeEvidence: {
+        sender: { account: ACCOUNT, status: 'no-code' },
+        targets: [
+          { account: TARGET, status: 'no-code', callIndexes: [0] },
+          { account: SECOND_TARGET, status: 'no-code', callIndexes: [1] }
+        ]
+      }
+    })
+    expect(requests.filter(({ method }) => method !== 'eth_getCode').map(({ method }) => method)).toEqual([
+      'eth_simulateV1'
+    ])
   })
 })

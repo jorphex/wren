@@ -280,25 +280,6 @@ it('bounds retained batches per origin without evicting live records', () => {
   expect(() => ledger.create(batch({ id: 'different-origin', origin: 'origin-two' }), 2000)).not.toThrow()
 })
 
-it('derives pending then successful status from ordered hashes and receipts', () => {
-  const { ledger } = createLedger()
-  const firstHash = hash('1')
-  const secondHash = hash('2')
-  ledger.create(batch({ callCount: 2 }), 1000)
-
-  expect(ledger.getStatus(origin, account, 'app-id', 1001)).toMatchObject({ status: 100, atomic: false })
-  ledger.recordTransaction(origin, account, 'app-id', firstHash, 1002)
-  ledger.recordTransaction(origin, account, 'app-id', secondHash, 1003)
-  ledger.complete(origin, account, 'app-id', 1004)
-  ledger.recordReceipt(origin, account, 'app-id', receipt(secondHash), 1005)
-  expect(ledger.getStatus(origin, account, 'app-id', 1006).status).toBe(100)
-  ledger.recordReceipt(origin, account, 'app-id', receipt(firstHash), 1007)
-
-  const status = ledger.getStatus(origin, account, 'app-id', 1008)
-  expect(status.status).toBe(200)
-  expect(status.receipts.map((entry) => entry.transactionHash)).toEqual([firstHash, secondHash])
-})
-
 it('distinguishes signed reservations from submitted transactions', () => {
   const { ledger } = createLedger()
   const transactionHash = hash('1')

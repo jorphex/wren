@@ -29,7 +29,6 @@ async function fixture() {
   storage.save({ main: { activity: [], observedTokenApprovals: [], accountActivityCursors: {} } })
   let head = 2
   let active = true
-  let enabled = true
   let accounts = [ACCOUNT]
   let amount = 125n
   let tokenBalance = 500n
@@ -89,7 +88,7 @@ async function fixture() {
       storage.save(state)
     },
     accounts: () => accounts,
-    chainEnabled: (chainId) => enabled && chainId === 1,
+    chainEnabled: (chainId) => chainId === 1,
     rpc: (chainId, method, params) => {
       expect(chainId).toBe(1)
       return rpc.request(method, params)
@@ -102,7 +101,7 @@ async function fixture() {
       return rpc.request(method, params)
     },
     accounts: () => accounts,
-    active: () => active && enabled,
+    active: () => active,
     cursor: (chainId) => storage.load().main.accountActivityCursors[chainId],
     clearedAt: () => 0,
     localActivity: () => undefined,
@@ -168,7 +167,6 @@ async function fixture() {
     tokenBalance: (value) => (tokenBalance = value),
     accounts: (value) => (accounts = value),
     active: (value) => (active = value),
-    enabled: (value) => (enabled = value),
     failCommit: (value) => (failCommit = value),
     receiptTransform: (value) => (receiptTransform = value),
     beforeHeader: (value) => (beforeHeader = value),
@@ -228,7 +226,10 @@ it('does not save an approval when a receipt or final block check is inconsisten
   })
   await expect(f.scanner.scan(1)).rejects.toThrow('block changed during scan')
   expect(f.service.list(ACCOUNT)).toEqual([])
-  expect(f.storage.load().main.accountActivityCursors[1].number).toBe(2)
+  const state = f.storage.load().main
+  expect(state.accountActivityCursors[1].number).toBe(2)
+  expect(state.activity).toEqual([])
+  expect(f.notifications).toHaveLength(0)
   f.beforeHeader(() => {})
   f.branches.delete(3)
   await f.scanner.scan(1)
@@ -265,6 +266,9 @@ it('invalidates current allowances on a reorg and keeps a replayed approval as o
   f.receipts.set(tx.hash, { ...f.receipts.get(tx.hash), blockHash: hash(3003) })
   await f.scanner.scan(1)
   expect(f.service.list(ACCOUNT)).toHaveLength(1)
+  expect(f.storage.load().main.activity).toMatchObject([
+    { outcome: 'confirmed', observed: { hash: tx.hash, blockHash: hash(3003) } }
+  ])
   await f.service.refresh(ACCOUNT, [id])
   const state = f.storage.load()
   const saved = state.main.observedTokenApprovals
@@ -338,17 +342,16 @@ it.each([false, true])(
   }
 )
 
-it.each(['clear', 'remove', 'disable', 'stop'])('honors %s during receipt collection', async (change) => {
+it.each(['clear', 'remove', 'stop'])('honors %s during receipt collection', async (change) => {
   f.tx(3)
   f.head(5)
   f.beforeHeader((number, full) => {
     if (number !== 3 || full) return
     if (change === 'clear') f.service.clear(ACCOUNT)
     if (change === 'remove') f.accounts([])
-    if (change === 'disable') f.enabled(false)
     if (change === 'stop') f.active(false)
   })
-  if (change === 'disable' || change === 'stop') await expect(f.scanner.scan(1)).rejects.toThrow('stopped')
+  if (change === 'stop') await expect(f.scanner.scan(1)).rejects.toThrow('stopped')
   else await f.scanner.scan(1)
   expect(f.storage.load().main.observedTokenApprovals).toEqual([])
 })

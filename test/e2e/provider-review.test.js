@@ -35,7 +35,7 @@ it('returns no accounts and rejects transaction review before permission', async
   expect(upstream.requests).toHaveLength(0)
 })
 
-it('admits an authorized review and returns a stable user rejection', async () => {
+it('allows a granted review, returns a user rejection and blocks a later request after revocation', async () => {
   harness.grant()
   await expect(dapp.request('eth_accounts')).resolves.toEqual([harness.account])
 
@@ -46,12 +46,12 @@ it('admits an authorized review and returns a stable user rejection', async () =
   await expect(pendingResponse).rejects.toMatchObject({ code: 4001, message: 'User rejected request' })
   expect(harness.ledger.getStatus(harness.origin, harness.account, 'rejected-batch').status).toBe(400)
   expect(upstream.requests).toHaveLength(0)
-})
 
-it('fails closed if permission is revoked before a later review', async () => {
-  harness.grant()
   harness.revoke()
-
-  await expect(dapp.request('wallet_sendCalls', sendCalls())).rejects.toMatchObject({ code: 4100 })
+  await expect(dapp.request('eth_accounts')).resolves.toEqual([])
+  await expect(dapp.request('wallet_sendCalls', sendCalls({ id: 'later-batch' }))).rejects.toMatchObject({
+    code: 4100
+  })
   expect(harness.requests.size).toBe(0)
+  expect(upstream.requests).toHaveLength(0)
 })

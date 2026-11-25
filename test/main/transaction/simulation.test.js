@@ -1122,38 +1122,6 @@ it('bounds a nonresponsive account delegation check without weakening execution 
   })
 })
 
-it.each([-32601, -32004])('falls back to eth_call for unsupported-method code %s', async (code) => {
-  const send = jest
-    .fn()
-    .mockImplementationOnce((_payload, callback) => callback(rpcError(code, 'Method unsupported')))
-    .mockImplementationOnce((_payload, callback) => callback({ id: 1, jsonrpc: '2.0', result: '0x' }))
-
-  await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
-    accountCodeEvidence: transactionAccountCodeEvidence,
-    advancedChecks: { status: 'partly-unavailable' },
-    status: 'succeeded',
-    source: 'eth_call'
-  })
-  expect(send.mock.calls[1][0]).toEqual({
-    id: 1,
-    jsonrpc: '2.0',
-    method: 'eth_call',
-    params: [buildEthCall(transaction), 'latest']
-  })
-})
-
-it('does not mask invalid simulation parameters with a fallback', async () => {
-  const send = jest.fn((_payload, callback) => callback(rpcError(-32602, 'Invalid parameters')))
-
-  await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
-    accountCodeEvidence: transactionAccountCodeEvidence,
-    status: 'failed',
-    source: 'eth_simulateV1',
-    reason: 'Invalid parameters'
-  })
-  expect(send).toHaveBeenCalledTimes(1)
-})
-
 it('reports an eth_call revert after fallback', async () => {
   const send = jest
     .fn()
@@ -1402,21 +1370,6 @@ describe('wallet call batches', () => {
       }
     })
     expect(send.mock.calls.filter(([payload]) => payload.method === 'eth_getCode')).toHaveLength(3)
-  })
-
-  it('does not substitute independent eth_call checks when stateful simulation is unsupported', async () => {
-    const send = jest.fn((_payload, callback) => callback(rpcError(-32601, 'Method not found')))
-
-    await expect(
-      simulateWalletCalls([transaction, secondTransaction], { send: withAccountCode(send) })
-    ).resolves.toEqual({
-      accountCodeEvidence: walletAccountCodeEvidence,
-      status: 'unavailable',
-      source: 'eth_simulateV1',
-      calls: [],
-      reason: 'Configured RPC does not support stateful wallet call simulation'
-    })
-    expect(send).toHaveBeenCalledTimes(1)
   })
 
   it('fails closed on malformed result counts and RPC errors', async () => {
