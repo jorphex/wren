@@ -16,8 +16,6 @@ protection has an additional
 unnotarized macOS releases have a separate
 [architecture-specific checklist](MACOS_UNNOTARIZED_QUALIFICATION.md).
 
-<a name="0112-preparation-record"></a>
-
 ## Trezor Suite client candidate
 
 The new client requires Suite Desktop on the same computer. Run
@@ -25,6 +23,8 @@ The new client requires Suite Desktop on the same computer. Run
 record. Physical qualification remains pending. Follow the checks in
 [Trezor Suite verification](TREZOR_SUITE.md#verification); record the Suite,
 firmware and device versions. Earlier direct USB results remain below.
+
+<a name="0112-preparation-record"></a>
 
 ## 0.1.12 release record
 

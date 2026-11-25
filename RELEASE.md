@@ -30,9 +30,9 @@ DPAPI qualification also needs the
 
 ## 2. Prepare a candidate
 
-Review the licenses of bundled dependencies. Trezor Connect carries T-RSL;
-no separate Wren grant is recorded. Its applicable integration and redistribution
-terms remain a [clarification item](TREZOR_CLEAR_SIGNING.md#sdk-license-prerequisite).
+Check the licenses in the installers. Keep the MIT license files for
+`@trezor/connect-web` and `@trezor/connect-common`. See the
+[Trezor package details](TREZOR_SUITE.md#implementation).
 
 Check the qualification record for the candidate version. If an unpublished
 draft contains older artifacts, archive its files before removing it.
@@ -45,8 +45,8 @@ The workflow refuses to overwrite an existing release.
    current physical-device evidence in
    [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md). When desktop/Companion integration
    changes, update the Companion `compatibility.json` minimum desktop commit and
-   build both from their exact paired commits. The current protocol is version 3;
-   do not direct a protocol-3 client to an older store extension.
+   build both from their exact paired commits. Use a Companion version that
+   supports pairing protocol 3.
 3. Install `xvfb` for renderer checks, then run the Linux release gate:
 
    ```bash

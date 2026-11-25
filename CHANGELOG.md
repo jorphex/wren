@@ -4,18 +4,17 @@ For release details and platform limits, see
 [`release-notes`](release-notes) and the
 [GitHub releases page](https://github.com/jorphex/wren/releases).
 
-## Unreleased
+## 0.1.13
 
-- Use Trezor Suite Desktop for device connection and signing. Review in Wren, then continue in Suite.
-- Check that the signed transaction matches the approved request before sending it.
-- Group estimated asset changes in review. Keep individual movements in Advanced details.
-- Open Contacts from a reviewed contract address to save it.
-- Find tokens from recent Activity or the bundled catalog. Choose which balances to add.
-- Refresh the bundled catalog and exclude three misleading token entries from automatic discovery.
-- Ask for native confirmation before removing device protection or staging a profile restore.
-- Retry or reload the dashboard without restarting Wren.
-- Refine wallet layouts, scroll cues, and button order.
-- Update Ledger, WebSocket, and development dependencies.
+- Moved Trezor connection and signing to Trezor Suite Desktop.
+- Checked that signed transactions match the approved requests before sending.
+- Grouped estimated asset changes. Kept individual movements in Advanced details.
+- Added a shortcut to save a reviewed contract address to Contacts.
+- Added **Find tokens** for recent Activity and the bundled catalog. Updated the catalog and removed three lookalikes from discovery.
+- Asked for confirmation before turning off device protection or preparing a profile restore.
+- Added dashboard recovery without a full restart.
+- Refined wallet navigation, layouts, scroll cues, and button order.
+- Updated Ledger and WebSocket libraries. Removed duplicate tests.
 
 ## 0.1.12 - 2026-11-07
 
