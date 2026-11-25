@@ -58,8 +58,9 @@ export const saveAddressBookDialog = async () => {
   return result.canceled ? undefined : result.filePath
 }
 
-export const openProfileBackupDialog = async () => {
-  const browserWindow = BrowserWindow.getFocusedWindow() as BrowserWindow
+export const openProfileBackupDialog = async (
+  browserWindow = BrowserWindow.getFocusedWindow() as BrowserWindow
+) => {
   const result = await dialog.showOpenDialog(browserWindow, {
     title: 'Inspect Wren Profile Backup',
     properties: ['openFile'],

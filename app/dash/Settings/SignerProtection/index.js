@@ -57,6 +57,9 @@ export class SignerProtection extends Component {
     this.setState({ pending: true, error: '', announcement: '' })
     try {
       const result = await (operation === 'enable' ? enableSignerProtection() : disableSignerProtection())
+      if (result.canceled) {
+        return this.setState({ pending: false, operation: '' }, () => this.actionRef.current?.focus())
+      }
       if (!result.success) throw new Error('operation failed')
       const announcement =
         operation === 'enable'

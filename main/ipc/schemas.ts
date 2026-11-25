@@ -1098,6 +1098,7 @@ const invokeResultSchemas = {
   ]),
   'signers:disableProtection': z.union([
     z.object({ success: z.literal(true), status: SignerProtectionStatusSchema }).strict(),
+    z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:maxAmount': z.union([

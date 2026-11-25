@@ -160,6 +160,8 @@ export class Recovery extends Component {
     this.setState({ restorePending: true, restoreError: '' })
     try {
       const result = await stageProfileRestore(this.state.restoreToken, this.state.restorePassword)
+      if (result.canceled)
+        return this.setState({ restorePending: false }, () => this.restoreCancelRef.current?.focus())
       if (!result.success) throw new Error('restore failed')
       this.setState(
         {

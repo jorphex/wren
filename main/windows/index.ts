@@ -5,7 +5,8 @@ import {
   globalShortcut,
   systemPreferences,
   IpcMainEvent,
-  WebContents
+  WebContents,
+  WebContentsView
 } from 'electron'
 import path from 'path'
 import log from 'electron-log'
@@ -847,6 +848,14 @@ store.api.feed((_state, actions) => {
 })
 
 export default {
+  dashboardDialogParent(sender: WebContents) {
+    const parent = windows.tray
+    if (!parent || parent.isDestroyed() || !dash?.isVisible()) return
+    const ownsSender = parent.contentView.children.some(
+      (view) => view instanceof WebContentsView && view.webContents === sender
+    )
+    return ownsSender ? parent : undefined
+  },
   isAnyWrenVisible() {
     return Boolean(
       tray?.isVisible() ||

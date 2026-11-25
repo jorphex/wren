@@ -1,6 +1,6 @@
 import link from '../../../../../resources/link'
 import { Recovery } from '../../../../../app/dash/Settings/Recovery'
-import { fireEvent, render, screen } from '../../../../componentSetup'
+import { fireEvent, render, screen, waitFor } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ invoke: jest.fn() }))
 
@@ -178,6 +178,25 @@ it('stages the exact inspected backup token only after explicit replacement conf
   )
   expect(screen.getByRole('status').textContent).toContain('restarting to replace this profile atomically')
   expect(screen.queryByRole('alertdialog')).toBeNull()
+})
+
+it('keeps the inspected backup open when the native confirmation is canceled', async () => {
+  link.invoke
+    .mockResolvedValueOnce({
+      success: true,
+      backup,
+      restoreToken,
+      tokenExpiresAt: '2026-08-12T14:05:00.000Z'
+    })
+    .mockResolvedValueOnce({ success: false, canceled: true })
+  render(<Recovery />)
+  startRestore()
+  fireEvent.change(screen.getByLabelText('Backup password'), { target: { value: password } })
+  fireEvent.submit(screen.getByRole('dialog', { name: 'Inspect encrypted backup' }))
+  await screen.findByRole('alertdialog')
+  fireEvent.click(screen.getByRole('button', { name: 'Replace this Wren profile' }))
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' })))
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
 })
 
 it('keeps the current profile in place after inspect or staging failure', async () => {

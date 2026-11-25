@@ -28,6 +28,7 @@ import {
   saveProfileBackupDialog,
   showUnhandledExceptionDialog
 } from './windows/dialog'
+import { confirmDashboardAction, dashboardDocument } from './windows/dialog/dashboardConsent'
 import { openBlockExplorer, openContractVerificationResult, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
@@ -113,7 +114,7 @@ let profileRestoreRelaunchTimer: ReturnType<typeof setTimeout> | undefined
 const PROFILE_INSPECTION_TOKEN_TTL_MS = 5 * 60 * 1000
 const profileInspectionTokens = new Map<
   string,
-  { source: string; binding: ProfileBackupFileBinding; expiresAt: number }
+  { source: string; binding: ProfileBackupFileBinding; expiresAt: number; owner: object }
 >()
 const managedClipboard = createSecretClipboard(clipboard, {
   onError: (error) => log.warn('Could not clear expired sensitive clipboard data', error)
@@ -592,13 +593,33 @@ handleRenderer('signers:disableProtection', async (e, confirmation) => {
   if (confirmation !== 'DISABLE_OS_SIGNER_PROTECTION') {
     return { success: false as const, error: 'Software signer protection was not confirmed' }
   }
-  return signerProtectionMutation(() => osSignerStorage.disable())
+  try {
+    const before = osSignerStorage.status()
+    const confirmed = await confirmDashboardAction(e, windows.dashboardDialogParent(e.sender), {
+      message: 'Disable device protection?',
+      detail: 'Software signers will still use their passwords.',
+      confirm: 'Disable protection'
+    })
+    if (!confirmed || closing) return { success: false as const, canceled: true as const }
+    const current = osSignerStorage.status()
+    if (JSON.stringify(current) !== JSON.stringify(before) || profileRestoreRelaunchTimer) {
+      return { success: false as const, error: 'Software signer protection state changed' }
+    }
+    return signerProtectionMutation(() => osSignerStorage.disable())
+  } catch {
+    return { success: false as const, error: 'Software signer protection status is unavailable' }
+  }
 })
 
 handleRenderer('profile:inspectBackup', async (e, password) =>
   profileBackupMutation('Encrypted backup could not be inspected', async () => {
-    const source = await openProfileBackupDialog()
-    if (!source) return { success: false as const, canceled: true as const }
+    const owner = dashboardDocument(e)
+    const parent = windows.dashboardDialogParent(e.sender)
+    if (!owner || !parent || parent.isDestroyed()) return { success: false as const, canceled: true as const }
+    const source = await openProfileBackupDialog(parent)
+    if (!source || parent.isDestroyed() || dashboardDocument(e) !== owner) {
+      return { success: false as const, canceled: true as const }
+    }
     const now = Date.now()
     for (const [token, inspection] of profileInspectionTokens) {
       if (inspection.expiresAt <= now) profileInspectionTokens.delete(token)
@@ -611,7 +632,7 @@ handleRenderer('profile:inspectBackup', async (e, password) =>
     const binding = inspectEncryptedProfileBackupFile(source, password)
     const token = crypto.randomUUID()
     const expiresAt = now + PROFILE_INSPECTION_TOKEN_TTL_MS
-    profileInspectionTokens.set(token, { source, binding, expiresAt })
+    profileInspectionTokens.set(token, { source, binding, expiresAt, owner })
     return {
       success: true as const,
       backup: binding.backup,
@@ -626,18 +647,33 @@ handleRenderer('profile:stageRestore', async (e, restoreToken, password, confirm
     if (confirmation !== 'REPLACE_PROFILE_ON_RESTART') {
       throw new Error('Profile replacement was not explicitly confirmed')
     }
+    const owner = dashboardDocument(e)
     const inspection = profileInspectionTokens.get(restoreToken)
-    profileInspectionTokens.delete(restoreToken)
-    if (!inspection || inspection.expiresAt <= Date.now()) {
+    const usableInspection = () =>
+      inspection &&
+      inspection.owner === owner &&
+      profileInspectionTokens.get(restoreToken) === inspection &&
+      inspection.expiresAt > Date.now() &&
+      !profileRestoreRelaunchTimer
+    if (!usableInspection() || !inspection) {
       throw new Error('Profile backup inspection expired; inspect the backup again')
     }
+    const confirmed = await confirmDashboardAction(e, windows.dashboardDialogParent(e.sender), {
+      message: 'Replace this Wren profile?',
+      detail: 'Wren will restart and use the inspected backup.',
+      confirm: 'Replace and restart'
+    })
+    if (!confirmed || closing) return { success: false as const, canceled: true as const }
+    if (!usableInspection() || dashboardDocument(e) !== owner) {
+      throw new Error('Profile backup inspection expired; inspect the backup again')
+    }
+    profileInspectionTokens.delete(restoreToken)
     const restore = stageInspectedProfileRestore(
       inspection.source,
       password,
       inspection.binding,
       app.getPath('userData')
     )
-    if (profileRestoreRelaunchTimer) clearTimeout(profileRestoreRelaunchTimer)
     profileRestoreRelaunchTimer = setTimeout(() => {
       profileRestoreRelaunchTimer = undefined
       app.relaunch()
