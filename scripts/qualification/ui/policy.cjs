@@ -4444,6 +4444,18 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     ]) {
       selected.push(
         {
+          id: `dash-find-tokens-${size}-1`,
+          renderer: 'dash',
+          state: 'find-tokens',
+          scale: 1,
+          logicalWidth: 620,
+          logicalHeight,
+          action: { type: 'clickText', text: 'Find tokens' },
+          ready: '.tokenDiscoveryMatch',
+          requiredText: ['Find tokens', 'Incoming transfers seen by Wren', 'Demo receipt token'],
+          requiredControls: ['Add RCT at 0x2222222222222222222222222222222222222222']
+        },
+        {
           id: `dash-state-retry-${size}-1`,
           renderer: 'dash',
           state: 'control-center',
@@ -4477,6 +4489,14 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         }
       )
     }
+    const tokenSearch = selected.find(({ id }) => id === 'dash-find-tokens-short-1')
+    selected.push({
+      ...tokenSearch,
+      id: 'dash-find-tokens-private-short-1',
+      hideBalances: true,
+      requiredText: [...tokenSearch.requiredText, '••••'],
+      layoutExpectations: [{ kind: 'hidden', selector: '.tokenDiscoveryAmount' }]
+    })
     const assetChanges = selected.find(({ id }) => id === 'tray-transaction-asset-changes-full-1')
     selected.push({
       ...assetChanges,

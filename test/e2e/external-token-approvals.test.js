@@ -2,6 +2,8 @@ import { Interface } from 'ethers'
 
 import actions from '../../main/store/actions'
 import { createAccountActivityScanner } from '../../main/accountActivity/scanner'
+import { createTokenDiscovery } from '../../main/tokenDiscovery'
+import TokenLoader from '../../main/externalData/inventory/tokens'
 import { TokenApprovalsService } from '../../main/tokenApprovals/service'
 import { ACCOUNT, TARGET, createDappClient, profileStorage, startJsonRpcFixture } from './support/harness'
 
@@ -11,7 +13,13 @@ const hex = (value) => `0x${value.toString(16)}`
 const hash = (value) => `0x${value.toString(16).padStart(64, '0')}`
 const abi = new Interface([
   'function approve(address spender, uint256 amount)',
-  'function allowance(address owner, address spender) view returns (uint256)'
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'event Transfer(address indexed from, address indexed to, uint256 value)',
+  'function balanceOf(address) view returns (uint256)',
+  'function name() view returns (string)',
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function totalSupply() view returns (uint256)'
 ])
 let fixtureSequence = 0
 let f
@@ -24,6 +32,7 @@ async function fixture() {
   let enabled = true
   let accounts = [ACCOUNT]
   let amount = 125n
+  let tokenBalance = 500n
   let failCommit = false
   let receiptTransform = (receipt) => receipt
   let beforeHeader = () => {}
@@ -51,7 +60,15 @@ async function fixture() {
     }
     if (method === 'eth_getLogs') return { result: [] }
     if (method === 'eth_getTransactionReceipt') return { result: receiptTransform(receipts.get(params[0])) }
+    if (method === 'eth_getCode') return { result: '0x6000' }
     if (method === 'eth_call') {
+      const call = abi.getFunction(params[0].data.slice(0, 10))
+      if (call?.name === 'balanceOf') {
+        expect(abi.decodeFunctionData('balanceOf', params[0].data)[0].toLowerCase()).toBe(ACCOUNT)
+        return { result: abi.encodeFunctionResult('balanceOf', [tokenBalance]) }
+      }
+      const values = { name: 'Receipt Token', symbol: 'RCT', decimals: 2n, totalSupply: 1000n }
+      if (call?.name in values) return { result: abi.encodeFunctionResult(call.name, [values[call.name]]) }
       const snapshot = amount
       await beforeAllowance()
       expect(params[1]).toBe('latest')
@@ -148,6 +165,7 @@ async function fixture() {
     },
     head: (value) => (head = value),
     amount: (value) => (amount = value),
+    tokenBalance: (value) => (tokenBalance = value),
     accounts: (value) => (accounts = value),
     active: (value) => (active = value),
     enabled: (value) => (enabled = value),
@@ -333,4 +351,86 @@ it.each(['clear', 'remove', 'disable', 'stop'])('honors %s during receipt collec
   if (change === 'disable' || change === 'stop') await expect(f.scanner.scan(1)).rejects.toThrow('stopped')
   else await f.scanner.scan(1)
   expect(f.storage.load().main.observedTokenApprovals).toEqual([])
+})
+
+it('previews canonical incoming tokens after restart and tracks only a selected current balance', async () => {
+  const tx = f.tx(3, { input: '0x' })
+  const receipt = f.receipts.get(tx.hash)
+  receipt.logs = [{ address: TARGET, ...abi.encodeEventLog('Transfer', [outside, ACCOUNT, 500n]) }]
+  f.head(5)
+  f.failCommit(true)
+  await expect(f.scanner.scan(1)).rejects.toThrow('Simulated commit failure')
+  expect(f.storage.load().main.accountActivityCursors[1].incomingTokens).toBeUndefined()
+  f.failCommit(false)
+  await createAccountActivityScanner(f.deps).scan(1)
+
+  let routes = 'first RPC'
+  const track = jest.fn()
+  const network = () => ({
+    routes,
+    known: new Set(),
+    incoming: f.storage.load().main.accountActivityCursors[1].incomingTokens || []
+  })
+  const discovery = createTokenDiscovery({ rpc: f.deps.rpc, getNetwork: network, track })
+  const scope = { account: ACCOUNT, chainId: 1, source: 'activity' }
+  const result = await discovery.preview(scope, 0)
+  expect(result.matches).toEqual([
+    { address: TARGET, chainId: 1, name: 'Receipt Token', symbol: 'RCT', decimals: 2, balance: '0x1f4' }
+  ])
+  expect(track).not.toHaveBeenCalled()
+  f.tokenBalance(0n)
+  await expect(discovery.add(scope, TARGET)).rejects.toThrow('no longer available')
+  f.tokenBalance(501n)
+  await discovery.add(scope, TARGET)
+  expect(track).toHaveBeenCalledTimes(1)
+  expect(track).toHaveBeenCalledWith(ACCOUNT, expect.objectContaining({ address: TARGET, decimals: 2 }), {
+    balance: '0x1f5',
+    displayBalance: '5.01'
+  })
+
+  const originalRpc = f.deps.rpc
+  const changedRoute = createTokenDiscovery({
+    rpc: (...args) => {
+      routes = 'new RPC'
+      return originalRpc(...args)
+    },
+    getNetwork: network,
+    track
+  })
+  await expect(changedRoute.preview(scope, 0)).rejects.toThrow('lookup changed')
+
+  f.branches.set(3, 3000)
+  f.transactions.delete(3)
+  await f.scanner.scan(1)
+  expect((await discovery.preview(scope, 0)).matches).toEqual([])
+  await expect(discovery.add(scope, TARGET)).rejects.toThrow('no longer discoverable')
+})
+
+it('paginates catalog checks and keeps exclusions and tracked tokens out of the preview', async () => {
+  const tokens = Array.from({ length: 20 }, (_, index) => ({
+    address: `0x${(index + 1).toString(16).padStart(40, '0')}`,
+    chainId: 1,
+    name: 'Catalog token',
+    symbol: 'CAT',
+    decimals: 2
+  }))
+  tokens[0].extensions = { omitFromDiscovery: true }
+  tokens[1].extensions = { omit: true }
+  const known = new Set([`1:${tokens[2].address}`])
+  const track = jest.fn()
+  const discovery = createTokenDiscovery({
+    rpc: f.deps.rpc,
+    getNetwork: () => ({ routes: 'first RPC', incoming: [], known }),
+    catalog: new TokenLoader(tokens),
+    track
+  })
+  const scope = { account: ACCOUNT, chainId: 1, source: 'catalog' }
+  const first = await discovery.preview(scope, 0)
+  expect(first.matches).toHaveLength(15)
+  expect(first.next).toBe(16)
+  expect(first.matches[0].address).toBe(tokens[3].address)
+  const second = await discovery.preview(scope, first.next)
+  expect(second.matches.map(({ address }) => address)).toEqual(tokens.slice(18).map(({ address }) => address))
+  expect(second.next).toBeNull()
+  expect(track).not.toHaveBeenCalled()
 })

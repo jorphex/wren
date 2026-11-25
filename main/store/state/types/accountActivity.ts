@@ -24,13 +24,22 @@ export const ObservedActivitySchema = z
     ])
   })
   .strict()
+export const MAX_INCOMING_TOKEN_REFERENCES = 120
+export const INCOMING_TOKEN_REFERENCE_TTL = 7 * 24 * 60 * 60 * 1000
+
+const IncomingTokenReferenceSchema = z
+  .object({ account: Address, token: Address, blockHash: Hash, blockNumber: Height, timestamp: Height })
+  .strict()
+export type IncomingTokenReference = z.infer<typeof IncomingTokenReferenceSchema>
+
 export const AccountActivityCursorSchema = z
   .object({
     number: Height,
     hash: Hash,
     history: z.array(z.object({ number: Height, hash: Hash }).strict()).max(12),
     watchFrom: z.record(Address, Height).refine((value) => Object.keys(value).length <= 500),
-    notified: z.array(Hash).max(1000)
+    notified: z.array(Hash).max(1000),
+    incomingTokens: z.array(IncomingTokenReferenceSchema).max(MAX_INCOMING_TOKEN_REFERENCES).optional()
   })
   .strict()
 export type AccountActivityCursor = z.infer<typeof AccountActivityCursorSchema>

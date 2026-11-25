@@ -1,2 +1,49 @@
 @import '../AddToken/style'
 @import '../CustomTokens/style'
+.tokenDiscovery
+  color var(--wren-text-primary)
+  gap var(--wren-space-4)
+  padding-top var(--wren-space-4)
+
+  h1, p
+    margin 0
+
+  p
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-body)
+
+.tokenDiscoveryFields, .tokenDiscoveryMatch > div
+  display grid
+  gap var(--wren-space-3)
+  min-width 0
+
+.tokenDiscoveryFields label
+  display grid
+  gap var(--wren-space-2)
+
+  select.wrenInput
+    min-height 44px
+    padding 0 var(--wren-space-3)
+    font inherit
+
+.tokenDiscoveryMatch > div
+  overflow-wrap anywhere
+
+.tokenDiscoveryMatch
+  display flex
+  justify-content space-between
+  align-items center
+  gap var(--wren-space-3)
+  padding var(--wren-space-4)
+  background var(--wren-surface-card)
+  border-radius var(--wren-radius-md)
+
+.tokenDiscoveryAddress
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-small)
+  overflow-wrap anywhere
+
+.tokenDiscoveryActions
+  display flex
+  flex-wrap wrap
+  gap var(--wren-space-3)

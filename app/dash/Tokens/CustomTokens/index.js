@@ -294,6 +294,16 @@ class CustomTokens extends React.Component {
             className='wrenControl wrenControlSecondary wrenControlLarge'
             disabled={removalActive}
             onClick={() =>
+              link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'findTokens' } })
+            }
+          >
+            Find tokens
+          </button>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlLarge'
+            disabled={removalActive}
+            onClick={() =>
               link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
             }
           >

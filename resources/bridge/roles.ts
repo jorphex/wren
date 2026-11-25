@@ -34,6 +34,8 @@ const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
 
 const dashboardOnlyInvokeChannels = new Set([
   'settings:clearRecentRecipients',
+  'tokens:find',
+  'tokens:trackDiscovered',
   'contractVerification:credentialStatus',
   'contractVerification:get',
   'contractVerification:inspectArtifact',

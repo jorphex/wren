@@ -35,6 +35,13 @@ export default class TokenLoader {
     )
   }
 
+  getDiscoveryExclusions(chains: number[]) {
+    return this.tokens.filter(
+      (token) =>
+        chains.includes(token.chainId) && (isBlacklisted(token) || token.extensions?.omitFromDiscovery)
+    )
+  }
+
   getBlacklist(chains: number[] = []) {
     const chainMatches = (token: TokenSpec) => !chains.length || chains.includes(token.chainId)
 

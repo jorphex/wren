@@ -682,6 +682,11 @@ const TokenSchema = z
   })
   .strict()
 
+const DiscoveryScopeSchema = z
+  .object({ account: AddressSchema, chainId: ChainNumberSchema, source: z.enum(['activity', 'catalog']) })
+  .strict()
+const DiscoveryPageSchema = z.number().int().nonnegative().max(50_000)
+
 const ShortcutSchema = StoredShortcutSchema.required().strict()
 
 const noArgs = z.tuple([])
@@ -914,6 +919,8 @@ const invokeSchemas = {
   'send:quoteSweep': z.tuple([SweepQuoteRequestSchema]),
   'send:queueSweep': z.tuple([SweepQueueRequestSchema]),
   'send:resolveRecipient': z.tuple([z.string().trim().min(1).max(255)]),
+  'tokens:find': z.tuple([DiscoveryScopeSchema, DiscoveryPageSchema]),
+  'tokens:trackDiscovered': z.tuple([DiscoveryScopeSchema, AddressSchema]),
   'tokens:save': z.tuple([TokenSchema, AssetSuggestionReferenceSchema.optional()]),
   'yearn:getCatalog': z.tuple([z.object({ force: z.boolean(), cacheOnly: z.boolean().optional() }).strict()]),
   'yearn:getPositions': z.tuple([]),
@@ -1130,6 +1137,23 @@ const invokeResultSchemas = {
     z
       .object({ success: z.literal(true), address: AddressSchema, name: z.string().max(255).optional() })
       .strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'tokens:find': z.union([
+    z
+      .object({
+        success: z.literal(true),
+        matches: z
+          .array(TokenSchema.extend({ balance: z.string().regex(/^0x[1-9a-f][0-9a-f]{0,63}$/u) }))
+          .max(16),
+        next: DiscoveryPageSchema.nullable(),
+        partial: z.boolean()
+      })
+      .strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'tokens:trackDiscovered': z.union([
+    z.object({ success: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'tokens:save': z.union([

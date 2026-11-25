@@ -58,9 +58,17 @@ function start() {
       if (!active() || !networks().some((chain) => chain.id === chainId))
         throw new Error('Activity network disconnected')
       const currentAccounts = accounts()
+      const clearedAt = store('main.activityClearedAt') || 0
       requireStoreAction('commitAccountActivity')(
         chainId,
-        cursor,
+        cursor.incomingTokens
+          ? {
+              ...cursor,
+              incomingTokens: cursor.incomingTokens.filter(
+                (ref) => currentAccounts.includes(ref.account) && ref.timestamp > clearedAt
+              )
+            }
+          : cursor,
         entries.filter((entry) => currentAccounts.includes(entry.account)),
         reorgAfter,
         approvals

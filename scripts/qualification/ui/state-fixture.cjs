@@ -20,6 +20,7 @@ const QUALIFICATION_VERIFICATION_TOKEN = '77777777-7777-4777-8777-777777777777'
 const QUALIFICATION_VERIFICATION_RUNTIME_HASH = `0x${'67'.repeat(32)}`
 const QUALIFICATION_INVOKE_CHANNELS = Object.freeze([
   'activity:details',
+  'tokens:find',
   'signers:protectionStatus',
   'tray:revokeAccess',
   'send:resolveRecipient',
@@ -1201,6 +1202,22 @@ const fixtureFor = (scenario) => {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'accounts', data: {} }]
+    }
+  }
+
+  if (scenario.state === 'find-tokens') {
+    prepareSelectedAccount(state)
+    state.selected.hideBalances = Boolean(scenario.hideBalances)
+    state.main.networks.ethereum[1] = {
+      id: 1,
+      name: 'Ethereum',
+      on: true,
+      connection: { endpoints: [{ on: true, connected: true }] }
+    }
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'tokens', data: { notify: 'findTokens' } }]
     }
   }
 
@@ -3021,6 +3038,23 @@ const qualificationVerificationJob = (scenario) => ({
 })
 
 const invokeReplyFor = (scenario, method, args = []) => {
+  if (scenario.state === 'find-tokens' && method === 'tokens:find') {
+    return {
+      success: true,
+      matches: [
+        {
+          name: 'Demo receipt token',
+          symbol: 'RCT',
+          address: QUALIFICATION_RECIPIENT,
+          chainId: 1,
+          decimals: 6,
+          balance: '0x1312d0'
+        }
+      ],
+      partial: false,
+      next: null
+    }
+  }
   if (scenario.state === 'earn-extended' && method.startsWith('yearn:')) {
     const catalog = qualificationYearnCatalog()
     const positions = qualificationYearnPositions()

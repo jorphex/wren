@@ -344,7 +344,10 @@ module.exports = {
     u('main.activityClearedAt', (clearedAt = 0) => Math.max(clearedAt, Date.now()))
     u('main.accountActivityCursors', (cursors = {}) =>
       Object.fromEntries(
-        Object.entries(cursors).map(([chainId, cursor]) => [chainId, { ...cursor, notified: [] }])
+        Object.entries(cursors).map(([chainId, cursor]) => [
+          chainId,
+          { ...cursor, notified: [], incomingTokens: [] }
+        ])
       )
     )
     u('main.activity', () => [])
@@ -427,6 +430,19 @@ module.exports = {
       delete accounts[id]
       return accounts
     })
+    u('main.accountActivityCursors', (cursors = {}) =>
+      Object.fromEntries(
+        Object.entries(cursors).map(([chainId, cursor]) => [
+          chainId,
+          cursor.incomingTokens
+            ? {
+                ...cursor,
+                incomingTokens: cursor.incomingTokens.filter((ref) => ref.account !== id.toLowerCase())
+              }
+            : cursor
+        ])
+      )
+    )
     u('main.dappGuardrails', (guardrails = {}) => {
       const account = typeof id === 'string' ? id.toLowerCase() : ''
       if (!account || !Object.prototype.hasOwnProperty.call(guardrails, account)) return guardrails
@@ -870,6 +886,17 @@ module.exports = {
     })
   },
   // Tokens
+  trackDiscoveredToken: (u, address, token, balance) => {
+    const id = toTokenId(token)
+    u('main.tokens.known', address, (tokens = []) => [
+      ...tokens.filter((entry) => toTokenId(entry) !== id),
+      token
+    ])
+    u('main.balances', address, (balances = []) => [
+      ...balances.filter((entry) => toTokenId(entry) !== id),
+      { ...token, ...balance }
+    ])
+  },
   setBalances: (u, address, newBalances) => {
     u('main.balances', address, (balances = []) => {
       const balancesByToken = new Map(balances.map((balance) => [toTokenId(balance), balance]))

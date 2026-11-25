@@ -7,7 +7,13 @@ import { parseErc20ApprovalIntent } from '../../resources/domain/transaction/all
 import type { ObservedTokenApprovalCall, TokenApprovalsService } from '../tokenApprovals/service'
 import type { TokenApprovalObservation } from '../../resources/domain/tokenApprovals'
 import type { ActivityEntry } from '../store/state/types/activity'
-import type { AccountActivityCursor, ObservedActivity } from '../store/state/types/accountActivity'
+import {
+  INCOMING_TOKEN_REFERENCE_TTL,
+  MAX_INCOMING_TOKEN_REFERENCES,
+  type AccountActivityCursor,
+  type IncomingTokenReference,
+  type ObservedActivity
+} from '../store/state/types/accountActivity'
 
 export const ACTIVITY_BLOCK_BATCH = 20
 export const ACTIVITY_CONFIRMATION_DEPTH = 2
@@ -186,11 +192,24 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
         cursor = {
           ...cursor,
           ...ancestor,
-          history: cursor.history.filter((b) => b.number < ancestor!.number)
+          history: cursor.history.filter((b) => b.number < ancestor!.number),
+          ...(cursor.incomingTokens && {
+            incomingTokens: cursor.incomingTokens.filter((ref) => ref.blockNumber <= ancestor!.number)
+          })
         }
         commit(cursor, [], ancestor.number)
       }
       commit(cursor, [])
+      const cutoff = Math.max(deps.clearedAt(), Date.now() - INCOMING_TOKEN_REFERENCE_TTL)
+      const incomingReferenceKey = ({ account, token }: IncomingTokenReference) => `${account}:${token}`
+      const incoming = new Map(
+        (cursor.incomingTokens || [])
+          .filter(
+            (ref) =>
+              ref.blockNumber <= cursor!.number && accounts.includes(ref.account) && ref.timestamp > cutoff
+          )
+          .map((ref) => [incomingReferenceKey(ref), ref])
+      )
       const end = Math.min(safeHead, cursor.number + ACTIVITY_BLOCK_BATCH)
       const blocks: Array<z.infer<typeof Block>> = []
       let parentHash = cursor.hash
@@ -286,9 +305,37 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
           ) {
             approvals.push({ from: tx.from, to: tx.to, data: tx.input, hash })
           }
+          const timestamp = height(block.timestamp) * 1000
+          if (!Number.isSafeInteger(timestamp)) throw new Error('Invalid activity timestamp')
           for (const account of watched) {
-            if (local?.account === account) continue
             const transfers = effects.filter((e) => e.from === account || e.to === account)
+            if (timestamp > cutoff) {
+              for (const effect of transfers) {
+                if (
+                  effect.standard !== 'erc20' ||
+                  effect.to !== account ||
+                  effect.from === account ||
+                  !effect.amount ||
+                  effect.amount === '0'
+                )
+                  continue
+                const ref = {
+                  account,
+                  token: effect.token,
+                  blockHash: block.hash,
+                  blockNumber: number,
+                  timestamp
+                }
+                const key = incomingReferenceKey(ref)
+                incoming.delete(key)
+                incoming.set(key, ref)
+                if (incoming.size > MAX_INCOMING_TOKEN_REFERENCES) {
+                  const oldest = incoming.keys().next().value
+                  if (oldest) incoming.delete(oldest)
+                }
+              }
+            }
+            if (local?.account === account) continue
             if (tx.from !== account && tx.to !== account && !transfers.length) continue
             const outgoing = tx.from === account
             let action: ObservedActivity['action'] =
@@ -311,8 +358,6 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
                 action = decoded.method === 'transfer' ? 'sent' : 'transfer'
             } else if (!outgoing && !transfers.some((e) => e.to === account) && tx.to !== account)
               action = 'sent'
-            const timestamp = height(block.timestamp) * 1000
-            if (!Number.isSafeInteger(timestamp)) throw new Error('Invalid activity timestamp')
             if (timestamp <= deps.clearedAt()) continue
             const entry: ActivityEntry = {
               id: observedActivityId(chainId, account, hash),
@@ -350,7 +395,8 @@ export function createAccountActivityScanner(deps: ActivityScannerDependencies) 
           number,
           hash: block.hash,
           history: [...cursor.history, { number: cursor.number, hash: cursor.hash }].slice(-12),
-          notified: [...notified].slice(-1000)
+          notified: [...notified].slice(-1000),
+          ...(cursor.incomingTokens || incoming.size ? { incomingTokens: [...incoming.values()] } : {})
         }
         check()
         commit(cursor, entries, undefined, approvals)

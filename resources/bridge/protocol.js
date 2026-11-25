@@ -76,6 +76,8 @@ export const requestInvokeChannels = new Set([
   'send:quoteSweep',
   'send:queueSweep',
   'send:resolveRecipient',
+  'tokens:find',
+  'tokens:trackDiscovered',
   'tokens:save',
   'tray:addChain',
   'tray:adjustWalletCalls',

@@ -72,6 +72,11 @@ import { contractVerificationArtifactErrorCode } from './contractVerification/ar
 import { wakeContractVerificationPollingForActiveResult } from './contractVerification/pollingRuntime'
 import { createSecretClipboard } from './security/secretClipboard'
 import activityDetails from './activity/detailsRuntime'
+import { createTokenDiscovery, type DiscoveryScope } from './tokenDiscovery'
+import { createWalletCallEvidenceRPC } from './provider/walletCallEvidenceRPC'
+import { toTokenId } from '../resources/domain/balance'
+import type { Chain as StoredChain, Token } from './store/state'
+import type { AccountActivityCursor } from './store/state/types/accountActivity'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -726,6 +731,52 @@ handleRenderer('send:queueSweep', async (e, request) => {
       success: false as const,
       error: code === 'managed-sweep-changed' ? 'sweep-quote-changed' : 'sweep-unavailable'
     }
+  }
+})
+
+const tokenDiscovery = createTokenDiscovery({
+  rpc: createWalletCallEvidenceRPC(chains, { timeoutMs: 8_000 }).rpc,
+  getNetwork: ({ account, chainId }: DiscoveryScope) => {
+    const network = store('main.networks.ethereum', chainId) as StoredChain | undefined
+    if (!store('main.accounts', account) || !network?.on) return
+    const connected = network.connection.endpoints.filter((endpoint) => endpoint.on && endpoint.connected)
+    if (!connected.length) return
+    const known = new Set(
+      [...(store('main.tokens.custom') || []), ...(store('main.tokens.known', account) || [])].map(
+        (token: Token) => toTokenId(token)
+      )
+    )
+    const cursor = store('main.accountActivityCursors', chainId) as AccountActivityCursor | undefined
+    const cutoff = store('main.activityClearedAt') || 0
+    return {
+      routes: JSON.stringify(connected.map(({ id, current, custom }) => [id, current, custom])),
+      provider: chains.connections.ethereum[chainId]?.active?.provider ?? null,
+      known,
+      incoming: (cursor?.incomingTokens || []).filter((ref) => ref.timestamp > cutoff)
+    }
+  },
+  track: (account, token, balance) => {
+    requireStoreAction('trackDiscoveredToken')(account, token, balance)
+    requireStoreAction('accountTokensUpdated')(account)
+  }
+})
+
+const discoveryScope = (scope: DiscoveryScope) => ({ ...scope, account: scope.account.toLowerCase() })
+
+handleRenderer('tokens:find', async (_event, scope, offset) => {
+  try {
+    return await tokenDiscovery.preview(discoveryScope(scope), offset)
+  } catch {
+    return { success: false as const, error: 'Token lookup unavailable. Try again.' }
+  }
+})
+
+handleRenderer('tokens:trackDiscovered', async (_event, scope, address) => {
+  try {
+    await tokenDiscovery.add(discoveryScope(scope), address.toLowerCase())
+    return { success: true as const }
+  } catch {
+    return { success: false as const, error: 'This token could not be added. Check again.' }
   }
 })
 
