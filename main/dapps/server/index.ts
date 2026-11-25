@@ -1,5 +1,4 @@
 import http from 'http'
-import { parse } from 'cookie'
 import { URL } from 'url'
 import { hash } from 'eth-ens-namehash'
 
@@ -8,11 +7,14 @@ import store from '../../store'
 import sessions from './sessions'
 import asset from './asset'
 
+// The cookie package exports ESM. Electron can load it from the CommonJS main process.
+const { parseCookie }: typeof import('cookie', { with: { 'resolution-mode': 'import' } }) = require('cookie')
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`)
   const ens = url.hostname.replace('.localhost', '')
   const namehash = hash(ens)
-  const session = (req.headers.cookie && parse(req.headers.cookie)['__frameSession']) || ''
+  const session = (req.headers.cookie && parseCookie(req.headers.cookie)['__frameSession']) || ''
 
   // check if dapp is added before progressing
   if (!store('main.dapps', namehash)) {
