@@ -6,6 +6,7 @@ import App from './App'
 import link from '../../resources/link'
 import observeScrollEdges from '../scrollEdges'
 import appStore from '../store'
+import RecoveryBoundary, { RecoveryView } from '../tray/RecoveryBoundary'
 
 document.addEventListener('dragover', (e) => e.preventDefault())
 document.addEventListener('drop', (e) => e.preventDefault())
@@ -64,6 +65,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) revealShellContent()
 })
 
+if (!document.body.classList.contains('light')) document.body.classList.add('dark')
 const dash = document.getElementById('dash')
 observeScrollEdges(document.body, [
   '.dash',
@@ -85,26 +87,92 @@ observeScrollEdges(document.body, [
   '.notifyBoxSlide'
 ])
 
-link.rpc('getState', (err, state) => {
-  if (err) return console.error('Could not get initial state from main')
-  const store = appStore(state)
+const root = createRoot(dash, { onCaughtError: () => {} })
+const reloadDashboard = () => link.send('dash:reload')
+let stopDashboard
+
+window.addEventListener(
+  'pagehide',
+  () => {
+    stopDashboard?.()
+    clearTimeout(shellRevealTimer)
+    cancelAnimationFrame(shellRevealFrame)
+  },
+  { once: true }
+)
+
+function startDashboard() {
+  const recovery = {
+    onRetry: startDashboard,
+    onReload: reloadDashboard,
+    view: 'Dashboard'
+  }
+  root.render(<RecoveryView {...recovery} pending />)
+  let settled = false
+  let cancelRpc
+  const fail = () => {
+    if (settled) return
+    settled = true
+    clearTimeout(timer)
+    cancelRpc?.()
+    console.error('Dashboard state could not be loaded')
+    root.render(<RecoveryView {...recovery} />)
+  }
+  const timer = setTimeout(fail, 10_000)
+  const lifetime = new AbortController()
+  stopDashboard = () => {
+    settled = true
+    clearTimeout(timer)
+    cancelRpc?.()
+    lifetime.abort()
+  }
+  cancelRpc = link.rpc('getState', (error, state) => {
+    if (settled) return
+    if (error || !state?.main || !state.windows) return fail()
+    try {
+      mountDashboard(state, lifetime.signal)
+      settled = true
+      clearTimeout(timer)
+    } catch {
+      lifetime.abort()
+      fail()
+    }
+  })
+}
+
+function mountDashboard(state, signal) {
+  const store = appStore(state, { signal })
   window.store = store
-  store.observer(() => {
+  let colorTimer
+  const theme = store.observer(() => {
     document.body.classList.remove('dark', 'light')
     document.body.classList.add('clip', store('main.colorway'))
-    setTimeout(() => {
-      document.body.classList.remove('clip')
-    }, 100)
+    clearTimeout(colorTimer)
+    colorTimer = setTimeout(() => document.body.classList.remove('clip'), 100)
   })
-  store.observer(() => {
+  signal.addEventListener(
+    'abort',
+    () => {
+      theme.remove()
+      clearTimeout(colorTimer)
+    },
+    { once: true }
+  )
+  const workspaceEdge = store.observer(() => {
     const glideSide = store('main.glideSide') === 'left' ? 'left' : 'right'
     document.body.classList.toggle('workspace-edge-left', glideSide === 'left')
     document.body.classList.toggle('workspace-edge-right', glideSide === 'right')
   })
-  const root = createRoot(dash)
+  signal.addEventListener('abort', () => workspaceEdge.remove(), { once: true })
   const Dash = Restore.connect(AppComponent, store)
-  root.render(<Dash />)
-})
+  root.render(
+    <RecoveryBoundary view='Dashboard' onReload={reloadDashboard}>
+      <Dash />
+    </RecoveryBoundary>
+  )
+}
+
+startDashboard()
 
 document.addEventListener('contextmenu', (e) => link.send('*:contextmenu', e.clientX, e.clientY))
 

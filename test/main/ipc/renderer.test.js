@@ -196,3 +196,16 @@ test('authorizes decoded RPC methods and ignores malformed method values', () =>
   expect(dapp.sender.send).toHaveBeenCalledTimes(2)
   expect(dapp.sender.send).toHaveBeenCalledWith('main:rpc', 1, '"Invalid renderer RPC payload"')
 })
+
+it('limits the dashboard reload event to the dashboard itself', () => {
+  const listener = jest.fn()
+  onRenderer('dash:reload', listener)
+  const dispatch = mockListeners.get('dash:reload')
+  const dashboard = sender('dash')
+  dispatch(sender('tray'))
+  dispatch(sender('dapp'))
+  dispatch(dashboard, 'wrong payload')
+  dispatch(dashboard)
+  expect(listener).toHaveBeenCalledTimes(1)
+  expect(listener).toHaveBeenCalledWith(dashboard)
+})

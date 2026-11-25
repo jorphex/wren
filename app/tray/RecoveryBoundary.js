@@ -1,16 +1,22 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import link from '../../resources/link'
 
-export function RecoveryView({ onRetry, pending = false }) {
+const reloadWallet = () => link.send('tray:reload')
+
+export function RecoveryView({ onRetry, onReload = reloadWallet, pending = false, view = 'Wallet' }) {
+  const retry = useRef(null)
+  useEffect(() => {
+    if (!pending) retry.current?.focus()
+  }, [pending])
   return (
     <div className='walletRecovery' role='alert'>
-      <strong>{pending ? 'Loading wallet' : 'Wallet view unavailable'}</strong>
+      <strong>{pending ? `Loading ${view.toLowerCase()}` : `${view} view unavailable`}</strong>
       <div className='walletRecoveryActions'>
-        <button type='button' onClick={onRetry} disabled={pending}>
+        <button ref={retry} type='button' onClick={onRetry} disabled={pending}>
           Try again
         </button>
-        <button type='button' onClick={() => link.send('tray:reload')}>
-          Reload wallet
+        <button type='button' onClick={onReload}>
+          {`Reload ${view.toLowerCase()}`}
         </button>
       </div>
     </div>
@@ -26,12 +32,16 @@ export default class RecoveryBoundary extends React.Component {
 
   componentDidCatch() {
     // Renderer errors can include account data; report only the failure category.
-    console.error('Wallet view failed to render')
+    console.error(`${this.props.view || 'Wallet'} view failed to render`)
   }
 
   render() {
     return this.state.failed ? (
-      <RecoveryView onRetry={() => this.setState({ failed: false })} />
+      <RecoveryView
+        onRetry={() => this.setState({ failed: false })}
+        onReload={this.props.onReload}
+        view={this.props.view}
+      />
     ) : (
       this.props.children
     )

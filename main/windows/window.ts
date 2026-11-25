@@ -23,10 +23,12 @@ import {
 } from '../../resources/constants'
 import { onRenderer, registerRendererRole } from '../ipc/renderer'
 
-// Reload only the requesting wallet view; keep navigation policy unchanged.
-onRenderer('tray:reload', (event) => {
-  if (!event.sender.isDestroyed()) event.sender.reload()
-})
+// Reload only the requesting view; keep the main process and other views running.
+for (const channel of ['tray:reload', 'dash:reload']) {
+  onRenderer(channel, ({ sender }) => {
+    if (!sender.isDestroyed()) sender.reload()
+  })
+}
 
 const hardenedSessions = new WeakSet<Session>()
 

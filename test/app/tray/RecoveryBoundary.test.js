@@ -26,3 +26,25 @@ it('contains a rendering failure and recovers the view without replaying an acti
     log.mockRestore()
   }
 })
+
+it('focuses dashboard recovery and reloads only the configured view', async () => {
+  const log = jest.spyOn(console, 'error').mockImplementation(() => {})
+  const reload = jest.fn()
+  function BrokenDashboard() {
+    throw new Error('Private state')
+  }
+  try {
+    const view = render(
+      <RecoveryBoundary view='Dashboard' onReload={reload}>
+        <BrokenDashboard />
+      </RecoveryBoundary>
+    )
+    expect(screen.getByRole('alert').textContent).toContain('Dashboard view unavailable')
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Try again' }))
+    await view.user.click(screen.getByRole('button', { name: 'Reload dashboard' }))
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith('Dashboard view failed to render')
+  } finally {
+    log.mockRestore()
+  }
+})

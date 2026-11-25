@@ -4438,6 +4438,47 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
   if (includeReview) {
+    for (const [size, logicalHeight] of [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ]) {
+      selected.push(
+        {
+          id: `dash-state-retry-${size}-1`,
+          renderer: 'dash',
+          state: 'control-center',
+          initialStateError: true,
+          scale: 1,
+          logicalWidth: 620,
+          logicalHeight,
+          action: { type: 'clickText', text: 'Try again' },
+          ready: '.dashControlShell',
+          requiredText: ['MORE TOOLS', 'BROWSER COMPANION']
+        },
+        {
+          id: `dash-state-unavailable-${size}-1`,
+          renderer: 'dash',
+          state: 'control-center',
+          initialStateError: true,
+          scale: 1,
+          logicalWidth: 620,
+          logicalHeight,
+          ready: '.walletRecovery',
+          requiredText: ['Dashboard view unavailable'],
+          requiredControls: ['Try again', 'Reload dashboard'],
+          layoutExpectations: [
+            {
+              kind: 'computed-style',
+              selector: '.walletRecovery',
+              property: 'color',
+              value: 'rgb(242, 244, 239)'
+            }
+          ]
+        }
+      )
+    }
+  }
+  if (includeReview) {
     const base = selected.find((scenario) => scenario.id === 'tray-account-activity-full-1')
     selected.push({
       ...base,

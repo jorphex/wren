@@ -31,6 +31,7 @@ const preload = path.join(bundleRoot, 'bridge.js')
 const stateByWebContents = new Map()
 const scenarioByWebContents = new Map()
 const rendererErrors = new Map()
+const initialStateFailures = new WeakSet()
 const reconnectCalls = new Map()
 const reconnectInteractions = new Map()
 const metadataInteractions = new Map()
@@ -259,6 +260,7 @@ const createRendererWindow = (scenario) => {
   scenarioByWebContents.set(window.webContents.id, scenario)
   rendererErrors.set(window.webContents.id, [])
   window.webContents.on('console-message', (details) => {
+    if (scenario.initialStateError && details.message === 'Dashboard state could not be loaded') return
     if (details.level === 'error') {
       rendererErrors.get(window.webContents.id)?.push(String(details.message))
     }
@@ -979,6 +981,11 @@ const main = async () => {
       if (scenario.variant === 'error')
         event.sender.send('main:rpc', id, JSON.stringify('Fixture reconnect failed'))
       else if (scenario.variant === 'settled') event.sender.send('main:rpc', id, null)
+      return
+    }
+    if (method === 'getState' && scenario?.initialStateError && !initialStateFailures.has(event.sender)) {
+      initialStateFailures.add(event.sender)
+      event.sender.send('main:rpc', id, JSON.stringify('Qualification state read failed'))
       return
     }
     if (scenario?.deferRpcs?.includes(method)) return

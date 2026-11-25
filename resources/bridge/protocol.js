@@ -32,6 +32,7 @@ export const requestEventChannels = new Set([
   'tray:quit',
   'tray:ready',
   'tray:reload',
+  'dash:reload',
   'tray:rejectRequest',
   'tray:removeToken',
   'tray:renameAccount',

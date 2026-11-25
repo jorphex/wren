@@ -12,7 +12,7 @@ import link from '../resources/link'
 
 import * as actions from '../resources/store/actions.panel'
 
-export default (state, _cb) => {
+export default (state, { signal } = {}) => {
   const store = Restore.create(state, actions)
   store.events = new EventEmitter()
 
@@ -28,9 +28,11 @@ export default (state, _cb) => {
   //   })
   // })
 
-  link.on('action', (action, ...args) => {
+  const onAction = (action, ...args) => {
     if (store[action]) store[action](...args)
-  })
+  }
+  link.on('action', onAction)
+  signal?.addEventListener('abort', () => link.off('action', onAction), { once: true })
 
   return store
 }
