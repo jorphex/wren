@@ -15,7 +15,10 @@ import AddressIdentity from '../../../../../../resources/Components/AddressIdent
 import AddressSafetyStatus, {
   addressSafetyTarget
 } from '../../../../../../resources/Components/AddressSafetyStatus'
-import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
+import {
+  lookupAddressBookEntry,
+  resolveLocalAddressIdentity
+} from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
 
 const YEARN_ACTION_LABELS = {
@@ -57,6 +60,8 @@ class TxRecipient extends React.Component {
       : undefined
     const yearnAction = (req.recognizedActions || []).find(({ id }) => id?.startsWith('yearn:'))
     const yearnData = yearnAction?.data || {}
+    const savedContact = lookupAddressBookEntry(this.store('main.addressBook'), address)
+    const canOpenContact = !this.props.readOnly && !req.status && req.recipientType === 'contract'
     const addressSafety = addressSafetyTarget(req.addressSafety, address)
     const tokenAction = (req.recognizedActions || []).some(
       (action) => action.id === 'erc20:approve' || action.id === 'erc20:transfer'
@@ -103,6 +108,23 @@ class TxRecipient extends React.Component {
             </ClusterValue>
             <ClusterStatus>{this.state.copied ? 'Transaction recipient address copied' : ''}</ClusterStatus>
           </ClusterRow>
+
+          {canOpenContact ? (
+            <ClusterRow>
+              <button
+                type='button'
+                className='wrenControl wrenControlSecondary wrenControlCompact'
+                onClick={() =>
+                  link.send('tray:action', 'navDash', {
+                    view: 'addressBook',
+                    data: { screen: 'edit', ...(savedContact ? { address } : { seed: address }) }
+                  })
+                }
+              >
+                {savedContact ? 'View contact' : 'Save to Contacts'}
+              </button>
+            </ClusterRow>
+          ) : null}
 
           {this.props.technical && req.decodedData && req.decodedData.method ? (
             <ClusterRow>

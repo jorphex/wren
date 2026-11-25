@@ -131,7 +131,7 @@ export class TransactionRequest extends React.Component {
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
                 {approval ? actions : null}
-                <TxRecipient i={1} {...this.props} req={req} />
+                <TxRecipient i={1} {...this.props} req={req} readOnly={readOnly} />
                 {!approval ? actions : null}
                 <ReviewAcknowledgements req={req} readOnly={readOnly} />
                 <ReviewDetails initiallyOpen={feeInitiallyExpanded}>

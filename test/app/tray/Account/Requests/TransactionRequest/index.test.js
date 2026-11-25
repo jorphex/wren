@@ -360,6 +360,21 @@ describe('confirm', () => {
     store.removeAddressBookEntry(recipient)
   })
 
+  it('opens the Contacts editor for the exact reviewed contract from an editable review', async () => {
+    const recipient = '0x7777777777777777777777777777777777777777'
+    const req = { data: { to: recipient, value: '0x0' }, recipientType: 'contract' }
+    const view = render(<TxRecipient i={0} req={req} readOnly />)
+    expect(screen.queryByRole('button', { name: 'Save to Contacts' })).toBeNull()
+    view.rerender(<TxRecipient i={0} req={req} />)
+    link.send.mockClear()
+    await view.user.click(screen.getByRole('button', { name: 'Save to Contacts' }))
+    expect(link.send).toHaveBeenCalledTimes(1)
+    expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+      view: 'addressBook',
+      data: { screen: 'edit', seed: recipient }
+    })
+  })
+
   it('recognizes an existing Wren account without hiding the recipient address', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
     store.updateAccount({ id: recipient, name: 'Frame Savings' })
@@ -774,6 +789,38 @@ describe('simulation review', () => {
     const outgoing = outgoingDirection.closest('.transactionReviewAssetChangeOutgoing')
     const incoming = incomingDirection.closest('.transactionReviewAssetChangeIncoming')
     expect(outgoing.compareDocumentPosition(incoming) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('nets matching transfers, keeps minting separate, and ignores self-transfers', () => {
+    const owner = account.toLowerCase()
+    const payer = '0x2222222222222222222222222222222222222222'
+    const token = '0x3333333333333333333333333333333333333333'
+    const zero = '0x0000000000000000000000000000000000000000'
+    const transfer = (from, to, amount) => ({ type: 'transfer', standard: 'erc20', token, from, to, amount })
+    render(
+      <BalanceChanges
+        account={owner}
+        req={{ classification: 'CONTRACT_CALL', data: {} }}
+        simulation={{
+          status: 'succeeded',
+          source: 'eth_simulateV1',
+          effectsTruncated: true,
+          effects: [
+            transfer(payer, owner, '20'),
+            transfer(payer, owner, '30'),
+            transfer(owner, payer, '10'),
+            transfer(owner, owner, '10000'),
+            transfer(zero, owner, '7')
+          ]
+        }}
+        symbol='ETH'
+      />
+    )
+    expect(screen.getByText('Partial estimate')).toBeTruthy()
+    expect(screen.getByText('From token events')).toBeTruthy()
+    expect(screen.getByText('40 base units')).toBeTruthy()
+    expect(screen.getByText('7 base units')).toBeTruthy()
+    expect(screen.getAllByText(/base units/)).toHaveLength(2)
   })
 
   it('places the selected account native trace alongside token balance changes', () => {

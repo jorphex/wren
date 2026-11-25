@@ -1855,7 +1855,7 @@ const reviewScenarios = () => [
     ['no-decimals', ['New Token', '2500000 base units']],
     ['wrong-chain', ['0x333333…', '2500000 base units']],
     ['zero-decimals', ['Whole Token', '42 WHOLE']],
-    ['nft', ['42 base units']]
+    ['nft', ['#42']]
   ].map(([variant, text]) => ({
     id: `tray-transaction-asset-metadata-${variant}-full-1`,
     renderer: 'tray',
@@ -4477,6 +4477,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         }
       )
     }
+    const assetChanges = selected.find(({ id }) => id === 'tray-transaction-asset-changes-full-1')
+    selected.push({
+      ...assetChanges,
+      id: 'tray-transaction-asset-changes-short-1',
+      logicalHeight: SHORT_SHELL_HEIGHT
+    })
   }
   if (includeReview) {
     const base = selected.find((scenario) => scenario.id === 'tray-account-activity-full-1')

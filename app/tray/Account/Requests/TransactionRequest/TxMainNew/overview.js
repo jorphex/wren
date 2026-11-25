@@ -43,23 +43,34 @@ export const getExpectedNativeBalanceChange = (simulation, account) => {
   )
 }
 
+function summarizeTransfers(effects, account) {
+  const groups = new Map()
+  for (const effect of effects) {
+    if (effect.from === effect.to) continue
+    const direction =
+      effect.from === ZERO_ADDRESS ? 'Minted' : effect.to === ZERO_ADDRESS ? 'Burned' : 'Transfer'
+    const quantity = effect.standard === 'erc721' ? '1' : effect.amount
+    if (!/^[0-9]{1,78}$/.test(quantity || '')) continue
+    const key = [effect.standard, effect.token, effect.tokenId, direction].join(':')
+    const group = groups.get(key) || { key, effect, direction, total: 0n }
+    group.total += effect.to === account ? BigInt(quantity) : -BigInt(quantity)
+    groups.set(key, group)
+  }
+  return [...groups.values()]
+    .filter(({ total }) => total !== 0n)
+    .map(({ key, effect, direction, total }) => ({
+      key,
+      change: effect,
+      direction: direction === 'Transfer' ? (total > 0n ? 'Received' : 'Sent') : direction,
+      incoming: total > 0n,
+      amount: (total > 0n ? total : -total).toString()
+    }))
+    .sort((left, right) => Number(left.incoming) - Number(right.incoming))
+}
+
 export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) => {
   const accountAddress = account?.toLowerCase() || ''
-  const changes = getExpectedAssetChanges(simulation, account)
-    .map((change) => {
-      const from = change.from?.toLowerCase()
-      const to = change.to?.toLowerCase()
-      const direction =
-        from === ZERO_ADDRESS
-          ? 'Minted'
-          : to === ZERO_ADDRESS
-            ? 'Burned'
-            : from === accountAddress
-              ? 'Sent'
-              : 'Received'
-      return { change, direction, incoming: direction === 'Minted' || direction === 'Received' }
-    })
-    .sort((left, right) => Number(left.incoming) - Number(right.incoming))
+  const changes = summarizeTransfers(getExpectedAssetChanges(simulation, account), accountAddress)
   const tracedNativeChange = getExpectedNativeBalanceChange(simulation, account)
   const nativeIncoming = Boolean(tracedNativeChange && !String(tracedNativeChange.change).startsWith('-'))
   const parsedNativeValue = BigNumber(req.data.value || '0')
@@ -70,14 +81,27 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
     !parsedNativeValue.isZero()
       ? req.data.value
       : null
-  if (!tracedNativeChange && !sentNativeValue && !changes.length) return null
+  const tokenChangesUnavailable =
+    req.classification === 'CONTRACT_CALL' &&
+    simulation?.status === 'succeeded' &&
+    simulation.advancedChecks?.status !== 'pending' &&
+    !hasSimulationEffects(simulation)
+  const partial = Boolean(simulation?.effectsTruncated || simulation?.nativeBalanceChanges?.truncated)
+  if (!tracedNativeChange && !sentNativeValue && !changes.length && !partial && !tokenChangesUnavailable)
+    return null
+  const hasEstimate =
+    tracedNativeChange || changes.length || (sentNativeValue && simulation?.status === 'succeeded')
+  let title = 'Token preview unavailable'
+  if (partial) title = 'Partial estimate'
+  else if (hasEstimate) title = 'Estimated changes'
+  else if (sentNativeValue) title = 'Transaction value'
 
   return (
     <ClusterRow className='transactionReviewAssetChanges'>
       <ClusterValue>
         <div className='transactionReviewAssetChangesInner'>
           <div className='transactionReviewAssetChangesHeader'>
-            <strong>Estimated changes</strong>
+            <strong>{title}</strong>
           </div>
           {(tracedNativeChange || sentNativeValue) && !nativeIncoming ? (
             <div className='transactionReviewAssetChange transactionReviewAssetChangeOutgoing'>
@@ -101,7 +125,7 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
               </span>
             </div>
           ) : null}
-          {changes.map(({ change, direction, incoming }, index) => {
+          {changes.map(({ key, change, direction, incoming, amount }) => {
             const token = change.standard === 'erc20' ? tokenFor?.(change.token) : undefined
             const hasDecimals =
               Number.isInteger(token?.decimals) && token.decimals >= 0 && token.decimals <= 255
@@ -113,11 +137,10 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
                   : incoming
                     ? 'You receive'
                     : 'You send'
-            const amount = change.amount ?? change.tokenId
             return (
               <div
                 className={`transactionReviewAssetChange transactionReviewAssetChange${incoming ? 'Incoming' : 'Outgoing'}`}
-                key={`${change.token}:${index}`}
+                key={key}
               >
                 <span className='transactionReviewAssetChangeIdentity'>
                   <strong title={change.token}>
@@ -126,8 +149,8 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
                   </strong>
                 </span>
                 <span className='transactionReviewAssetChangeAmount'>
-                  {amount !== undefined ? <span aria-hidden='true'>{incoming ? '+' : '−'}</span> : null}
-                  {amount !== undefined && hasDecimals ? (
+                  <span aria-hidden='true'>{incoming ? '+' : '−'}</span>
+                  {hasDecimals ? (
                     <DisplayValue
                       type='ether'
                       value={amount}
@@ -135,10 +158,12 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
                       currencySymbol={token.symbol}
                       currencySymbolPosition='last'
                     />
-                  ) : amount !== undefined ? (
-                    <span>{`${amount} base units`}</span>
+                  ) : change.tokenId !== undefined ? (
+                    <span>
+                      {change.standard === 'erc721' ? `#${change.tokenId}` : `${amount} × #${change.tokenId}`}
+                    </span>
                   ) : (
-                    <span>Token transfer</span>
+                    <span>{`${amount} base units`}</span>
                   )}
                 </span>
               </div>
@@ -164,13 +189,10 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
               </span>
             </div>
           ) : null}
-          {simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated ? (
-            <div
-              className='transactionReviewAssetChangesDisclaimer transactionReviewAssetChangesDisclaimerWarning'
-              role='alert'
-            >
-              Some token changes could not be simulated.
-            </div>
+          {changes.length || (tokenChangesUnavailable && hasEstimate) ? (
+            <span className='transactionReviewAssetChangesDisclaimer'>
+              {tokenChangesUnavailable ? 'Token preview unavailable' : 'From token events'}
+            </span>
           ) : null}
         </div>
       </ClusterValue>
