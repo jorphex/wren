@@ -50,7 +50,7 @@ afterAll(() => {
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
 
 describe('#clearActivity', () => {
-  it('clears displayed history and both outbound-address memories together', () => {
+  it('clears history, incoming token references and both outbound-address memories together', () => {
     const updates = []
     const update = (path, reducer) =>
       updates.push([
@@ -59,7 +59,22 @@ describe('#clearActivity', () => {
           path === 'main.activityClearedAt'
             ? 0
             : path === 'main.accountActivityCursors'
-              ? { 1: { number: 12, notified: ['hash'] } }
+              ? {
+                  1: { number: 12, notified: ['hash'] },
+                  2: {
+                    number: 18,
+                    notified: ['other hash'],
+                    incomingTokens: [
+                      {
+                        account: owner,
+                        token: '0x1111111111111111111111111111111111111111',
+                        blockHash: `0x${'0'.repeat(64)}`,
+                        blockNumber: 18,
+                        timestamp: 18000
+                      }
+                    ]
+                  }
+                }
               : { retained: true }
         )
       ])
@@ -68,7 +83,7 @@ describe('#clearActivity', () => {
 
     expect(updates).toEqual([
       ['main.activityClearedAt', expect.any(Number)],
-      ['main.accountActivityCursors', { 1: { number: 12, notified: [] } }],
+      ['main.accountActivityCursors', { 1: { number: 12, notified: [] }, 2: { number: 18, notified: [] } }],
       ['main.activity', []],
       ['main.activityTransactionReferences', {}],
       ['main.outboundAddressMemory', {}],

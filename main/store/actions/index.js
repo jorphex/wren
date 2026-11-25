@@ -344,9 +344,9 @@ module.exports = {
     u('main.activityClearedAt', (clearedAt = 0) => Math.max(clearedAt, Date.now()))
     u('main.accountActivityCursors', (cursors = {}) =>
       Object.fromEntries(
-        Object.entries(cursors).map(([chainId, cursor]) => [
+        Object.entries(cursors).map(([chainId, { incomingTokens: _incomingTokens, ...cursor }]) => [
           chainId,
-          { ...cursor, notified: [], incomingTokens: [] }
+          { ...cursor, notified: [] }
         ])
       )
     )

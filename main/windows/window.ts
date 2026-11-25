@@ -24,11 +24,12 @@ import {
 import { onRenderer, registerRendererRole } from '../ipc/renderer'
 
 // Reload only the requesting view; keep the main process and other views running.
-for (const channel of ['tray:reload', 'dash:reload']) {
-  onRenderer(channel, ({ sender }) => {
-    if (!sender.isDestroyed()) sender.reload()
-  })
+const reloadSender = ({ sender }: Electron.IpcMainEvent) => {
+  if (!sender.isDestroyed()) sender.reload()
 }
+
+onRenderer('tray:reload', reloadSender)
+onRenderer('dash:reload', reloadSender)
 
 const hardenedSessions = new WeakSet<Session>()
 
