@@ -8,7 +8,9 @@ const commands = () => {
     document.querySelectorAll(
       '.customTokensListItemBottom button, .tokenApprovalsToolbar button, .addressBookTransfer button, ' +
         '.hardwareSignerPromptDismiss, .sendConfirmedActions button, .activityClearButton, ' +
-        '.contractVerificationDirect > button'
+        '.contractVerificationDirect > button, .accountPortfolioActions button, .notifyInput .notifyInputOption, ' +
+        '.txLifecycleAction:not(.txLifecycleActionIcon), .txLifecycleCancelRequest, ' +
+        '.walletCallsStatusUnavailableActions > button'
     )
   )
   for (const button of document.querySelectorAll('.signerControls > button')) {
@@ -28,7 +30,7 @@ const commands = () => {
     }
   }
   const buttons = [...document.querySelectorAll('button')]
-  const modal = document.querySelector('[aria-modal="true"]')
+  const modal = document.querySelector('[aria-modal="true"], .receivePanel')
   return [...targets]
     .filter(
       (button) =>

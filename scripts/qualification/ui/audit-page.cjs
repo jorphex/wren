@@ -4,6 +4,7 @@ const auditPage = async ({
   compactExceptions,
   expectedInitialFocus,
   expectedViewport,
+  initialFocus,
   layoutExpectations = [],
   requiredControls = [],
   requiredText = []
@@ -79,13 +80,11 @@ const auditPage = async ({
         control.innerText ||
         control.getAttribute('placeholder')
     )
-  const initialFocus = normalizedText(
-    document.activeElement?.getAttribute?.('aria-label') || document.activeElement?.innerText
-  )
-  if (expectedInitialFocus && initialFocus !== expectedInitialFocus) {
+  const focusLabel = normalizedText(initialFocus)
+  if (expectedInitialFocus && focusLabel !== expectedInitialFocus) {
     violations.push({
       kind: 'initial-focus',
-      detail: `expected ${expectedInitialFocus}, got ${initialFocus || '<none>'}`
+      detail: `expected ${expectedInitialFocus}, got ${focusLabel || '<none>'}`
     })
   }
 

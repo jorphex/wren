@@ -581,6 +581,12 @@ const performAction = async (webContents, action) => {
     await clickText(webContents, action.text)
     return
   }
+  if (action.type === 'clickSelector') {
+    const target = `document.querySelector(${JSON.stringify(action.selector)})`
+    await waitFor(webContents, `${target}?.matches('button:enabled') && ${target}.getClientRects().length`)
+    await webContents.executeJavaScript(`${target}.click()`)
+    return
+  }
   if (action.type === 'focusText') {
     await waitFor(
       webContents,
@@ -783,6 +789,11 @@ const runScenario = async (scenario) => {
     await new Promise((resolve) => setTimeout(resolve, 900))
     await assertGeneratedViewport()
     await assertApprovalPresentation(window, scenario)
+    const initialFocus = scenario.expectedInitialFocus
+      ? await window.webContents.executeJavaScript(
+          `document.activeElement?.getAttribute('aria-label') || document.activeElement?.innerText`
+        )
+      : undefined
     const controlLayout = await checkControlLayout(window.webContents)
     const consistency = await checkConsistency(
       window.webContents,
@@ -800,6 +811,7 @@ const runScenario = async (scenario) => {
         compactExceptions: COMPACT_TARGET_EXCEPTIONS,
         expectedInitialFocus: scenario.expectedInitialFocus,
         expectedViewport: { width: scenario.logicalWidth, height: scenario.logicalHeight },
+        initialFocus,
         layoutExpectations: scenario.layoutExpectations,
         requiredControls: scenario.requiredControls,
         requiredText: scenario.requiredText

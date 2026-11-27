@@ -4440,7 +4440,65 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       requiredControls: ['Cancel', 'Save changes', 'RPC connections'],
       requiredText: ['Network name', 'Chain ID']
     },
+    ...['dash', 'tray'].map((renderer) => ({
+      id: `${renderer}-notify-open-external-short-1`,
+      renderer,
+      state: 'notify-open-external',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.notifyInputProceed',
+      requiredText: ['Open external link'],
+      requiredControls: ['Cancel', 'Open link'],
+      expectedInitialFocus: 'Cancel'
+    })),
+    {
+      id: 'tray-wallet-calls-status-unavailable-full-1',
+      renderer: 'tray',
+      state: 'wallet-calls-status-unavailable',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.walletCallsStatusUnavailableActions',
+      requiredText: ['Status unavailable'],
+      requiredControls: ['Refresh', 'Close']
+    },
     ...accountAccessReviewScenarios(),
+    ...[
+      {
+        id: 'dash-earn-yvusd-watch-only-short-1',
+        watchOnly: true,
+        requiredText: ['Watch-only account']
+      },
+      {
+        id: 'dash-earn-yvusd-withdraw-locked-short-1',
+        ready: '.earnActions > button:disabled',
+        requiredText: ['Start cooldown to withdraw'],
+        requiredControls: ['Flexible', 'Locked', 'Deposit', 'Start locked cooldown'],
+        layoutExpectations: [
+          { kind: 'hidden', selector: '.earnActions > button[aria-pressed="true"]' },
+          { kind: 'hidden', selector: '.earnActionForm, .earnPrimaryAction' },
+          { kind: 'contained', selector: '.earnSecondaryActions', container: '.earnDetailsContent' }
+        ],
+        action: {
+          type: 'sequence',
+          steps: [
+            { type: 'clickText', text: 'Withdraw' },
+            { type: 'clickSelector', selector: '.earnVariantGrid > button[aria-pressed="false"]' }
+          ]
+        }
+      }
+    ].map((scenario) => ({
+      renderer: 'dash',
+      state: 'earn-yvusd',
+      variant: 'unlocked',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.earnActions > button[aria-pressed="true"]:disabled',
+      requiredControls: ['Flexible', 'Locked'],
+      ...scenario
+    })),
     ...sendComposerScenarios().filter(({ state }) => state === 'send-asset-picker')
   ]
   const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios

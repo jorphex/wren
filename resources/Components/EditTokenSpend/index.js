@@ -268,7 +268,7 @@ const EditTokenSpend = ({
 
         {!hasInvalidAmount ? (
           <div
-            className='wrenTokenApprovalModes wrenSegmented'
+            className='wrenTokenApprovalModes wrenSegmented wrenInsetChoices'
             role='group'
             aria-label='Spending limit options'
           >

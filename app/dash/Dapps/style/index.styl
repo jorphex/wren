@@ -262,11 +262,11 @@
     cursor pointer
     transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
-  .originChainItem:hover
+  .originChainItem:hover:not(:disabled)
     border-color var(--wren-border-default)
     background var(--wren-surface-hover)
 
-  .originChainItem:active
+  .originChainItem:active:not(:disabled)
     background var(--wren-surface-active)
 
   .originChainItem:focus-visible
@@ -284,24 +284,15 @@
     width 36px
     margin-right var(--wren-space-3)
 
-  .originChainItemCheck
-    position absolute
-    top 50%
-    right var(--wren-space-3)
-    display flex
-    align-items center
-    justify-content center
-    width 28px
-    height 28px
-    border-radius var(--wren-radius-sm)
-    color var(--wren-success)
-    background var(--wren-success-soft)
-    transform translateY(-50%)
-
-  .originChainItemActive
-    color var(--wren-success)
-
 .connectedAppsDetails
+  .originChainItem
+    padding-right var(--wren-space-2)
+
+    &[aria-pressed='true']
+      background var(--wren-ledger-selected)
+      font-weight 650
+      opacity 1
+
   .originSwapTitle
     padding-right 0
     padding-left 0

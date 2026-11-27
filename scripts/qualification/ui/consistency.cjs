@@ -42,6 +42,50 @@ const inspect = async () => {
     ensure(earn.querySelector('.earnProvider').getBoundingClientRect().height > 0, 'Earn provider hidden')
     checks.push('Earn heading and provider')
   }
+  const selectedChoices = [
+    ...document.querySelectorAll(
+      ':is(.sendModeSwitch.wrenSegmented, .contractsModeSwitch, .earnVariantGrid, .earnActions, ' +
+        '.wrenTokenApprovalModes, .interfaceScaleOptions) > button[aria-pressed="true"], ' +
+        '.addressBookProvenanceOptions label:has(input:checked)'
+    )
+  ].filter((choice) => choice.getClientRects().length)
+  if (selectedChoices.length) {
+    const reference = document.createElement('span')
+    reference.hidden = true
+    reference.style.backgroundColor = 'var(--wren-choice-surface)'
+    reference.style.boxShadow = 'var(--wren-choice-shadow)'
+    reference.style.color = 'var(--wren-text-disabled)'
+    document.body.append(reference)
+    const expected = getComputedStyle(reference)
+    for (const choice of selectedChoices) {
+      const actual = getComputedStyle(choice)
+      const label = choice.getAttribute('aria-label') || choice.textContent.trim()
+      ensure(
+        actual.backgroundColor === expected.backgroundColor &&
+          actual.boxShadow !== 'none' &&
+          actual.boxShadow === expected.boxShadow,
+        label + ': selected choice is missing its inset'
+      )
+      if (choice.disabled)
+        ensure(actual.color === expected.color, label + ': disabled choice is too prominent')
+    }
+    reference.remove()
+    checks.push(`${selectedChoices.length} selected choices: shared inset`)
+  }
+  const currentNetwork = document.querySelector('.connectedAppsDetails .originChainItem[aria-pressed="true"]')
+  if (currentNetwork) {
+    const reference = document.createElement('span')
+    reference.hidden = true
+    reference.style.backgroundColor = 'var(--wren-ledger-selected)'
+    currentNetwork.append(reference)
+    const css = getComputedStyle(currentNetwork)
+    ensure(
+      css.backgroundColor === getComputedStyle(reference).backgroundColor && css.boxShadow === 'none',
+      'Current network must use a flat selected row'
+    )
+    reference.remove()
+    checks.push('current network: flat selected row')
+  }
   const tabs = document.querySelector('.networkEditorSections')
   if (tabs) {
     ensure(tabs.getAttribute('role') === 'tablist', 'Network sections lack tablist semantics')

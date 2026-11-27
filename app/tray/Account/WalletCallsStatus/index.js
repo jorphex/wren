@@ -169,10 +169,19 @@ export function WalletCallsStatus({
 
         {statusUnavailable && (
           <div className='walletCallsStatusUnavailableActions'>
-            <button type='button' disabled={refreshing || !origin} onClick={refreshStatus}>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary'
+              disabled={refreshing || !origin}
+              onClick={refreshStatus}
+            >
               Refresh
             </button>
-            <button type='button' onClick={() => link.send('nav:back', 'panel')}>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary'
+              onClick={() => link.send('nav:back', 'panel')}
+            >
               Close
             </button>
           </div>

@@ -1783,7 +1783,7 @@ export class Send extends React.Component {
           this.state.mode === 'sweep' ? this.reviewSweep(event, context) : this.submit(event, context)
         }
       >
-        <div aria-label='Send mode' className='sendModeSwitch wrenSegmented' role='group'>
+        <div aria-label='Send mode' className='sendModeSwitch wrenSegmented wrenInsetChoices' role='group'>
           <button
             aria-pressed={this.state.mode === 'send'}
             disabled={derivationBusy || this.state.queueing}

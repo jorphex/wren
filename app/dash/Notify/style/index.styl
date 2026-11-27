@@ -273,41 +273,8 @@
         margin var(--wren-space-6) 0 0
 
         .notifyInputOption
-          appearance none
           width calc(50% - 4px)
-          min-height 40px
-          box-sizing border-box
-          display flex
-          justify-content center
-          align-items center
-          padding var(--wren-space-2) var(--wren-space-3)
-          border 1px solid var(--wren-border-default)
-          border-radius var(--wren-radius-sm)
-          background var(--wren-bg-elevated)
-          color var(--wren-text-primary)
-          font-family var(--wren-font-ui)
-          font-size var(--wren-type-small)
-          font-weight 540
-          letter-spacing 0
-          cursor pointer
-          transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
-
-          &:hover:not(:disabled)
-            border-color var(--wren-border-strong)
-            background var(--wren-surface-hover)
-
-          &:active:not(:disabled)
-            background var(--wren-surface-active)
-
-          &:focus-visible
-            outline 2px solid var(--wren-focus)
-            outline-offset 2px
-
-          &:disabled
-            border-color var(--wren-border-subtle)
-            background var(--wren-bg-subtle)
-            color var(--wren-text-disabled)
-            cursor not-allowed
+          min-height 44px
 
           *
             pointer-events none
@@ -315,20 +282,6 @@
           .notifyInputOptionText
             position relative
             z-index 2
-
-        .notifyInputProceed,
-        .notifyInputSingleButton
-          border-color var(--wren-accent-primary)
-          background var(--wren-accent-primary)
-          color var(--wren-text-inverse)
-
-          &:hover:not(:disabled)
-            border-color var(--wren-accent-primary-hover)
-            background var(--wren-accent-primary-hover)
-
-          &:active:not(:disabled)
-            border-color var(--wren-accent-primary-active)
-            background var(--wren-accent-primary-active)
 
         .notifyInputSingleButton
           width 280px

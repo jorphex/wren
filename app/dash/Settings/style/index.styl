@@ -261,22 +261,6 @@
       background-color var(--wren-surface-active)
       box-shadow inset 0 0 0 1px var(--wren-border-strong)
 
-    &[aria-pressed='true']
-      border-color var(--wren-accent-primary-hover)
-      color var(--wren-text-inverse)
-      background-color var(--wren-accent-primary)
-      background-image var(--wren-control-texture-light)
-      box-shadow var(--wren-control-primary-shadow)
-
-    &[aria-pressed='true']:hover:not(:disabled),
-    &[aria-pressed='true']:active:not(:disabled),
-    &[aria-pressed='true']:focus-visible
-      border-color var(--wren-control-primary-border-hover)
-      color var(--wren-text-inverse)
-      background-color var(--wren-accent-primary-hover)
-      background-image var(--wren-control-texture-light)
-      box-shadow var(--wren-control-primary-shadow-hover)
-
     &:focus-visible
       outline-offset -3px
 
@@ -669,9 +653,10 @@
     &[aria-pressed='true']:active:not(:disabled),
     &[aria-pressed='true']:focus-visible
       color var(--wren-text-primary)
-      background var(--wren-bg-elevated)
+      background var(--wren-choice-surface)
       border-color transparent
-      box-shadow var(--wren-shadow-sm)
+      box-shadow var(--wren-choice-shadow)
+      transform none
 
   .recoverySettings
     padding 0

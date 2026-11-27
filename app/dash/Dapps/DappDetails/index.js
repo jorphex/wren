@@ -77,7 +77,7 @@ export class DappDetails extends React.Component {
                 type='button'
                 aria-pressed={selected}
                 key={id}
-                className={'originChainItem'}
+                className='originChainItem'
                 disabled={selected || this.state.switchingChainId !== null}
                 onClick={() => this.switchOriginChain(parseInt(id), selected)}
               >
@@ -91,10 +91,6 @@ export class DappDetails extends React.Component {
                 </div>
 
                 {chain.name}
-
-                <div className='originChainItemCheck'>
-                  {selected ? <Icon name='check' size={28} /> : null}
-                </div>
               </button>
             )
           })}

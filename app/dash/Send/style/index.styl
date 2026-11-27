@@ -21,40 +21,6 @@
   overflow hidden
   flex-direction column
 
-.contractsModeSwitch
-  display grid
-  grid-template-columns 1fr 1fr
-  gap 4px
-  margin 14px 24px 0
-  padding 4px
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-md)
-  background var(--wren-surface-inset)
-
-  button
-    min-height 44px
-    padding 0 12px
-    border 0
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-secondary)
-    background transparent
-    font-family var(--wren-font-ui)
-    font-weight 610
-    cursor pointer
-
-    &[aria-pressed='true']
-      color var(--wren-text-primary)
-      background var(--wren-bg-elevated)
-      box-shadow var(--wren-shadow-sm)
-
-    &:focus-visible
-      outline 2px solid var(--wren-focus)
-      outline-offset 2px
-
-    &:disabled
-      color var(--wren-text-disabled)
-      cursor default
-
 .sendLedger
   flex 1
   padding 12px 24px 0

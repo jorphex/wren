@@ -643,21 +643,44 @@ it('conceals every account-derived Earn amount while keeping public metrics visi
   expect(document.body.textContent).not.toContain('1.2 yvUSD')
 })
 
-it('explains an inactive locked withdrawal cooldown in user-facing terms', async () => {
+it('clears an unavailable withdrawal through route sync and a pending prepare reply', async () => {
   getYearnPositions.mockResolvedValue({
     ...makePositions(),
     chains: makePositions().chains.map((chain) =>
       chain.chainId === 1 ? { ...chain, positions: [lockedPosition] } : chain
     )
   })
-  const { user } = render(<ConnectedEarn />)
+  let finishPrepare
+  startYearnWorkflow.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishPrepare = resolve
+      })
+  )
+  const { rerender, user } = render(<ConnectedEarn />)
   await screen.findByRole('heading', { name: 'Ethereum' })
 
   await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
+  await user.click(screen.getByRole('button', { name: 'Withdraw' }))
+  await user.type(screen.getByRole('textbox', { name: 'Amount in USDC' }), '1')
+  await user.click(screen.getByRole('button', { name: 'Review Withdraw' }))
+  await user.click(screen.getByRole('button', { name: /^Locked/ }))
+  rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'locked', screen: 'vault' }} />)
 
   expect(screen.getByRole('heading', { name: 'Withdrawal terms' })).toBeTruthy()
   expect(screen.queryByText(/No cooldown is active/)).toBeNull()
   expect(screen.queryByText(/Locked yvUSD: none/)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Withdraw', pressed: false }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Start locked cooldown' }).disabled).toBe(false)
+  expect(screen.queryByRole('textbox', { name: 'Amount in USDC' })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: /^Flexible/ }))
+  expect(screen.getByRole('button', { name: 'Withdraw', pressed: false }).disabled).toBe(false)
+  await act(async () => finishPrepare({ ...makeWorkflow(), action: 'withdraw' }))
+  expect(screen.queryByRole('textbox', { name: 'Amount in USDC' })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: 'Deposit', pressed: false }))
+  expect(screen.getByRole('textbox', { name: 'Amount in USDC' })).toBeTruthy()
 })
 
 it('describes approvals only for routes that can request them', async () => {

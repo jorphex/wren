@@ -1303,6 +1303,7 @@ const fixtureFor = (scenario) => {
 
   if (['earn-yvusd', 'earn-extended', 'earn-loading', 'earn-list', 'earn-privacy'].includes(scenario.state)) {
     prepareSelectedAccount(state)
+    if (scenario.watchOnly) state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'address'
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
@@ -1738,6 +1739,29 @@ const fixtureFor = (scenario) => {
       notifyId: 'native:qualification-native-pairing',
       notifyOwner: 'native:qualification-native-pairing'
     }
+  }
+
+  if (scenario.state === 'notify-open-external') {
+    const data = { notify: 'openExternal', notifyData: { url: 'https://example.invalid' } }
+    if (scenario.renderer === 'dash') {
+      state.windows.dash = { ...state.windows.dash, showing: true, nav: [{ view: 'notify', data }] }
+    } else {
+      state.view = { ...state.view, ...data }
+    }
+  }
+
+  if (scenario.state === 'wallet-calls-status-unavailable') {
+    prepareSelectedAccount(state)
+    state.windows.panel.nav = [
+      {
+        view: 'walletCallsStatus',
+        data: {
+          accountId: QUALIFICATION_ACCOUNT,
+          originName: 'workshop',
+          status: { id: 'qualification-batch', chainId: '0x1', status: 0 }
+        }
+      }
+    ]
   }
 
   if (scenario.state === 'dash-notify-remove-network') {

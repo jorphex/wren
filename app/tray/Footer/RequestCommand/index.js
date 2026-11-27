@@ -424,7 +424,7 @@ export class RequestCommand extends React.Component {
               type='button'
               aria-label='Copy hash'
               title='Copy transaction hash'
-              className='txLifecycleAction txLifecycleActionIcon'
+              className='wrenControl wrenControlSecondary txLifecycleAction txLifecycleActionIcon'
               onClick={() => {
                 link.send('tray:copyTxHash', hash)
                 this.setState({ txHashCopied: true })
@@ -439,7 +439,7 @@ export class RequestCommand extends React.Component {
               type='button'
               aria-label='Open explorer'
               title='View transaction on explorer'
-              className='txLifecycleAction txLifecycleActionIcon'
+              className='wrenControl wrenControlSecondary txLifecycleAction txLifecycleActionIcon'
               onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
               }}
@@ -450,7 +450,7 @@ export class RequestCommand extends React.Component {
           {replaceable && (
             <button
               type='button'
-              className='txLifecycleAction txLifecycleActionGood'
+              className='wrenControl wrenControlSecondary txLifecycleAction txLifecycleActionGood'
               disabled={this.state.requestActionPending}
               onClick={() => {
                 this.runReplacementAction('speed', req)
@@ -462,7 +462,7 @@ export class RequestCommand extends React.Component {
           {canVerifySource && (
             <button
               type='button'
-              className='txLifecycleAction txLifecycleActionVerify'
+              className='wrenControl wrenControlSecondary txLifecycleAction txLifecycleActionVerify'
               disabled={this.state.requestActionPending}
               onClick={() => this.continueContractVerification(req)}
             >
@@ -472,7 +472,7 @@ export class RequestCommand extends React.Component {
           {replaceable && (
             <button
               type='button'
-              className='txLifecycleAction txLifecycleActionBad'
+              className='wrenControl wrenControlSecondary txLifecycleAction txLifecycleActionBad'
               disabled={this.state.requestActionPending}
               onClick={() => {
                 this.runReplacementAction('cancel', req)
@@ -495,7 +495,11 @@ export class RequestCommand extends React.Component {
             : ''}
         </span>
         {isCancelableRequest(status) && (
-          <button type='button' className='txLifecycleCancelRequest' onClick={() => this.decline(req)}>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary txLifecycleCancelRequest'
+            onClick={() => this.decline(req)}
+          >
             Cancel
           </button>
         )}

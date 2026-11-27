@@ -1031,8 +1031,17 @@
     font-family var(--wren-font-ui)
     letter-spacing 0
 
-  button.wrenControl.earnTabActive, button.wrenControl.active
+  button.wrenControl.earnTabActive
     background var(--wren-surface-active)
+    color var(--wren-text-primary)
+
+.earnActions button.wrenControl.wrenControlSelected
+  &, &:disabled, &:hover:not(:disabled), &:active:not(:disabled)
+    background var(--wren-choice-surface)
+    box-shadow var(--wren-choice-shadow)
+    transform none
+
+  &:not(:disabled)
     color var(--wren-text-primary)
 
 .earnPositionsOverview, .earnChain
@@ -1194,8 +1203,18 @@ button.earnVariant.wrenControl.wrenControlSecondary
     color var(--wren-text-primary)
 
   &.earnVariantSelected
-    border-color var(--wren-accent-primary)
-    background var(--wren-surface-active)
+    &, &:hover:not(:disabled), &:active:not(:disabled)
+      background var(--wren-choice-surface)
+      box-shadow var(--wren-choice-shadow)
+      transform none
+
+  .earnVariantHeading
+    display flex
+    flex-wrap wrap
+    width 100%
+    align-items baseline
+    justify-content space-between
+    gap 4px 8px
 
 .earnOwnedLine
   display flex
@@ -1214,6 +1233,9 @@ button.earnVariant.wrenControl.wrenControlSecondary
 
 .earnActions
   margin 0 0 16px
+
+  &:only-child
+    margin-bottom 0
 
 .earnSecondaryActions
   display flex

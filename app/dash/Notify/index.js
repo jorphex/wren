@@ -134,7 +134,7 @@ export class Notify extends React.Component {
             <div className='notifyInput'>
               <button
                 type='button'
-                className='notifyInputOption notifyInputSingleButton'
+                className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
                 data-dialog-initial-focus
                 onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
@@ -180,7 +180,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
@@ -191,7 +191,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               disabled={approvalPending}
               onClick={() => this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))}
             >
@@ -228,7 +228,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -256,7 +256,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -304,7 +304,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
@@ -315,7 +315,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               disabled={approvalPending}
               onClick={() => {
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
@@ -413,7 +413,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -451,7 +451,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -488,7 +488,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -516,7 +516,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -526,7 +526,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExternal', url)
                 this.dismissNotification()
@@ -554,7 +554,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               data-dialog-initial-focus
               onClick={() => {
                 this.dismissNotification()
@@ -564,7 +564,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
                 this.dismissNotification()

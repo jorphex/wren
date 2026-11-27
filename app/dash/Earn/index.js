@@ -888,12 +888,13 @@ const VaultDetails = ({
   positionsError,
   workflowsLoading,
   workflowsError,
-  form,
+  form: requestedForm,
   workflowBusy,
   hideBalances,
   selectedVariant: selectedVariantProp,
   onOpenAction,
   onFormChange,
+  onClearForm,
   onSubmit,
   onOpenActivity,
   onResume,
@@ -907,7 +908,7 @@ const VaultDetails = ({
   const canDeposit = signingAccount && vault.status === 'available' && catalogStatus === 'fresh'
   const canExit = signingAccount && position?.hasPosition
   const selectedVariant =
-    form?.variant ||
+    requestedForm?.variant ||
     selectedVariantProp ||
     (vault.kind === 'yvUSD' ? 'unlocked' : vault.kind === 'yBOLD' ? 'staked' : 'direct')
   const locked = position?.variants.find(({ id }) => id === 'locked')
@@ -928,7 +929,12 @@ const VaultDetails = ({
   const canCancelCooldown =
     canExit && ['cooling-down', 'withdrawal-window', 'expired'].includes(cooldown?.status)
   const coolingDown = selectedVariant === 'locked' && cooldown?.status === 'cooling-down'
-  const showActionForm = !coolingDown || cooldownFormOpen || form?.action !== 'deposit'
+  const withdrawUnavailable = requestedForm?.action === 'withdraw' && !canWithdrawSelected
+  const form = withdrawUnavailable ? null : requestedForm
+  React.useEffect(() => {
+    if (withdrawUnavailable) onClearForm(requestedForm)
+  }, [withdrawUnavailable, requestedForm, onClearForm])
+  const showActionForm = form && (!coolingDown || cooldownFormOpen || form.action !== 'deposit')
   const actionEnabled = {
     deposit: canDeposit,
     withdraw: canWithdrawSelected,
@@ -977,14 +983,16 @@ const VaultDetails = ({
                 <button
                   type='button'
                   className={`earnVariant wrenControl wrenControlSecondary ${
-                    selectedVariant === variant.id ? 'earnVariantSelected wrenControlSelected' : ''
+                    selectedVariant === variant.id ? 'earnVariantSelected' : ''
                   }`}
                   aria-pressed={selectedVariant === variant.id}
                   key={variant.id}
                   onClick={() => onFormChange({ variant: variant.id, error: '' })}
                 >
-                  <strong>{variant.id === 'locked' ? 'Locked' : 'Flexible'}</strong>
-                  <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
+                  <span className='earnVariantHeading'>
+                    <strong>{variant.id === 'locked' ? 'Locked' : 'Flexible'}</strong>
+                    <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
+                  </span>
                   <span>
                     {variant.id === 'locked'
                       ? `Cooldown: ${durationDays(cooldown?.cooldownDuration, '14-day')}`
@@ -1147,77 +1155,75 @@ const VaultDetails = ({
           </button>
         </div>
       </div>
-      {form ? (
-        <div className='earnDetailActionShelf'>
-          {coolingDown ? (
-            <div className='earnCooldownActions'>
-              <button
-                type='button'
-                className='wrenControl wrenControlSecondary wrenControlLarge'
-                disabled={!canDeposit}
-                onClick={() => {
-                  setCooldownFormOpen(true)
-                  onOpenAction('deposit', 'locked')
-                }}
-              >
-                Deposit
-              </button>
-              <button
-                type='button'
-                className='wrenControl wrenControlDanger wrenControlLarge'
-                disabled={!canCancelCooldown}
-                onClick={() => onOpenAction('cancel-cooldown', 'locked')}
-              >
-                Cancel cooldown
-              </button>
-            </div>
-          ) : null}
-          {!coolingDown ? (
-            <div className='earnActions' role='group' aria-label='Vault action'>
-              <button
-                type='button'
-                aria-pressed={form?.action === 'deposit'}
-                className={`wrenControl wrenControlGhost wrenControlLarge ${
-                  form?.action === 'deposit' ? 'active wrenControlSelected' : ''
-                }`}
-                disabled={!canDeposit}
-                onClick={() => onOpenAction('deposit', selectedVariant)}
-              >
-                Deposit
-              </button>
-              <button
-                type='button'
-                aria-pressed={form?.action === 'withdraw'}
-                className={`wrenControl wrenControlGhost wrenControlLarge ${
-                  form?.action === 'withdraw' ? 'active wrenControlSelected' : ''
-                }`}
-                disabled={!canWithdrawSelected}
-                onClick={() => onOpenAction('withdraw', selectedVariant)}
-              >
-                Withdraw
-              </button>
-            </div>
-          ) : null}
-          {showActionForm ? (
-            <>
-              <ActionForm
-                vault={vault}
-                position={position}
-                form={form}
-                disabled={!actionEnabled[form.action]}
-                hideBalances={hideBalances}
-                onChange={onFormChange}
-                formRef={formRef}
-              />
-              <ActionReview
-                form={form}
-                disabled={!actionEnabled[form.action] || !isEarnActionCompatible(form.action, form.variant)}
-                onSubmit={onSubmit}
-              />
-            </>
-          ) : null}
-        </div>
-      ) : null}
+      <div className='earnDetailActionShelf'>
+        {coolingDown ? (
+          <div className='earnCooldownActions'>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary wrenControlLarge'
+              disabled={!canDeposit}
+              onClick={() => {
+                setCooldownFormOpen(true)
+                onOpenAction('deposit', 'locked')
+              }}
+            >
+              Deposit
+            </button>
+            <button
+              type='button'
+              className='wrenControl wrenControlDanger wrenControlLarge'
+              disabled={!canCancelCooldown}
+              onClick={() => onOpenAction('cancel-cooldown', 'locked')}
+            >
+              Cancel cooldown
+            </button>
+          </div>
+        ) : null}
+        {!coolingDown ? (
+          <div className='earnActions' role='group' aria-label='Vault action'>
+            <button
+              type='button'
+              aria-pressed={form?.action === 'deposit'}
+              className={`wrenControl wrenControlGhost wrenControlLarge ${
+                form?.action === 'deposit' ? 'active wrenControlSelected' : ''
+              }`}
+              disabled={!canDeposit}
+              onClick={() => onOpenAction('deposit', selectedVariant)}
+            >
+              Deposit
+            </button>
+            <button
+              type='button'
+              aria-pressed={form?.action === 'withdraw'}
+              className={`wrenControl wrenControlGhost wrenControlLarge ${
+                form?.action === 'withdraw' ? 'active wrenControlSelected' : ''
+              }`}
+              disabled={!canWithdrawSelected}
+              onClick={() => onOpenAction('withdraw', selectedVariant)}
+            >
+              Withdraw
+            </button>
+          </div>
+        ) : null}
+        {showActionForm ? (
+          <>
+            <ActionForm
+              vault={vault}
+              position={position}
+              form={form}
+              disabled={!actionEnabled[form.action]}
+              hideBalances={hideBalances}
+              onChange={onFormChange}
+              formRef={formRef}
+            />
+            <ActionReview
+              form={form}
+              disabled={!actionEnabled[form.action] || !isEarnActionCompatible(form.action, form.variant)}
+              onSubmit={onSubmit}
+            />
+          </>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -1263,11 +1269,11 @@ export class Earn extends React.Component {
       this.setState(
         {
           ...route,
-          form: route.selected
-            ? sameVault
-              ? this.state.form || actionForm('deposit', route.selectedVariant)
-              : actionForm('deposit', route.selectedVariant)
-            : null
+          form: sameVault
+            ? this.state.form
+            : route.selected
+              ? actionForm('deposit', route.selectedVariant)
+              : null
         },
         () => {
           if (route.activityExpanded) {
@@ -1490,27 +1496,42 @@ export class Earn extends React.Component {
     }))
   }
 
+  clearForm = (dismissedForm) => {
+    this.setState(({ form }) => (form === dismissedForm ? { form: null } : null))
+  }
+
   async submitForm() {
-    const form = this.state.form
+    const { form, selected } = this.state
     if (!form || !isEarnActionCompatible(form.action, form.variant)) return
-    this.changeForm({ busy: true, error: '' })
+    const submittingForm = { ...form, busy: true, error: '' }
+    this.setState({ form: submittingForm })
     try {
       const workflow = await startYearnWorkflow({
-        vaultId: this.state.selected,
+        vaultId: selected,
         action: form.action,
         variant: form.variant,
         amount: form.amount || '0',
         max: form.max
       })
       if (this.mounted) {
-        this.setState(({ workflows }) => ({
+        this.setState(({ workflows, form: currentForm }) => ({
           workflows: [workflow, ...workflows.filter(({ id }) => id !== workflow.id)],
-          form: actionForm(form.action, form.variant)
+          form: currentForm === submittingForm ? actionForm(form.action, form.variant) : currentForm
         }))
       }
     } catch (error) {
       if (this.mounted)
-        this.changeForm({ busy: false, error: error.message || 'Could not prepare transaction.' })
+        this.setState(({ form: currentForm }) =>
+          currentForm === submittingForm
+            ? {
+                form: {
+                  ...currentForm,
+                  busy: false,
+                  error: error.message || 'Could not prepare transaction.'
+                }
+              }
+            : null
+        )
     }
   }
 
@@ -1694,6 +1715,7 @@ export class Earn extends React.Component {
           }}
           onOpenAction={(action, variant) => this.openAction(action, variant)}
           onFormChange={(changes) => this.changeForm(changes)}
+          onClearForm={this.clearForm}
           onSubmit={() => this.submitForm()}
           onOpenActivity={() => this.openActivity()}
           onResume={(id) => this.runWorkflow(resumeYearnWorkflow, id)}

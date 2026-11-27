@@ -194,10 +194,12 @@ body
   // Direction-free top light and a deeper lower edge keep controls tactile without patterned noise.
   --wren-control-texture-dark linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, 0) 55%)
   --wren-control-texture-light linear-gradient(180deg, rgba(250, 245, 233, .16), rgba(250, 245, 233, 0) 52%)
-  --wren-control-shadow inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 -2px 0 rgba(0, 0, 0, .42), 0 1px 2px rgba(0, 0, 0, .24)
-  --wren-control-shadow-hover inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -2px 0 rgba(0, 0, 0, .38), 0 2px 5px rgba(0, 0, 0, .26)
-  --wren-control-shadow-pressed inset 0 1px 2px rgba(0, 0, 0, .42), 0 1px 1px rgba(0, 0, 0, .18)
+  --wren-control-shadow inset 0 1px 0 rgba(255, 255, 255, .10), inset 0 -2px 0 rgba(0, 0, 0, .46), 0 1px 2px rgba(0, 0, 0, .24)
+  --wren-control-shadow-hover inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -2px 0 rgba(0, 0, 0, .42), 0 2px 5px rgba(0, 0, 0, .24)
+  --wren-control-shadow-pressed inset 0 2px 2px rgba(0, 0, 0, .50), inset 0 -1px 0 rgba(255, 255, 255, .10)
   --wren-control-shadow-disabled inset 0 1px 0 rgba(255, 255, 255, .02)
+  --wren-choice-surface var(--wren-accent-primary-soft)
+  --wren-choice-shadow inset 0 0 0 1px #927a56, inset 0 2px 3px rgba(0, 0, 0, .38)
 
   --wren-motion-fast 120ms
   --wren-motion-standard 180ms
@@ -285,6 +287,10 @@ button
     &:disabled
       color var(--wren-text-disabled)
       cursor default
+
+  &.wrenInsetChoices > button[aria-pressed='true']
+    background var(--wren-choice-surface)
+    box-shadow var(--wren-choice-shadow)
 
 [data-wren-scroll-above],
 [data-wren-scroll-below]
@@ -496,7 +502,7 @@ button
   --wren-control-primary-border-hover #c4aa83
   --wren-control-primary-shadow inset 0 1px 0 rgba(250, 245, 233, .22), inset 0 -2px 0 rgba(56, 43, 26, .4), 0 2px 4px rgba(0, 0, 0, .28)
   --wren-control-primary-shadow-hover inset 0 1px 0 rgba(250, 245, 233, .26), inset 0 -2px 0 rgba(56, 43, 26, .36), 0 3px 7px rgba(0, 0, 0, .3)
-  --wren-control-primary-shadow-pressed inset 0 2px 3px rgba(56, 43, 26, .4), 0 1px 1px rgba(0, 0, 0, .2)
+  --wren-control-primary-shadow-pressed inset 0 2px 3px rgba(56, 43, 26, .48), inset 0 -1px 0 rgba(250, 245, 233, .24)
 
   // Compatibility aliases for inherited components
   --v var(--wren-text-tertiary)

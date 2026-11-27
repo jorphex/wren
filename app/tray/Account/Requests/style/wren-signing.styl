@@ -1551,49 +1551,30 @@
   justify-content flex-end
   gap 8px
 
-.txLifecycleAction,
-.txLifecycleCancelRequest
+button.wrenControl.txLifecycleAction,
+button.wrenControl.txLifecycleCancelRequest
   min-height 44px
   height 44px
   padding 0 13px
-  border 1px solid var(--wren-border-default)
-  border-radius var(--wren-radius-sm)
-  color var(--wren-text-secondary)
-  background var(--wren-control-texture-dark), var(--wren-bg-elevated)
-  box-shadow var(--wren-control-shadow)
-  font-family var(--wren-font-ui)
-  font-size 12px
-  font-weight 620
+  font-size var(--wren-type-small)
 
-  &:hover
-    color var(--wren-text-primary)
-    border-color var(--wren-border-strong)
-    background var(--wren-control-texture-dark), var(--wren-surface-hover)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-.txLifecycleActionBad
+button.wrenControl.txLifecycleActionBad:not(:disabled)
   color var(--wren-danger)
 
-.txLifecycleActionGood
+button.wrenControl.txLifecycleActionGood:not(:disabled)
   color var(--wren-accent-primary-hover)
 
-.txLifecycleActionVerify
-  min-width 132px
+button.wrenControl.txLifecycleActionVerify:not(:disabled)
   color var(--wren-text-primary)
   border-color var(--wren-border-strong)
 
-.txLifecycleActionIcon
-  display grid
+button.wrenControl.txLifecycleActionVerify
+  min-width 132px
+
+button.wrenControl.txLifecycleActionIcon
   width 44px
   min-width 44px
   padding 0
-  place-items center
-
-  > svg
-    display block
 
 .txLifecycleCopyStatus
   position absolute
