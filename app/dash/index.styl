@@ -417,6 +417,16 @@ button,
         margin 0 0 16px
         box-sizing border-box
 
+    // Earn shows vault details before dashboard navigation sync arrives.
+    .dashControlShell:has(> .dashControlContent > .earnDetails)
+      display contents
+
+      > .dashControlNavigation
+        display none
+
+      > .dashControlContent
+        display contents
+
     .dashControlContent
       min-width 0
 

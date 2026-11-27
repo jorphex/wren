@@ -25,7 +25,7 @@ const measure = () => {
       shadow: style.boxShadow
     }
   }
-  if (!nav) return null
+  if (!nav || (!nav.getClientRects().length && document.querySelector('.earnDetails'))) return null
   const buttons = [...nav.querySelectorAll(':scope > button')]
   const scroller = nav.closest('.dashMainScroll')
   scroller.scrollTop = 0

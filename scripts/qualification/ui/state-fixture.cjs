@@ -1309,13 +1309,14 @@ const fixtureFor = (scenario) => {
       nav: [
         {
           view: 'earn',
-          data: ['earn-yvusd', 'earn-extended'].includes(scenario.state)
-            ? {
-                vaultId: 'ethereum-yvusd',
-                variant: scenario.variant,
-                ...(scenario.product === 'activity' ? { screen: 'activity' } : {})
-              }
-            : {}
+          data:
+            ['earn-yvusd', 'earn-extended'].includes(scenario.state) && scenario.product !== 'ybold'
+              ? {
+                  vaultId: 'ethereum-yvusd',
+                  variant: scenario.variant,
+                  ...(scenario.product === 'activity' ? { screen: 'activity' } : {})
+                }
+              : {}
         }
       ]
     }
@@ -3057,6 +3058,35 @@ const invokeReplyFor = (scenario, method, args = []) => {
   if (scenario.state === 'earn-extended' && method.startsWith('yearn:')) {
     const catalog = qualificationYearnCatalog()
     const positions = qualificationYearnPositions()
+    if (scenario.product === 'ybold') {
+      const vault = catalog.vaults[0]
+      const asset = { ...vault.asset, name: 'BOLD', symbol: 'BOLD', decimals: 18 }
+      const [direct, staked] = vault.variants
+      const apy = { ...vault.apy, value: 0.9237 }
+      catalog.vaults[0] = {
+        ...vault,
+        id: 'ethereum-ybold',
+        kind: 'yBOLD',
+        name: 'Staked yBOLD',
+        symbol: 'ysyBOLD',
+        asset,
+        decimals: 18,
+        apy,
+        variants: [
+          { ...direct, id: 'direct', name: 'yBOLD', symbol: 'yBOLD', asset, decimals: 18 },
+          {
+            ...staked,
+            id: 'staked',
+            name: 'Staked yBOLD',
+            symbol: 'ysyBOLD',
+            asset: { ...asset, address: vault.address, name: 'yBOLD', symbol: 'yBOLD' },
+            decimals: 18,
+            apy
+          }
+        ]
+      }
+      positions.chains[0].positions = []
+    }
     if (scenario.product === 'direct') {
       const vault = catalog.vaults[0]
       vault.kind = 'direct'

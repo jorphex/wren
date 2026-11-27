@@ -4645,6 +4645,29 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
     }
   }
   if (includeReview) {
+    // Keep the catalog route in place to exercise the detail before navigation sync arrives.
+    for (const [geometry, logicalHeight] of [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ]) {
+      selected.push({
+        id: `dash-earn-ybold-entry-${geometry}-1`,
+        renderer: 'dash',
+        state: 'earn-extended',
+        product: 'ybold',
+        scale: 1,
+        logicalWidth: 620,
+        logicalHeight,
+        action: { type: 'clickText', text: 'View Staked yBOLD on Ethereum' },
+        ready: '.earnDetails',
+        requiredText: ['Staked yBOLD', 'Review Deposit'],
+        layoutExpectations: [
+          { kind: 'hidden', selector: '.dashControlNavigation' },
+          { kind: 'viewport-bottom', selector: '.earnDetailActionShelf' },
+          { kind: 'contained', selector: '.earnPrimaryAction', container: '.earnDetailActionShelf' }
+        ]
+      })
+    }
     const cooldown = selected.find(({ id }) => id === 'dash-earn-cooldown-short-1')
     selected.push({
       ...cooldown,
