@@ -1173,8 +1173,7 @@ const qualificationYearnPositions = () => ({
         }
       ]
     },
-    { chainId: 8453, status: 'disabled', reason: 'Enable Base in Wren.', positions: [] },
-    { chainId: 747474, status: 'disabled', reason: 'Enable Katana in Wren.', positions: [] }
+    { chainId: 8453, status: 'disabled', reason: 'Enable Base in Wren.', positions: [] }
   ]
 })
 

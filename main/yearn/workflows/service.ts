@@ -111,6 +111,9 @@ const findVariant = (vault: YearnVault, id: YearnWorkflowRequest['variant']) => 
   return variant
 }
 
+const isCuratedWorkflow = ({ vaultId, chainId }: YearnWorkflow) =>
+  YEARN_CATALOG.some((vault) => vault.id === vaultId && vault.chainId === chainId)
+
 const findDefinition = (vaultId: string, chainId: number) => {
   const definition = YEARN_CATALOG.find(({ id, chainId: idChain }) => id === vaultId && idChain === chainId)
   if (!definition) throw new Error("Vault is not in Wren's curated Yearn catalog")
@@ -273,7 +276,9 @@ export function createYearnWorkflowService({
   }
 
   const persist = (next: YearnWorkflows) => {
-    const ordered = Object.values(next).sort((a, b) => b.updatedAt - a.updatedAt)
+    const workflows = Object.values(next)
+    const archived = workflows.filter((workflow) => !isCuratedWorkflow(workflow))
+    const ordered = workflows.filter(isCuratedWorkflow).sort((a, b) => b.updatedAt - a.updatedAt)
     const active = ordered.filter(({ status }) => !terminalStatuses.has(status))
     const recoveries = ordered.filter(
       ({ status, cleanupRecovery }) => terminalStatuses.has(status) && cleanupRecovery
@@ -288,7 +293,7 @@ export function createYearnWorkflowService({
         .filter(({ status, cleanupRecovery }) => terminalStatuses.has(status) && !cleanupRecovery)
         .slice(0, MAX_WORKFLOWS - required.length)
     ]
-    writeWorkflows(Object.fromEntries(retained.map((workflow) => [workflow.id, workflow])))
+    writeWorkflows(Object.fromEntries([...archived, ...retained].map((workflow) => [workflow.id, workflow])))
   }
 
   const save = (workflow: YearnWorkflow) => {
@@ -306,7 +311,7 @@ export function createYearnWorkflowService({
 
   const requireWorkflow = (id: string) => {
     const workflow = load()[id]
-    if (!workflow) throw new Error('Yearn workflow was not found')
+    if (!workflow || !isCuratedWorkflow(workflow)) throw new Error('Yearn workflow was not found')
     return workflow
   }
 
@@ -929,8 +934,10 @@ export function createYearnWorkflowService({
 
   const list = async () => {
     const selected = accountAddress(getCurrentAccount())
+    const forSelectedAccount = (workflow: YearnWorkflow) =>
+      selected && isCuratedWorkflow(workflow) && checksum(workflow.account) === selected
     const ids = Object.values(load())
-      .filter(({ account }) => selected && checksum(account) === selected)
+      .filter(forSelectedAccount)
       .map(({ id }) => id)
     await Promise.all(
       ids.map(async (id) => {
@@ -974,7 +981,7 @@ export function createYearnWorkflowService({
     )
     return YearnWorkflowListResultSchema.parse({
       workflows: Object.values(load())
-        .filter(({ account }) => selected && checksum(account) === selected)
+        .filter(forSelectedAccount)
         .sort((a, b) => b.updatedAt - a.updatedAt)
     })
   }

@@ -34,24 +34,6 @@ const assets: Record<string, { address: string; name: string; symbol: string; de
     name: 'USD Coin',
     symbol: 'USDC',
     decimals: 6
-  },
-  'katana-yvvbusdc': {
-    address: '0x203A662b0BD271A6ed5a60EdFbd04bFce608FD36',
-    name: 'Vault Bridge USDC',
-    symbol: 'vbUSDC',
-    decimals: 6
-  },
-  'katana-yvvbeth': {
-    address: '0xEE7D8BCFb72bC1880D0Cf19822eB0A2e6577aB62',
-    name: 'Vault Bridge ETH',
-    symbol: 'vbETH',
-    decimals: 18
-  },
-  'katana-yvvbusdt': {
-    address: '0x2DCa96907fde857dd3D816880A0df407eeB2D2F2',
-    name: 'Vault Bridge USDT',
-    symbol: 'vbUSDT',
-    decimals: 6
   }
 }
 
@@ -59,7 +41,6 @@ export const makeKongVaultList = () => {
   const roots = YEARN_CATALOG.map((definition, index) => {
     const asset = assets[definition.id]
     if (!asset) throw new Error(`Missing fixture asset for ${definition.id}`)
-    const isKatana = definition.chainId === 747474
     return {
       chainId: definition.chainId,
       address: definition.address,
@@ -75,19 +56,11 @@ export const makeKongVaultList = () => {
       decimals: asset.decimals,
       tvl: 1_000_000 - index,
       riskLevel: definition.id === 'base-yvusdc-h' ? 3 : 1,
-      fees: { managementFee: isKatana ? 25 : 0, performanceFee: 1000 },
+      fees: { managementFee: 0, performanceFee: 1000 },
       performance: {
         oracle: { netAPY: 0.04 },
         historical: { monthlyNet: 0.03 },
-        ...(definition.kind === 'yvUSD' || isKatana
-          ? {
-              estimated: {
-                apy: isKatana ? 0.05 : 0.06,
-                type: isKatana ? 'katana-estimated-apr' : 'yvusd-estimated-apr',
-                components: isKatana ? { katanaNativeYield: 0.02, katanaAppRewardsAPR: 0.01 } : {}
-              }
-            }
-          : {})
+        ...(definition.kind === 'yvUSD' ? { estimated: { apy: 0.06, type: 'yvusd-estimated-apr' } } : {})
       },
       inceptTime: 1_700_000_000
     }
@@ -142,7 +115,7 @@ export const makeKongVaultList = () => {
       tvl: 6_000_000,
       riskLevel: null,
       fees: { managementFee: 0, performanceFee: 0 },
-      performance: { oracle: { netAPY: 0.07 } },
+      performance: { oracle: { netAPY: 0.0637 }, historical: { weeklyNet: 0.9237 } },
       inceptTime: 1_700_000_200
     }
   ]

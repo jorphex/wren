@@ -21,8 +21,7 @@ import { isNetworkConnected } from '../../../resources/utils/chains'
 const CHAINS = [
   { id: 'all', name: 'All' },
   { id: 1, name: 'Ethereum' },
-  { id: 8453, name: 'Base' },
-  { id: 747474, name: 'Katana' }
+  { id: 8453, name: 'Base' }
 ]
 
 const ACTIVITY_PREVIEW_MAX = 3
@@ -123,7 +122,7 @@ export const workflowsForAccount = (workflows, vaultId, address) =>
 
 const chainName = (chainId) => CHAINS.find(({ id }) => id === chainId)?.name || `Chain ${chainId}`
 
-const earnChainColors = Object.freeze({ 1: 'accent1', 8453: 'accent8', 747474: 'accent3' })
+const earnChainColors = Object.freeze({ 1: 'accent1', 8453: 'accent8' })
 
 const VaultArtwork = ({ vault, size = 'card' }) => (
   <AssetMark
@@ -261,8 +260,13 @@ const EarnCatalogLoading = () => (
 
 const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBalances = false }) => {
   const unavailable = vault.status !== 'available'
-  const formattedApy = formatPercent(vault.apy.value)
-  const showApyLabel = formattedApy.toLowerCase() !== vault.apy.label.toLowerCase()
+  const isYvUsd = vault.kind === 'yvUSD'
+  const lockedApy = isYvUsd ? vault.variants.find(({ id }) => id === 'locked')?.apy : undefined
+  const showLockedRate = typeof lockedApy?.value === 'number'
+  const apy = showLockedRate ? lockedApy : vault.apy
+  const formattedApy = formatPercent(apy.value)
+  const showApyLabel = formattedApy.toLowerCase() !== apy.label.toLowerCase()
+  const apyLabel = isYvUsd ? `${showLockedRate ? 'Locked' : 'Flexible'} · ${apy.label}` : apy.label
   return (
     <button
       type='button'
@@ -280,9 +284,7 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBala
         </div>
         <div className='earnApy'>
           <strong>{metricsLoading ? <Skeleton className='earnSkeletonMetric' /> : formattedApy}</strong>
-          {!metricsLoading && showApyLabel ? (
-            <span>{vault.kind === 'yvUSD' ? `Vault · ${vault.apy.label}` : vault.apy.label}</span>
-          ) : null}
+          {!metricsLoading && showApyLabel ? <span>{apyLabel}</span> : null}
         </div>
       </div>
       <div className='earnVaultMetrics'>
@@ -1320,7 +1322,7 @@ export class Earn extends React.Component {
 
   currentStoreKey() {
     const selected = this.store('selected.current') || ''
-    const networks = [1, 8453, 747474].map((id) => {
+    const networks = CHAINS.slice(1).map(({ id }) => {
       const network = this.store('main.networks.ethereum', id) || {}
       const endpoints = network.connection?.endpoints || []
       return [

@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { act, render, screen, waitFor } from '../../../componentSetup'
+import { act, render, screen, waitFor, within } from '../../../componentSetup'
 import {
   Earn,
   formatReceiptAmount,
@@ -103,7 +103,6 @@ const makeVault = (id, chainId, chainName, kind = 'direct') => ({
 const vaults = [
   makeVault('ethereum-yvusd', 1, 'Ethereum', 'yvUSD'),
   makeVault('base-yvusdc-h', 8453, 'Base'),
-  makeVault('katana-yvvbusdc', 747474, 'Katana'),
   {
     ...makeVault('ethereum-ybold', 1, 'Ethereum', 'yBOLD'),
     name: 'Staked yBOLD',
@@ -245,8 +244,7 @@ const makePositions = (readOnly = false) => ({
   account: { address, name: 'Treasury', readOnly },
   chains: [
     { chainId: 1, status: 'ready', positions: [position] },
-    { chainId: 8453, status: 'disabled', reason: 'Enable this chain in Wren', positions: [] },
-    { chainId: 747474, status: 'ready', positions: [] }
+    { chainId: 8453, status: 'disabled', reason: 'Enable this chain in Wren', positions: [] }
   ]
 })
 
@@ -348,10 +346,13 @@ it('shows account positions in a distinct section before the chain-separated vau
   expect(screen.getByRole('img', { name: 'Yearn' })).toBeTruthy()
   expect(screen.queryByText('A selected set of vaults, grouped by network.')).toBeNull()
   expect(screen.getByRole('heading', { name: 'Base' })).toBeTruthy()
-  expect(screen.getByRole('heading', { name: 'Katana' })).toBeTruthy()
+  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['All', 'Ethereum', 'Base'])
+  expect(screen.queryByRole('heading', { name: 'Katana' })).toBeNull()
   const positionHeading = screen.getByRole('heading', { name: 'Your positions' })
   const position = screen.getByRole('button', { name: 'Manage yvUSD position' })
   const firstVault = screen.getByRole('button', { name: 'View yvUSD on Ethereum' })
+  expect(within(firstVault).getByText('7%')).toBeTruthy()
+  expect(within(firstVault).getByText('Locked · Est. APY')).toBeTruthy()
   expect(positionHeading.closest('.earnPositionsOverview')).toBeTruthy()
   expect(position.closest('.earnPositionsOverview')).toBeTruthy()
   expect(position.closest('.earnChain')).toBeNull()
@@ -421,7 +422,6 @@ it('filters by chain without mixing vaults', async () => {
 
   expect(screen.getByRole('heading', { name: 'Base' })).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'Ethereum' })).toBeNull()
-  expect(screen.queryByRole('heading', { name: 'Katana' })).toBeNull()
   expect(screen.queryByRole('heading', { name: 'Your positions' })).toBeNull()
 })
 
@@ -616,7 +616,7 @@ it('conceals every account-derived Earn amount while keeping public metrics visi
 
   const vaultCard = screen.getByRole('button', { name: 'View yvUSD on Ethereum' })
   const positionCard = screen.getByRole('button', { name: 'Manage yvUSD position' })
-  expect(vaultCard.textContent).toContain('5.12%')
+  expect(vaultCard.textContent).toContain('7%')
   expect(vaultCard.textContent).toContain('TVL')
   expect(vaultCard.textContent).toContain('•••• USDC available')
   expect(positionCard.textContent).toContain('•••• USDC')

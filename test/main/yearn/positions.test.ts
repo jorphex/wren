@@ -53,26 +53,25 @@ describe('Yearn account positions', () => {
       account: null,
       chains: [
         { chainId: 1, status: 'no-account' },
-        { chainId: 8453, status: 'no-account' },
-        { chainId: 747474, status: 'no-account' }
+        { chainId: 8453, status: 'no-account' }
       ]
     })
     expect(readContract).not.toHaveBeenCalled()
   })
 
-  it('isolates disabled and disconnected chains', async () => {
+  it.each(['disabled', 'disconnected'])('isolates a %s chain', async (status) => {
     const readContract = reader()
     const getPositions = createYearnPositionsService({
       getCatalog: async () => catalog(),
       getCurrentAccount: () => ({ address: account, lastSignerType: 'ring' }),
       getNetworkStatus: (chainId) =>
-        chainId === 1 ? { on: true, connected: true } : { on: chainId === 8453, connected: false },
+        chainId === 1 ? { on: true, connected: true } : { on: status === 'disconnected', connected: false },
       readContract
     })
 
     const result = await getPositions()
 
-    expect(result.chains.map(({ status }) => status)).toEqual(['ready', 'disconnected', 'disabled'])
+    expect(result.chains.map(({ status }) => status)).toEqual(['ready', status])
     expect(new Set(readContract.mock.calls.map(([chainId]) => chainId))).toEqual(new Set([1]))
   })
 
@@ -149,7 +148,7 @@ describe('Yearn account positions', () => {
     })
 
     const result = await getPositions()
-    expect(result.chains.map(({ status }) => status)).toEqual(['ready', 'partial', 'ready'])
+    expect(result.chains.map(({ status }) => status)).toEqual(['ready', 'partial'])
     expect(result.chains[1]?.positions[0]?.error).toBe('Base RPC failed')
   })
 

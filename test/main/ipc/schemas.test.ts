@@ -727,7 +727,7 @@ test('bounds Yearn position requests and results', () => {
   expect(
     parseRendererInvokeResult('yearn:getPositions', {
       account: null,
-      chains: [1, 8453, 747474].map((chainId) => ({
+      chains: [1, 8453].map((chainId) => ({
         chainId,
         status: 'no-account',
         reason: 'Select an account',

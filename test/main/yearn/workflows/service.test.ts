@@ -177,9 +177,10 @@ function setup(
     assetDecimals?: number
     vaultDecimals?: number
     fullBalanceRedeem?: boolean
+    savedWorkflows?: YearnWorkflows
   } = {}
 ) {
-  let workflows: YearnWorkflows = {}
+  let workflows: YearnWorkflows = options.savedWorkflows ?? {}
   let selectedAccount = account
   let readOnly = options.readOnly === true
   let clock = 10
@@ -198,6 +199,14 @@ function setup(
     respond: (result: YearnQueuedResult) => void
   }> = []
   const receipts = new Map<string, unknown>()
+  const getReceipt = jest.fn(async (_chainId: number, hash: string) => {
+    if (options.delayedReceipt) {
+      await new Promise<void>((resolve) => {
+        releaseReceipt = resolve
+      })
+    }
+    return receipts.get(hash) ?? null
+  })
   const readContract = jest.fn(async (_chainId: number, target: string, data: string) => {
     if (data.startsWith(selector(erc4626, 'asset'))) {
       return erc4626.encodeFunctionResult('asset', [asset.address])
@@ -251,14 +260,7 @@ function setup(
       getNetworkStatus: () => ({ on: true, connected: true }),
       readContract,
       simulateContract,
-      getReceipt: async (_chainId, hash) => {
-        if (options.delayedReceipt) {
-          await new Promise<void>((resolve) => {
-            releaseReceipt = resolve
-          })
-        }
-        return receipts.get(hash) ?? null
-      },
+      getReceipt,
       queueTransaction: async (transaction, respond) => {
         queued.push({ transaction, respond })
         if (options.delayedAdmission) {
@@ -279,6 +281,7 @@ function setup(
     restartService: createService,
     queued,
     receipts,
+    getReceipt,
     readContract,
     simulateContract,
     workflows: () => workflows,
@@ -423,6 +426,31 @@ const depositRequest = {
   amount: '12.5',
   max: false
 }
+
+it('keeps saved Katana workflows out of Earn without changing their records', async () => {
+  const initial = setup()
+  const workflow = await initial.service.start(depositRequest)
+  initial.queued[0].respond({ hash: `0x${'a'.repeat(64)}` })
+  const retired = {
+    ...initial.workflows()[workflow.id],
+    chainId: 747474 as const,
+    vaultId: 'katana-yvvbusdc'
+  }
+  const { service, getReceipt, queued, workflows } = setup({ savedWorkflows: { [retired.id]: retired } })
+
+  await expect(service.list()).resolves.toEqual({ workflows: [] })
+  await expect(
+    service.start({ ...depositRequest, vaultId: retired.vaultId, action: 'withdraw' })
+  ).rejects.toThrow("Vault is not in Wren's curated Yearn catalog")
+  await expect(service.resume({ id: retired.id })).rejects.toThrow('Yearn workflow was not found')
+  await expect(service.revoke({ id: retired.id })).rejects.toThrow('Yearn workflow was not found')
+  expect(getReceipt).not.toHaveBeenCalled()
+  expect(queued).toHaveLength(0)
+
+  const active = await service.start(depositRequest)
+  await expect(service.list()).resolves.toEqual({ workflows: [active] })
+  expect(workflows()[retired.id]).toEqual(retired)
+})
 
 it('queues an exact approval and advances only after a matching successful receipt', async () => {
   const subject = setup()

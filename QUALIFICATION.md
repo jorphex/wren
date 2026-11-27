@@ -373,13 +373,13 @@ API keys, and credential-bearing URLs without printing those fixtures.
 
 Run this only when [`YEARN_EARN.md`](YEARN_EARN.md) is present. Use an isolated
 `0700` profile, four disposable accounts (private key, seed, Safe 7, Model One),
-minimum funds, independently verified Ethereum/Base/Katana RPC chain IDs, and
+minimum funds, independently verified Ethereum and Base RPC chain IDs, and
 independently verify each displayed product/route and on-chain `asset()` before
 continuing. Stop on a mismatch.
 
 Check these states:
 
-- With no account selected, Earn shows three chain sections and eight products.
+- With no account selected, Earn shows two chain sections and five products.
   Transaction controls are inactive.
 - Watch-only positions appear before opportunities and cannot transact.
 - A disconnected chain affects only its own section and offers a settings action.
@@ -395,7 +395,7 @@ Use the minimum practical amount and withdraw after the required transition:
 | Account     | Required flow                                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------------------------------- |
 | Private key | Base yvUSDC-H exact deposit, partial underlying withdrawal, Max redeem                                              |
-| Seed        | Katana direct-vault exact deposit and Max redeem; read-only discovery of the other two Katana assets                |
+| Seed        | Ethereum USDS-1 exact deposit and Max redeem                                                                        |
 | Safe 7      | Ethereum flexible yvUSD deposit and Max redeem; clear-signing and reconnect                                         |
 | Model One   | Ethereum yBOLD pinned-zap deposit, Stake with an existing yBOLD position when available, then zero-loss staked exit |
 

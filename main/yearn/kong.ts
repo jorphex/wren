@@ -4,6 +4,7 @@ import {
   YearnCatalogCacheSchema,
   type YearnApy,
   type YearnCatalogCache,
+  type YearnChainId,
   type YearnVault,
   type YearnVaultVariant
 } from '../../resources/domain/yearn'
@@ -45,18 +46,7 @@ const KongVaultSchema = z
     performance: z
       .object({
         estimated: z
-          .object({
-            apy: OptionalRateSchema,
-            apr: OptionalRateSchema,
-            type: z.string().max(64).optional(),
-            components: z
-              .object({
-                katanaNativeYield: OptionalRateSchema,
-                katanaAppRewardsAPR: OptionalRateSchema
-              })
-              .passthrough()
-              .optional()
-          })
+          .object({ apy: OptionalRateSchema, type: z.string().max(64).optional() })
           .passthrough()
           .nullable()
           .optional(),
@@ -80,38 +70,35 @@ const KongVaultSchema = z
 type KongVault = z.infer<typeof KongVaultSchema>
 
 export interface CatalogNormalizationError {
-  chainId?: 1 | 8453 | 747474
+  chainId?: YearnChainId
   message: string
 }
 
 const finiteRate = (value: number | null | undefined) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 
-export function resolveYearnApy(vault: KongVault): YearnApy {
-  const estimated = finiteRate(vault.performance?.estimated?.apy)
-  if (estimated !== null) {
-    const components = vault.performance?.estimated?.components
-    return {
-      value: estimated,
-      label: 'Est. APY',
-      source: vault.performance?.estimated?.type || 'estimated',
-      ...(finiteRate(components?.katanaNativeYield) !== null && {
-        baseValue: finiteRate(components?.katanaNativeYield)
-      }),
-      ...(finiteRate(components?.katanaAppRewardsAPR) !== null && {
-        appRewardsValue: finiteRate(components?.katanaAppRewardsAPR)
-      })
+export function resolveYearnApy(vault: KongVault, variantId?: YearnVaultVariant['id']): YearnApy {
+  const { estimated, oracle, historical } = vault.performance || {}
+  const oracleApy = finiteRate(oracle?.netAPY) ?? finiteRate(oracle?.apy)
+  const weeklyApy = finiteRate(historical?.weeklyNet)
+
+  // Yearn estimates staked yBOLD yield using the higher of its weekly rate and oracle rate.
+  if (variantId === 'staked') {
+    if (weeklyApy !== null && (oracleApy === null || weeklyApy > oracleApy)) {
+      return { value: weeklyApy, label: 'Est. APY', source: 'historical-weekly' }
     }
+    if (oracleApy !== null) return { value: oracleApy, label: 'Est. APY', source: 'oracle' }
   }
 
-  const oracle = finiteRate(vault.performance?.oracle?.netAPY) ?? finiteRate(vault.performance?.oracle?.apy)
-  if (oracle !== null) return { value: oracle, label: 'Est. APY', source: 'oracle' }
+  const estimatedApy = finiteRate(estimated?.apy)
+  if (estimatedApy !== null) {
+    return { value: estimatedApy, label: 'Est. APY', source: estimated?.type || 'estimated' }
+  }
+  if (oracleApy !== null) return { value: oracleApy, label: 'Est. APY', source: 'oracle' }
 
-  const historical =
-    finiteRate(vault.performance?.historical?.monthlyNet) ??
-    finiteRate(vault.performance?.historical?.weeklyNet)
-  if (historical !== null) {
-    return { value: historical, label: 'Historical APY', source: 'historical' }
+  const historicalApy = finiteRate(historical?.monthlyNet) ?? weeklyApy
+  if (historicalApy !== null) {
+    return { value: historicalApy, label: 'Historical APY', source: 'historical' }
   }
 
   return { value: null, label: 'Unavailable', source: 'unavailable' }
@@ -139,7 +126,7 @@ const variantFromKong = (
   asset,
   decimals,
   tvlUsd: vault.tvl,
-  apy: resolveYearnApy(vault)
+  apy: resolveYearnApy(vault, id)
 })
 
 const isYearnEntry = (vault: KongVault) => vault.origin === 'yearn' && vault.inclusion?.isYearn !== false

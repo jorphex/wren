@@ -1003,7 +1003,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.earnPositionList',
     requiredControls: ['Refresh', 'Manage yvUSD position', 'View yvUSD on Ethereum'],
-    requiredText: ['Earn', 'Your positions', '1.5 USDC', '5.12%', '$1.5M TVL']
+    requiredText: ['Earn', 'Your positions', '1.5 USDC', '7%', 'LOCKED · EST. APY', '$1.5M TVL']
   },
   {
     id: 'dash-earn-privacy-short-1',
@@ -1014,7 +1014,14 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.earnPositionList',
     requiredControls: ['Manage yvUSD position', 'View yvUSD on Ethereum'],
-    requiredText: ['Your positions', '•••• USDC', '•••• USDC available', '5.12%', '$1.5M TVL']
+    requiredText: [
+      'Your positions',
+      '•••• USDC',
+      '•••• USDC available',
+      '7%',
+      'LOCKED · EST. APY',
+      '$1.5M TVL'
+    ]
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],

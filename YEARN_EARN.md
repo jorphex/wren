@@ -40,30 +40,24 @@ products, signers and RPCs.
 | Ethereum | WETH-1 yVault              | `0xc56413869c6CDf96496f2b1eF801fEDBdFA7dDB0` |
 | Ethereum | Staked yBOLD               | `0x9F4330700a36B29952869fac9b33f45EEdd8A3d8` |
 | Base     | USDC Horizon yVault        | `0xc3BD0A2193c8F027B82ddE3611D18589ef3f62a9` |
-| Katana   | vbUSDC yVault              | `0x80c34BD3A3569E126e7055831036aa7b212cB159` |
-| Katana   | vbETH yVault               | `0xE007CA01894c863d7898045ed5A3B4Abf0b18f37` |
-| Katana   | vbUSDT yVault              | `0x9A6bd7B6Fd5C4F87eb66356441502fc7dCdd185B` |
 
 The catalog excludes Yearn single-strategy vaults and lower-priority
-alternatives. Base offers only the higher-risk Horizon USDC product. Katana
-accepts only the listed Vault Bridge assets. Earn does not swap, bridge, wrap,
-or acquire them.
+alternatives. Base offers the higher-risk Horizon USDC product. Earn does not
+swap, bridge, wrap, or acquire assets. Manage existing Katana vault positions
+on the [Yearn website](https://yearn.fi/vaults).
 
 ### Pinned assets and routes
 
 Wren pins these scales and transaction addresses in source. Kong cannot alter
 them.
 
-| Product       | Exact input asset                                   | Decimals | Additional pinned route                                                                                |
-| ------------- | --------------------------------------------------- | -------: | ------------------------------------------------------------------------------------------------------ |
-| yvUSD         | USDC `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`   |        6 | Locked `0xAaaFEa48472f77563961Cdb53291DEDfB46F9040`; zap `0x7ba61c8e19414dcB8fe769a7Be63B508C8062bbA`  |
-| USDS-1        | USDS `0xdC035D45d973E3EC169d2276DDab16f1e407384F`   |       18 | None                                                                                                   |
-| WETH-1        | WETH `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`   |       18 | None                                                                                                   |
-| Staked yBOLD  | BOLD `0x6440f144b7e50D6a8439336510312d2F54beB01D`   |       18 | ysyBOLD `0x23346B04a7f55b8760E5860AA5A77383D63491cD`; zap `0xe7099092533a3fb693bb123cd96b8e53b4d83c58` |
-| Base Horizon  | USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`   |        6 | None                                                                                                   |
-| Katana vbUSDC | vbUSDC `0x203A662b0BD271A6ed5a60EdFbd04bFce608FD36` |        6 | None                                                                                                   |
-| Katana vbETH  | vbETH `0xEE7D8BCFb72bC1880D0Cf19822eB0A2e6577aB62`  |       18 | None                                                                                                   |
-| Katana vbUSDT | vbUSDT `0x2DCa96907fde857dd3D816880A0df407eeB2D2F2` |        6 | None                                                                                                   |
+| Product      | Exact input asset                                 | Decimals | Additional pinned route                                                                                |
+| ------------ | ------------------------------------------------- | -------: | ------------------------------------------------------------------------------------------------------ |
+| yvUSD        | USDC `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` |        6 | Locked `0xAaaFEa48472f77563961Cdb53291DEDfB46F9040`; zap `0x7ba61c8e19414dcB8fe769a7Be63B508C8062bbA`  |
+| USDS-1       | USDS `0xdC035D45d973E3EC169d2276DDab16f1e407384F` |       18 | None                                                                                                   |
+| WETH-1       | WETH `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2` |       18 | None                                                                                                   |
+| Staked yBOLD | BOLD `0x6440f144b7e50D6a8439336510312d2F54beB01D` |       18 | ysyBOLD `0x23346B04a7f55b8760E5860AA5A77383D63491cD`; zap `0xe7099092533a3fb693bb123cd96b8e53b4d83c58` |
+| Base Horizon | USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |        6 | None                                                                                                   |
 
 ## Data, balances, and availability
 
@@ -71,11 +65,12 @@ them.
   and highlight status, chain, vault and asset addresses, and pinned decimals.
   Wren rechecks asset/vault relationships and decimals on chain before each
   queued step.
-- Cards label Yearn's forward estimate `Est. APY`. The historical fallback is
-  `Historical APY`. Missing yield is `Unavailable`, never `0%`. APY, TVL,
-  labels, and simulation are third-party or configured-RPC evidence, not
-  guarantees of return, liquidity, execution, or safety.
-- `All` separates Ethereum, Base, and Katana. Failure on one chain cannot
+- The yvUSD card leads with the locked rate. Staked yBOLD shows the higher of
+  Yearn's seven-day rate and oracle rate. The historical fallback is
+  `Historical APY`. Missing yield shows as `Unavailable`. APY, TVL, labels,
+  and simulation are third-party or configured-RPC evidence, not guarantees
+  of return, liquidity, execution, or safety.
+- `All` separates Ethereum and Base. Failure on one chain cannot
   erase another chain's products or positions. Deposits require fresh eligible
   metadata. Cached, retired, hidden, or failed data is withdraw-only when Wren
   recognizes an existing position.

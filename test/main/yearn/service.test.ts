@@ -1,10 +1,39 @@
 import { normalizeKongCatalog } from '../../../main/yearn/kong'
 import { CATALOG_TTL_MS, createYearnCatalogService } from '../../../main/yearn/service'
+import { YearnStateSchema } from '../../../main/store/state/types/yearn'
 import { makeKongVaultList } from './fixtures'
 
 const cachedCatalog = (fetchedAt: number) => normalizeKongCatalog(makeKongVaultList(), fetchedAt).cache
 
 describe('Yearn catalog service', () => {
+  it('omits retired Katana vaults even from an upgraded offline cache', async () => {
+    const { vaults: retained, ...cache } = cachedCatalog(10_000)
+    const retired = {
+      ...retained.find(({ chainId }) => chainId === 8453),
+      id: 'katana-yvvbusdc',
+      chainId: 747474,
+      chainName: 'Katana'
+    }
+    const saved = YearnStateSchema.parse({
+      catalogCache: { ...cache, vaults: [retired, ...retained] },
+      workflows: {}
+    })
+    const service = createYearnCatalogService({
+      readCache: () => saved.catalogCache,
+      writeCache: jest.fn(),
+      fetchImpl: jest.fn(async () => new Response('', { status: 503 })),
+      now: () => 10_000 + CATALOG_TTL_MS
+    })
+
+    for (const cacheOnly of [true, false]) {
+      await expect(service.getCatalog({ cacheOnly })).resolves.toMatchObject({
+        status: 'stale',
+        fetchedAt: 10_000,
+        vaults: retained
+      })
+    }
+  })
+
   it('uses a fresh validated cache without a network request', async () => {
     const fetchImpl = jest.fn()
     const service = createYearnCatalogService({
@@ -47,7 +76,7 @@ describe('Yearn catalog service', () => {
     const result = await service.getCatalog({ cacheOnly: true })
 
     expect(result).toMatchObject({ status: 'unavailable', fetchedAt: null })
-    expect(result.vaults).toHaveLength(8)
+    expect(result.vaults).toHaveLength(5)
     expect(result.vaults.every(({ status }) => status === 'unavailable')).toBe(true)
     expect(fetchImpl).not.toHaveBeenCalled()
   })
@@ -106,8 +135,8 @@ describe('Yearn catalog service', () => {
 
     expect(result.status).toBe('unavailable')
     expect(result.fetchedAt).toBeNull()
-    expect(result.vaults).toHaveLength(8)
+    expect(result.vaults).toHaveLength(5)
     expect(result.vaults.every(({ status }) => status === 'unavailable')).toBe(true)
-    expect(new Set(result.errors.map(({ chainId }) => chainId))).toEqual(new Set([1, 8453, 747474]))
+    expect(new Set(result.errors.map(({ chainId }) => chainId))).toEqual(new Set([1, 8453]))
   })
 })

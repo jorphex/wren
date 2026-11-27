@@ -1,10 +1,11 @@
 import { z } from 'zod'
 
-export const YEARN_CHAIN_IDS = [1, 8453, 747474] as const
+export const YEARN_CHAIN_IDS = [1, 8453] as const
 export const YEARN_WORKFLOW_POLICY_VERSION = 1
 export type YearnChainId = (typeof YEARN_CHAIN_IDS)[number]
 
-export const YearnChainIdSchema = z.union([z.literal(1), z.literal(8453), z.literal(747474)])
+const RETIRED_KATANA_CHAIN_ID = 747474
+export const YearnChainIdSchema = z.literal(YEARN_CHAIN_IDS)
 export const YearnAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/)
 
 export const YearnAssetSchema = z
@@ -43,7 +44,7 @@ export const YearnVaultSchema = z
   .object({
     id: z.string().min(1).max(128),
     chainId: YearnChainIdSchema,
-    chainName: z.enum(['Ethereum', 'Base', 'Katana']),
+    chainName: z.enum(['Ethereum', 'Base']),
     address: YearnAddressSchema,
     kind: z.enum(['direct', 'yvUSD', 'yBOLD']),
     name: z.string().min(1).max(128),
@@ -65,13 +66,23 @@ export const YearnVaultSchema = z
   })
   .strict()
 
-export const YearnCatalogCacheSchema = z
+const RetiredKatanaVaultSchema = YearnVaultSchema.extend({
+  chainId: z.literal(RETIRED_KATANA_CHAIN_ID),
+  chainName: z.literal('Katana')
+})
+
+export const StoredYearnCatalogCacheSchema = z
   .object({
     version: z.literal(2),
     fetchedAt: z.number().int().nonnegative(),
-    vaults: z.array(YearnVaultSchema).max(16)
+    vaults: z.array(z.union([YearnVaultSchema, RetiredKatanaVaultSchema])).max(16)
   })
   .strict()
+
+export const YearnCatalogCacheSchema = StoredYearnCatalogCacheSchema.transform(({ vaults, ...cache }) => ({
+  ...cache,
+  vaults: vaults.filter((vault) => vault.chainId !== RETIRED_KATANA_CHAIN_ID)
+}))
 
 export const YearnCatalogResultSchema = z
   .object({
@@ -153,7 +164,7 @@ export const YearnPositionsResultSchema = z
       })
       .strict()
       .nullable(),
-    chains: z.array(YearnPositionChainSchema).length(3)
+    chains: z.array(YearnPositionChainSchema).length(YEARN_CHAIN_IDS.length)
   })
   .strict()
 
@@ -212,7 +223,8 @@ export const YearnWorkflowSchema = z
     parentWorkflowId: z.string().uuid().optional(),
     account: YearnAddressSchema,
     vaultId: z.string().min(1).max(128),
-    chainId: YearnChainIdSchema,
+    // Older Earn workflows remain valid saved records after Katana is retired.
+    chainId: z.union([YearnChainIdSchema, z.literal(RETIRED_KATANA_CHAIN_ID)]),
     action: YearnWorkflowActionSchema,
     variant: z.enum(['direct', 'unlocked', 'locked', 'staked']),
     amountRaw: BaseUnitAmountSchema,

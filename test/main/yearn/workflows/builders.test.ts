@@ -93,7 +93,7 @@ it('builds a direct exact-approval deposit to the allowlisted vault', () => {
 
 it('resets a mismatched allowance before setting the exact amount', () => {
   const result = buildYearnWorkflow({
-    vault: vault('katana-yvvbusdt'),
+    vault: vault('base-yvusdc-h'),
     account,
     action: 'deposit',
     variant: 'direct',

@@ -5,7 +5,7 @@ export type YearnProductKind = 'direct' | 'yvUSD' | 'yBOLD'
 export interface YearnCatalogDefinition {
   id: string
   chainId: YearnChainId
-  chainName: 'Ethereum' | 'Base' | 'Katana'
+  chainName: 'Ethereum' | 'Base'
   address: Address
   kind: YearnProductKind
   name: string
@@ -132,54 +132,6 @@ export const YEARN_CATALOG: readonly YearnCatalogDefinition[] = [
     asset: {
       address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
       symbol: 'USDC',
-      decimals: 6
-    },
-    decimals: 6
-  },
-  {
-    id: 'katana-yvvbusdc',
-    chainId: 747474,
-    chainName: 'Katana',
-    address: '0x80c34BD3A3569E126e7055831036aa7b212cB159',
-    kind: 'direct',
-    name: 'vbUSDC yVault',
-    symbol: 'yvvbUSDC',
-    description: 'A direct multi-strategy Yearn vault for Katana Vault Bridge USDC.',
-    asset: {
-      address: '0x203A662b0BD271A6ed5a60EdFbd04bFce608FD36',
-      symbol: 'vbUSDC',
-      decimals: 6
-    },
-    decimals: 6
-  },
-  {
-    id: 'katana-yvvbeth',
-    chainId: 747474,
-    chainName: 'Katana',
-    address: '0xE007CA01894c863d7898045ed5A3B4Abf0b18f37',
-    kind: 'direct',
-    name: 'vbETH yVault',
-    symbol: 'yvvbETH',
-    description: 'A direct multi-strategy Yearn vault for Katana Vault Bridge ETH.',
-    asset: {
-      address: '0xEE7D8BCFb72bC1880D0Cf19822eB0A2e6577aB62',
-      symbol: 'vbETH',
-      decimals: 18
-    },
-    decimals: 18
-  },
-  {
-    id: 'katana-yvvbusdt',
-    chainId: 747474,
-    chainName: 'Katana',
-    address: '0x9A6bd7B6Fd5C4F87eb66356441502fc7dCdd185B',
-    kind: 'direct',
-    name: 'vbUSDT yVault',
-    symbol: 'yvvbUSDT',
-    description: 'A direct multi-strategy Yearn vault for Katana Vault Bridge USDT.',
-    asset: {
-      address: '0x2DCa96907fde857dd3D816880A0df407eeB2D2F2',
-      symbol: 'vbUSDT',
       decimals: 6
     },
     decimals: 6

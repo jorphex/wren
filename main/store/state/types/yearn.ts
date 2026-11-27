@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
-import { YearnCatalogCacheSchema, YearnWorkflowsSchema } from '../../../../resources/domain/yearn'
+import { StoredYearnCatalogCacheSchema, YearnWorkflowsSchema } from '../../../../resources/domain/yearn'
 
 export const YearnStateSchema = z
   .object({
-    catalogCache: YearnCatalogCacheSchema.nullable(),
+    catalogCache: StoredYearnCatalogCacheSchema.nullable(),
     workflows: YearnWorkflowsSchema
   })
   .strict()
