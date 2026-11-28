@@ -6,7 +6,7 @@ For release details and platform limits, see
 
 ## Unreleased
 
-See the [0.1.13 candidate notes](release-notes/v0.1.13.md).
+## 0.1.13 - 2026-11-28
 
 - Moved Trezor connection and signing to Trezor Suite Desktop.
 - Verified signed transactions against the approved requests before sending.

@@ -26,16 +26,26 @@ The follow-up build, device models, firmware, and Suite version are pending.
 Run `npm run test:trezor-suite` for simulated checks and a JSON report. See
 [Trezor Suite verification](TREZOR_SUITE.md#verification) for device tests.
 
-## 0.1.13 Linux rebuild
+## 0.1.13 release record
 
-On 28 November 2026, both Linux x64 packages built from `9a601f88` passed
-startup and package checks. The deb upgrade from 0.1.12 preserved a saved
-setting, the Ethereum endpoint, and the desktop pairing identity.
-The maintainer reported a pass after installing the rebuilt deb over their
-current installation.
+Published 28 November 2026 from `537b03dd3841471b7a2c421638dbef8bec7f14dc`.
+All seven public downloads matched their checksums. The 359-component SBOM
+and ten attestations passed verification.
+[Release files](https://github.com/jorphex/wren/releases/tag/v0.1.13)
 
-The 25 November draft used `e8d30cd9`. Its platform build results apply to
-that source. See the [draft build](https://github.com/jorphex/wren/actions/runs/45550455026).
+The build passed 5,431 unit tests, 157 isolated end-to-end tests, 41 simulated
+Trezor scenarios, and 10 Ledger adapter checks. All 119 desktop UI scenarios
+passed. [Build results](https://github.com/jorphex/wren/actions/runs/46117003414/attempts/2)
+
+Both Linux x64 packages started in disposable profiles. The deb passed an
+upgrade from 0.1.12, a Frame import, and Companion 0.1.3 pairing in Chrome and
+Firefox. Wren 0.1.12 found the new release through its update check. Two Linux
+builds matched at the application payload level. AppImage container bytes and
+their update and checksum metadata varied.
+
+The maintainer confirmed the earlier `9a601f88` deb upgrade. See the Trezor
+test record above. Windows and macOS remain previews without physical
+qualification.
 
 <a name="0112-preparation-record"></a>
 
