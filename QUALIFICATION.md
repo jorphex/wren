@@ -18,11 +18,24 @@ unnotarized macOS releases have a separate
 
 ## Trezor Suite client candidate
 
-The new client requires Suite Desktop on the same computer. Run
-`npm run test:trezor-suite` for repeatable simulated-host checks and a JSON
-record. Physical qualification remains pending. Follow the checks in
-[Trezor Suite verification](TREZOR_SUITE.md#verification); record the Suite,
-firmware and device versions. Earlier direct USB results remain below.
+- 26 November 2026. Trezor Suite connection, signing, and reconnect passed on the 0.1.13 candidate.
+- 28 November 2026. The maintainer reported several successful Trezor transactions.
+
+The follow-up build, device models, firmware, and Suite version are pending.
+
+Run `npm run test:trezor-suite` for simulated checks and a JSON report. See
+[Trezor Suite verification](TREZOR_SUITE.md#verification) for device tests.
+
+## 0.1.13 Linux rebuild
+
+On 28 November 2026, both Linux x64 packages built from `9a601f88` passed
+startup and package checks. The deb upgrade from 0.1.12 preserved a saved
+setting, the Ethereum endpoint, and the desktop pairing identity.
+The maintainer reported a pass after installing the rebuilt deb over their
+current installation.
+
+The 25 November draft used `e8d30cd9`. Its platform build results apply to
+that source. See the [draft build](https://github.com/jorphex/wren/actions/runs/45550455026).
 
 <a name="0112-preparation-record"></a>
 

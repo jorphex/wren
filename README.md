@@ -64,14 +64,15 @@ Linux x64 is the main release target. Windows and macOS are unqualified previews
 Linux arm64 has automated package checks only. Read
 [Signer and platform support](HARDWARE_SUPPORT.md) for tested platforms, signers, and limits.
 
+To use Trezor with Wren 0.1.13, open Trezor Suite Desktop on the same computer.
+See the [Trezor connection guide](TREZOR_SUITE.md).
+
 ## Install
 
 Download Wren and `SHA256SUMS` from the
 [desktop releases page](https://github.com/jorphex/wren/releases).
 
 ### Linux x64
-
-The examples use 0.1.13. Use the version you downloaded.
 
 Verify the downloaded files:
 
@@ -82,14 +83,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.13.AppImage
-./Wren-0.1.13.AppImage
+chmod +x Wren-0.1.12.AppImage
+./Wren-0.1.12.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.13_amd64.deb
+sudo apt install ./wren_0.1.12_amd64.deb
 ```
 
 Linux packages are unsigned. Checksums and GitHub attestations verify their
@@ -123,7 +124,7 @@ Wren does not read Frame’s live profile. To import a private copy:
 3. Run this command before Wren creates its profile:
 
 ```bash
-./Wren-0.1.13.AppImage --import-frame-profile
+./Wren-0.1.12.AppImage --import-frame-profile
 ```
 
 The import copies only the supported configuration and encrypted signer files.
@@ -160,7 +161,7 @@ Wren has no hosted wallet backend. Common network requests use these services:
 | Earn catalog            | Yearn Kong               | A fixed catalog request; no account data                           |
 | Token artwork           | Reviewed CoinGecko host  | Recognized artwork requests only                                   |
 | Contract names and ABIs | Sourcify; Etherscan      | IP address, network and contract address                           |
-| Trezor requests         | Suite Desktop, local     | Selected device, address paths, messages and proposed transactions |
+| Trezor (0.1.13)         | Suite Desktop, local     | Selected device, address paths, messages and proposed transactions |
 
 GeckoTerminal supplies Robinhood Chain prices and fills missing quotes on supported
 networks. Lookups run from the desktop and resume after rate limits. Previous
@@ -168,9 +169,7 @@ quotes can remain during retries. Wren does not show a 24-hour change for these 
 See [pricing and network details](THREAT_MODEL.md#remote-services-and-content)
 for supported networks, pool rules and cache limits.
 
-Trezor access requires Suite Desktop on the same computer. Review requests in
-Wren, then continue in Suite. Suite handles device prompts and vendor lookups.
-See [Trezor connection details](TREZOR_SUITE.md).
+Trezor Suite Desktop handles device prompts and requests for device metadata.
 
 Wren does not contact Pylon or use an NFT indexer. Read the
 [threat model](THREAT_MODEL.md) for other requests and data access. Custom RPC

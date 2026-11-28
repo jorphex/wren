@@ -28,8 +28,9 @@ it does not record physical testing.
 | macOS x64/arm64                 | Electron DMG                       | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.                                                 |
 | Linux arm64 AppImage/tar.gz     | Electron package                   | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                                                            |
 
-Trezor access now requires Suite Desktop. Wren delegates device access and
-authentication to Suite. See [connection and verification details](TREZOR_SUITE.md).
+Wren 0.1.13 connects to Trezor through Suite Desktop. See the
+[Trezor connection guide](TREZOR_SUITE.md)
+and the [0.1.13 test record](QUALIFICATION.md#trezor-suite-client-candidate).
 
 ## Trezor limitations
 

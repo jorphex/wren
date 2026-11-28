@@ -4,16 +4,22 @@ For release details and platform limits, see
 [`release-notes`](release-notes) and the
 [GitHub releases page](https://github.com/jorphex/wren/releases).
 
-## 0.1.13
+## Unreleased
+
+See the [0.1.13 candidate notes](release-notes/v0.1.13.md).
 
 - Moved Trezor connection and signing to Trezor Suite Desktop.
-- Checked that signed transactions match the approved requests before sending.
-- Grouped estimated asset changes. Kept individual movements in Advanced details.
+- Verified signed transactions against the approved requests before sending.
+- Grouped estimated asset changes. Kept each movement in **Advanced details**.
 - Added a shortcut to save a reviewed contract address to Contacts.
-- Added **Find tokens** for recent Activity and the bundled catalog. Updated the catalog and removed three lookalikes from discovery.
+- Added **Find tokens** to check recent activity and the token catalog.
+- Updated the token catalog and removed three lookalikes from discovery.
 - Asked for confirmation before turning off device protection or preparing a profile restore.
-- Added dashboard recovery without a full restart.
-- Refined wallet navigation, layouts, scroll cues, and button order.
+- Added **Try again** and **Reload dashboard** when the dashboard can't open.
+- Moved Earn into the Control Center grid. Updated account setup and signing layouts.
+- Fixed Earn rates and removed Katana vaults.
+- Kept Earn actions visible in shorter windows. Hid the withdrawal form when you can't withdraw.
+- Made selected options easier to see and matched button feedback across desktop.
 - Updated Ledger and WebSocket libraries. Removed duplicate tests.
 
 ## 0.1.12 - 2026-11-07
